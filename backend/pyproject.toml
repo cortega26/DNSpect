@@ -14,7 +14,7 @@ dependencies = [
   "uvicorn[standard]==0.35.0",
   "pydantic==2.11.7",
   "dnspython==2.7.0",
-  "python-multipart==0.0.20"
+  "python-multipart==0.0.22"
 ]
 
 [project.optional-dependencies]
