@@ -1,0 +1,24 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+backend/.venv/
+backend/data/runs/*.json
+backend/build/
+backend/dist/
+build/
+dist/
+release/
+*.spec
+
+# Node
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/

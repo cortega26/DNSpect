@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dns-speed-lab-backend"
+version = "0.2.0"
+description = "Backend API for dns-speed-lab"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "dns-speed-lab contributors" }]
+dependencies = [
+  "fastapi==0.116.1",
+  "uvicorn[standard]==0.35.0",
+  "pydantic==2.11.7",
+  "dnspython==2.7.0",
+  "python-multipart==0.0.20"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==8.4.1",
+  "ruff==0.12.9",
+  "mypy==1.17.1",
+  "httpx==0.28.1",
+  "types-PyYAML==6.0.12.20250822"
+]
+pack = [
+  "pyinstaller==6.16.0"
+]
+
+[project.scripts]
+dns-speed-lab = "app.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+extend-exclude = ["build"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "N"]
+ignore = ["N805", "UP045"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["app"]
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+strict_equality = true
+pretty = true
+ignore_missing_imports = true

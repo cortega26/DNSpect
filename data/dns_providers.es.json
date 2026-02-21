@@ -1,0 +1,226 @@
+[
+  {
+    "id": "cloudflare",
+    "name": "Cloudflare",
+    "dns": ["1.1.1.1", "1.0.0.1"],
+    "tags": ["global", "anycast", "privacidad"],
+    "features": {
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
+      "doh": "yes",
+      "dot": "yes"
+    },
+    "notes_es": "DNS global rápido y muy usado; buena latencia en la mayoría de regiones."
+  },
+  {
+    "id": "google",
+    "name": "Google Public DNS",
+    "dns": ["8.8.8.8", "8.8.4.4"],
+    "tags": ["global", "anycast"],
+    "features": {
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
+      "doh": "yes",
+      "dot": "yes"
+    },
+    "notes_es": "Servicio DNS global con amplia infraestructura y alta disponibilidad."
+  },
+  {
+    "id": "quad9",
+    "name": "Quad9",
+    "dns": ["9.9.9.9", "149.112.112.112"],
+    "tags": ["global", "privacidad", "seguridad"],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "no",
+      "doh": "yes",
+      "dot": "yes"
+    },
+    "notes_es": "Prioriza bloqueo de dominios maliciosos con buena presencia global."
+  },
+  {
+    "id": "opendns",
+    "name": "OpenDNS",
+    "dns": ["208.67.222.222", "208.67.220.220"],
+    "tags": ["global", "familiar"],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "yes",
+      "doh": "no",
+      "dot": "no"
+    },
+    "notes_es": "Alternativa clásica con perfiles familiares y filtros de contenido."
+  },
+  {
+    "id": "adguard",
+    "name": "AdGuard DNS",
+    "dns": ["94.140.14.14", "94.140.15.15"],
+    "tags": ["privacidad", "filtrado"],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "optional",
+      "doh": "yes",
+      "dot": "yes"
+    },
+    "notes_es": "Enfocado en bloqueo de publicidad y protección básica de malware."
+  },
+  {
+    "id": "cleanbrowsing",
+    "name": "CleanBrowsing",
+    "dns": ["185.228.168.9", "185.228.169.9"],
+    "tags": ["privacidad", "familiar", "filtrado"],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "yes",
+      "doh": "yes",
+      "dot": "yes"
+    },
+    "notes_es": "Tiene perfiles de seguridad y familia útiles para redes domésticas."
+  },
+  {
+    "id": "controld",
+    "name": "ControlD",
+    "dns": ["76.76.2.0", "76.76.10.0"],
+    "tags": ["privacidad", "filtrado"],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "optional",
+      "doh": "yes",
+      "dot": "yes"
+    },
+    "notes_es": "Servicio configurable para políticas DNS avanzadas y filtrado por categorías."
+  },
+  {
+    "id": "nextdns",
+    "name": "NextDNS",
+    "dns": ["45.90.28.0", "45.90.30.0"],
+    "tags": ["privacidad", "filtrado"],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "optional",
+      "doh": "yes",
+      "dot": "yes"
+    },
+    "notes_es": "DNS con enfoque en privacidad y políticas personalizadas por perfil."
+  },
+  {
+    "id": "dnswatch",
+    "name": "DNS.Watch",
+    "dns": ["84.200.69.80", "84.200.70.40"],
+    "tags": ["global", "privacidad"],
+    "features": {
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
+      "doh": "no",
+      "dot": "no"
+    },
+    "notes_es": "Proveedor público con enfoque en neutralidad y sin filtrado agresivo."
+  },
+  {
+    "id": "mullvad",
+    "name": "Mullvad DNS",
+    "dns": ["194.242.2.2", "194.242.2.3"],
+    "tags": ["privacidad"],
+    "features": {
+      "filtering": "optional",
+      "malware_protection": "optional",
+      "family": "optional",
+      "doh": "yes",
+      "dot": "yes"
+    },
+    "notes_es": "Proveedor orientado a privacidad; útil para comparar latencia frente a grandes anycast."
+  },
+  {
+    "id": "uncensoreddns",
+    "name": "UncensoredDNS",
+    "dns": ["91.239.100.100", "89.233.43.71"],
+    "tags": ["privacidad"],
+    "features": {
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
+      "doh": "yes",
+      "dot": "yes"
+    },
+    "notes_es": "Alternativa de privacidad y baja intervención en consultas DNS."
+  },
+  {
+    "id": "lacnic",
+    "name": "LACNIC",
+    "dns": ["200.3.13.14", "200.3.14.14"],
+    "tags": ["latam"],
+    "features": {
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
+      "doh": "unknown",
+      "dot": "unknown"
+    },
+    "notes_es": "Referencia regional LATAM para comparar rutas en Sudamérica."
+  },
+  {
+    "id": "nicbr",
+    "name": "NIC.br",
+    "dns": ["200.160.0.8", "200.189.40.8"],
+    "tags": ["latam"],
+    "features": {
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
+      "doh": "unknown",
+      "dot": "unknown"
+    },
+    "notes_es": "Opción regional de Brasil para medir desempeño interregional en LATAM."
+  },
+  {
+    "id": "lumen",
+    "name": "Lumen / Level3",
+    "dns": ["4.2.2.1", "4.2.2.2", "4.2.2.3", "4.2.2.4", "4.2.2.5", "4.2.2.6"],
+    "tags": ["global", "legacy"],
+    "features": {
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
+      "doh": "no",
+      "dot": "no"
+    },
+    "notes_es": "Resolutores históricos; pueden rendir bien o fallar según la red actual."
+  },
+  {
+    "id": "chile-candidatos",
+    "name": "Chile (Candidatos)",
+    "dns": ["200.27.2.2", "200.91.44.2"],
+    "tags": ["chile", "candidato"],
+    "features": {
+      "filtering": "unknown",
+      "malware_protection": "unknown",
+      "family": "unknown",
+      "doh": "unknown",
+      "dot": "unknown"
+    },
+    "notes_es": "IPs candidatas para Chile; pueden estar obsoletas. Si fallan, se verán como timeout."
+  },
+  {
+    "id": "isp-detectado",
+    "name": "ISP (Detectado)",
+    "dns": [],
+    "tags": ["isp_detectado"],
+    "features": {
+      "filtering": "unknown",
+      "malware_protection": "unknown",
+      "family": "unknown",
+      "doh": "unknown",
+      "dot": "unknown"
+    },
+    "notes_es": "Representa los DNS detectados en tu sistema local en este momento."
+  }
+]

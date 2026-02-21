@@ -1,0 +1,21 @@
+# Lista curada para reducir sesgo de caché y reflejar tráfico común
+cloudflare.com
+google.com
+youtube.com
+wikipedia.org
+github.com
+microsoft.com
+apple.com
+netflix.com
+amazon.com
+openai.com
+akamai.com
+fastly.com
+reddit.com
+bbc.com
+elpais.com
+mercadolibre.com
+latamairlines.com
+cooperativa.cl
+biobiochile.cl
+nic.cl
