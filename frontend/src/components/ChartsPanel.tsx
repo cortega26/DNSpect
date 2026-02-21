@@ -4,10 +4,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Legend,
   ResponsiveContainer,
-  Scatter,
-  ScatterChart,
   Tooltip,
   XAxis,
   YAxis,
@@ -17,9 +14,10 @@ import type { ResolverResult } from '@/lib/types'
 
 interface Props {
   results: ResolverResult[]
+  variant?: 'minimal' | 'full'
 }
 
-export function ChartsPanel({ results }: Props) {
+export function ChartsPanel({ results, variant = 'full' }: Props) {
   const [topN, setTopN] = useState<number>(10)
 
   const limitedResults = useMemo(() => {
@@ -32,19 +30,11 @@ export function ChartsPanel({ results }: Props) {
     mediana: r.stats.median_ms ?? null,
   }))
 
-  const scatter = limitedResults
-    .filter((r) => r.stats.median_ms !== null && r.stats.p95_ms !== null)
-    .map((r) => ({
-      dns: r.resolver,
-      mediana: r.stats.median_ms,
-      p95: r.stats.p95_ms,
-    }))
-
   return (
     <section className="card">
       <div className="card-header">
         <h2>Gráficos</h2>
-        <p>Mediana por resolver y relación mediana vs p95 para consistencia.</p>
+        <p>{variant === 'minimal' ? 'Vista rápida del Top-N por mediana.' : 'Comparativa Top-N por mediana.'}</p>
         <div className="chart-controls">
           <label>
             Mostrar
@@ -58,34 +48,24 @@ export function ChartsPanel({ results }: Props) {
         </div>
       </div>
 
-      <div className="chart-grid">
-        <div className="chart-card">
-          <h3>Mediana por resolver</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={bars} margin={{ top: 8, right: 16, left: 8, bottom: 48 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="dns" angle={-35} textAnchor="end" height={70} interval={0} />
-              <YAxis unit=" ms" />
-              <Tooltip />
-              <Bar dataKey="mediana" fill="#0f766e" />
-            </BarChart>
-          </ResponsiveContainer>
+      {limitedResults.length === 0 ? (
+        <div className="empty-state">No hay datos para graficar con los filtros actuales.</div>
+      ) : (
+        <div className={variant === 'minimal' ? 'chart-single' : 'chart-grid'}>
+          <div className="chart-card">
+            <h3>Mediana por resolver</h3>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={bars} margin={{ top: 8, right: 16, left: 8, bottom: 48 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="dns" angle={-35} textAnchor="end" height={70} interval={0} />
+                <YAxis unit=" ms" />
+                <Tooltip />
+                <Bar dataKey="mediana" fill="#0f766e" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-
-        <div className="chart-card">
-          <h3>Consistencia (Mediana vs p95)</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <ScatterChart margin={{ top: 8, right: 16, left: 8, bottom: 24 }}>
-              <CartesianGrid />
-              <XAxis type="number" dataKey="mediana" name="Mediana" unit=" ms" />
-              <YAxis type="number" dataKey="p95" name="p95" unit=" ms" />
-              <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-              <Legend />
-              <Scatter data={scatter} name="Resolvers" fill="#0ea5e9" />
-            </ScatterChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      )}
     </section>
   )
 }

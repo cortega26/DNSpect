@@ -6,6 +6,7 @@ interface StartBenchmarkPayload {
   runs?: number
   timeout_sec: number
   resolvers: string[]
+  queries?: string[]
 }
 
 export async function getProviders(): Promise<Provider[]> {
@@ -27,6 +28,7 @@ export async function startBenchmark(payload: StartBenchmarkPayload): Promise<{ 
     resolvers: payload.resolvers,
   }
   if (payload.runs !== undefined) body.runs = payload.runs
+  if (payload.queries && payload.queries.length > 0) body.queries = payload.queries
 
   const res = await fetch(`${API_BASE}/api/benchmarks`, {
     method: 'POST',

@@ -14,12 +14,14 @@ interface Props {
   mode: BenchmarkMode
   runs: number
   timeoutSec: number
+  queriesText: string
   systemResolvers: string[]
   isRunning: boolean
   onToggleResolver: (ip: string) => void
   onModeChange: (mode: BenchmarkMode) => void
   onRunsChange: (value: number) => void
   onTimeoutChange: (value: number) => void
+  onQueriesTextChange: (value: string) => void
   onStart: () => void
 }
 
@@ -66,8 +68,8 @@ export function DashboardControls(props: Props) {
   return (
     <section className="card">
       <div className="card-header">
-        <h2>Dashboard</h2>
-        <p>Selecciona resolvers y parámetros antes de iniciar la prueba.</p>
+        <h2>Controles avanzados</h2>
+        <p>Ajusta parámetros, resolvers y consultas para pruebas detalladas.</p>
       </div>
 
       <div className="mode-grid">
@@ -109,6 +111,15 @@ export function DashboardControls(props: Props) {
               onChange={(e) => props.onTimeoutChange(Number(e.target.value))}
             />
           </label>
+          <label className="queries-field">
+            Consultas (una por línea)
+            <textarea
+              value={props.queriesText}
+              disabled={props.isRunning}
+              onChange={(e) => props.onQueriesTextChange(e.target.value)}
+              placeholder="example.com&#10;cloudflare.com&#10;wikipedia.org"
+            />
+          </label>
         </div>
       </details>
 
@@ -140,7 +151,7 @@ export function DashboardControls(props: Props) {
           ))}
       </div>
 
-      <button className="start-btn" onClick={props.onStart} disabled={props.isRunning || props.selected.size === 0}>
+      <button className="btn-primary" onClick={props.onStart} disabled={props.isRunning || props.selected.size === 0}>
         Iniciar prueba
       </button>
     </section>

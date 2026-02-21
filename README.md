@@ -1,6 +1,6 @@
-# dns-speed-lab
+# DNSpect
 
-`dns-speed-lab` es una app local para comparar resolvers DNS con medición **real de resolución** (no ICMP ping), interfaz moderna en español, exportación de resultados y empaquetado para releases.
+`DNSpect` es una app local para comparar resolvers DNS con medición **real de resolución** (no ICMP ping), interfaz moderna en español, exportación de resultados y empaquetado para releases.
 
 Versión actual: **0.2.0** (SemVer).
 
