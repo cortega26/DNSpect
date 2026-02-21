@@ -351,6 +351,7 @@ a:focus-visible {
   grid-template-rows: 0fr;
   transition: grid-template-rows 0.32s ease;
   margin-top: var(--space-4);
+  overflow: hidden;
 }
 
 .advanced-collapse.is-open {
@@ -358,7 +359,6 @@ a:focus-visible {
 }
 
 .advanced-inner {
-  overflow: hidden;
   border-top: 1px solid var(--border);
   padding-top: var(--space-4);
   display: grid;
