@@ -1,23 +1,16 @@
 import { useMemo, useState } from 'react'
 
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
+import { useI18n } from '@/lib/i18n'
 import type { ResolverResult } from '@/lib/types'
 
 interface Props {
   results: ResolverResult[]
-  variant?: 'minimal' | 'full'
 }
 
-export function ChartsPanel({ results, variant = 'full' }: Props) {
+export function ChartsPanel({ results }: Props) {
+  const { t } = useI18n()
   const [topN, setTopN] = useState<number>(10)
 
   const limitedResults = useMemo(() => {
@@ -25,42 +18,42 @@ export function ChartsPanel({ results, variant = 'full' }: Props) {
     return results.slice(0, topN)
   }, [results, topN])
 
-  const bars = limitedResults.map((r) => ({
-    dns: r.resolver,
-    mediana: r.stats.median_ms ?? null,
+  const bars = limitedResults.map((result) => ({
+    dns: result.resolver,
+    median: result.stats.median_ms ?? null,
   }))
 
   return (
     <section className="card">
       <div className="card-header">
-        <h2>Gráficos</h2>
-        <p>{variant === 'minimal' ? 'Vista rápida del Top-N por mediana.' : 'Comparativa Top-N por mediana.'}</p>
+        <h2>{t('charts.title')}</h2>
+        <p>{t('charts.subtitle')}</p>
         <div className="chart-controls">
           <label>
-            Mostrar
+            {t('charts.show')}
             <select value={topN} onChange={(e) => setTopN(Number(e.target.value))}>
-              <option value={10}>Top 10</option>
-              <option value={15}>Top 15</option>
-              <option value={0}>Todos</option>
+              <option value={10}>{t('charts.top10')}</option>
+              <option value={15}>{t('charts.top15')}</option>
+              <option value={0}>{t('charts.all')}</option>
             </select>
-            resolvers por mediana
+            {t('charts.resolversByMedian')}
           </label>
         </div>
       </div>
 
       {limitedResults.length === 0 ? (
-        <div className="empty-state">No hay datos para graficar con los filtros actuales.</div>
+        <div className="empty-state">{t('charts.empty')}</div>
       ) : (
-        <div className={variant === 'minimal' ? 'chart-single' : 'chart-grid'}>
+        <div className="chart-grid">
           <div className="chart-card">
-            <h3>Mediana por resolver</h3>
+            <h3>{t('charts.medianByResolver')}</h3>
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={bars} margin={{ top: 8, right: 16, left: 8, bottom: 48 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="dns" angle={-35} textAnchor="end" height={70} interval={0} />
-                <YAxis unit=" ms" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="dns" angle={-35} textAnchor="end" height={70} interval={0} stroke="var(--muted)" />
+                <YAxis unit=" ms" stroke="var(--muted)" />
                 <Tooltip />
-                <Bar dataKey="mediana" fill="#0f766e" />
+                <Bar dataKey="median" fill="var(--primary)" />
               </BarChart>
             </ResponsiveContainer>
           </div>

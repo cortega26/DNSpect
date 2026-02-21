@@ -1,51 +1,19 @@
 # DNSpect
 
-`DNSpect` es una app local para comparar resolvers DNS con medición **real de resolución** (no ICMP ping), interfaz moderna en español, exportación de resultados y empaquetado para releases.
+Local DNS resolver benchmark with real query timing (not ICMP ping), guided UI, exports, and release-ready binaries.
 
-Versión actual: **0.2.0** (SemVer).
+[![CI](https://github.com/cortega26/DNSpect/actions/workflows/ci.yml/badge.svg)](https://github.com/cortega26/DNSpect/actions/workflows/ci.yml)
+[![Release](https://github.com/cortega26/DNSpect/actions/workflows/release.yml/badge.svg)](https://github.com/cortega26/DNSpect/actions/workflows/release.yml)
+[![License](https://github.com/cortega26/DNSpect/raw/main/.github/badges/license-mit.svg)](https://github.com/cortega26/DNSpect/blob/main/LICENSE)
 
-## Qué hace
+## Why DNSpect
 
-- Benchmark DNS real por resolver usando:
-  - `drill` (Linux, si está disponible)
-  - `dnspython` (Windows y fallback)
-- Métricas por resolver:
-  - `avg_ms`, `median_ms`, `p95_ms`, `min_ms`, `max_ms`
-  - `ok_count`, `timeout_count`, `success_rate`, `timeout_rate`
-  - `consistency_ratio`, `p95_minus_median_ms`
-- Clasificación de fallos por muestra:
-  - `timeout | nxdomain | servfail | refused | noanswer | other`
-- UI en español con:
-  - Dashboard, ranking, filtros, recomendaciones, gráficos y detalle
-- Exportación:
-  - CSV resumen
-  - JSON resumen o JSON con muestras (`include_samples=1`)
-- Detección automática de DNS del sistema/ISP.
+- Measures DNS resolution latency directly with `drill` (Linux when available) or `dnspython` fallback.
+- Compares resolvers with median, p95, average, timeout rate, and consistency metrics.
+- Runs locally: no analytics, no telemetry.
+- Exports CSV and JSON summaries, plus optional JSON with samples (`include_samples=1`).
 
-## Por qué “ping al DNS” es incorrecto
-
-`ping` mide latencia ICMP hacia una IP, **no** cuánto tarda una resolución DNS. Un resolver puede responder ICMP rápido y resolver consultas lento (o al revés). `dns-speed-lab` mide tiempo real de consulta DNS.
-
-## Privacidad
-
-- No hay telemetría ni analytics.
-- Todo corre localmente.
-- Solo se realizan consultas DNS a los resolvers configurados.
-
-## Requisitos
-
-### Linux (Mint/Ubuntu)
-
-```bash
-sudo apt update
-sudo apt install -y ldnsutils
-```
-
-### Windows 10/11
-
-No requiere `drill`; usa `dnspython` por defecto.
-
-## Quick Start (Dev)
+## Quickstart (Dev)
 
 ### Linux/macOS
 
@@ -53,13 +21,13 @@ No requiere `drill`; usa `dnspython` por defecto.
 bash scripts/dev.sh
 ```
 
-Variables opcionales:
+Optional env vars:
 
 - `BACKEND_HOST` (default `127.0.0.1`)
 - `BACKEND_PORT` (default `8000`)
 - `FRONTEND_HOST` (default `127.0.0.1`)
 - `FRONTEND_PORT` (default `5173`)
-- `PYTHON_BIN` (si necesitas forzar un Python específico)
+- `PYTHON_BIN` (optional Python override)
 
 ### Windows (PowerShell)
 
@@ -67,7 +35,38 @@ Variables opcionales:
 .\scripts\dev.ps1
 ```
 
-## Smoke Tests
+## Releases
+
+DNSpect release artifacts bundle the built frontend served by FastAPI and a packaged backend.
+
+1. Download the latest asset from [GitHub Releases](https://github.com/cortega26/DNSpect/releases).
+2. Run the binary (`dns-speed-lab-linux` or `dns-speed-lab-windows.exe`).
+3. Open `http://127.0.0.1:8000`.
+
+Optional env vars:
+
+- `DNS_SPEED_LAB_HOST` (default `127.0.0.1`)
+- `DNS_SPEED_LAB_PORT` (default `8000`)
+- `DNS_SPEED_LAB_OPEN_BROWSER` (`1` or `0`)
+
+## Privacy
+
+- Everything runs locally on your machine.
+- DNSpect only sends DNS queries to selected resolvers.
+- No telemetry/analytics collection.
+
+## Troubleshooting
+
+- Linux DNS tooling and runtime notes: [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)
+- Security reporting: [`SECURITY.md`](SECURITY.md)
+
+## Contributing
+
+- Contribution flow and standards: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- Architecture overview: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- Provider data details: [`docs/PROVIDERS.md`](docs/PROVIDERS.md)
+
+## Smoke Test
 
 ### Linux/macOS
 
@@ -80,56 +79,3 @@ bash scripts/smoke_test.sh
 ```powershell
 .\scripts\smoke_test.ps1
 ```
-
-## API principal
-
-- `GET /api/health`
-- `GET /api/providers`
-- `GET /api/dns/system`
-- `POST /api/benchmarks`
-- `GET /api/benchmarks/{id}` (por defecto sin muestras)
-- `GET /api/benchmarks/{id}?include_samples=1`
-- `GET /api/benchmarks/{id}/export.csv`
-- `GET /api/benchmarks/{id}/export.json`
-- `GET /api/benchmarks/{id}/export.json?include_samples=1`
-
-## Releases (binario descargable)
-
-Estrategia: **Option B**
-
-- Frontend compilado (`frontend/dist`) servido por backend FastAPI
-- Backend empaquetado con PyInstaller
-
-### Ejecutar binario
-
-1. Descarga el artefacto de GitHub Releases.
-2. Ejecuta el binario (`dns-speed-lab-linux` o `dns-speed-lab-windows.exe`).
-3. Abre `http://127.0.0.1:8000`.
-
-Variables opcionales:
-
-- `DNS_SPEED_LAB_HOST` (default `127.0.0.1`)
-- `DNS_SPEED_LAB_PORT` (default `8000`)
-- `DNS_SPEED_LAB_OPEN_BROWSER` (`1`/`0`)
-
-## Calidad y CI
-
-- Backend: `ruff`, `mypy`, `pytest`
-- Frontend: `eslint`, `typecheck`, `build`
-- CI en `.github/workflows/ci.yml`
-- Release automation por tag `vX.Y.Z` en `.github/workflows/release.yml`
-
-## Versionado
-
-SemVer. Mantener alineados:
-
-- `backend/app/__init__.py`
-- `backend/pyproject.toml`
-- `frontend/package.json`
-- `CHANGELOG.md`
-
-## Documentación adicional
-
-- `docs/ARCHITECTURE.md`
-- `docs/PROVIDERS.md`
-- `docs/TROUBLESHOOTING.md`

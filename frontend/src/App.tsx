@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { ChartsPanel } from '@/components/ChartsPanel'
-import { DashboardControls } from '@/components/DashboardControls'
+import { DashboardControls, type TimeoutPreset } from '@/components/DashboardControls'
 import { ResolverDetailModal } from '@/components/ResolverDetailModal'
 import { ResultsTable } from '@/components/ResultsTable'
+import { useI18n, type Language } from '@/lib/i18n'
 import { getBenchmark, getProviders, getSystemDns, startBenchmark } from '@/lib/api'
+import { useTheme } from '@/lib/theme'
 import type { BenchmarkMode, BenchmarkStatus, Provider, ResolverResult, SystemDnsPayload } from '@/lib/types'
 import { API_BASE, fmtMs, recommendations, sortRanking } from '@/lib/utils'
 
@@ -13,9 +15,6 @@ const MODE_RUNS: Record<BenchmarkMode, number> = {
   standard: 30,
   exhaustive: 80,
 }
-
-type TabId = 'basic' | 'advanced'
-type TimeoutPreset = 'low' | 'medium' | 'high'
 
 const BASIC_TIMEOUT_PRESET: Record<TimeoutPreset, number> = {
   low: 1.5,
@@ -43,16 +42,27 @@ function nearestTimeoutPreset(seconds: number): TimeoutPreset {
   }, 'medium')
 }
 
+const languageOptions: Array<{ value: Language; flag: string; code: string }> = [
+  { value: 'es', flag: '🇪🇸', code: 'ES' },
+  { value: 'en', flag: '🇺🇸', code: 'EN' },
+  { value: 'pt', flag: '🇧🇷', code: 'PT' },
+]
+
 function App() {
+  const { language, setLanguage, t } = useI18n()
+  const { theme, toggleTheme } = useTheme()
+  const nextThemeLabel = theme === 'dark' ? t('header.themeToggleToLight') : t('header.themeToggleToDark')
+
   const [providers, setProviders] = useState<Provider[]>([])
   const [systemDns, setSystemDns] = useState<SystemDnsPayload | null>(null)
   const [selectedResolvers, setSelectedResolvers] = useState<Set<string>>(new Set())
-  const [activeTab, setActiveTab] = useState<TabId>('basic')
   const [mode, setMode] = useState<BenchmarkMode>('standard')
   const [runs, setRuns] = useState<number>(MODE_RUNS.standard)
   const [timeoutSec, setTimeoutSec] = useState<number>(2)
   const [timeoutPreset, setTimeoutPreset] = useState<TimeoutPreset>('medium')
   const [queriesText, setQueriesText] = useState<string>('')
+  const [advancedOpen, setAdvancedOpen] = useState<boolean>(false)
+
   const [benchmarkId, setBenchmarkId] = useState<string | null>(null)
   const [status, setStatus] = useState<BenchmarkStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -61,6 +71,9 @@ function App() {
   const [searchTerm, setSearchTerm] = useState<string>('')
   const [onlyReliable, setOnlyReliable] = useState<boolean>(false)
   const [naLast, setNaLast] = useState<boolean>(true)
+  const [localeMenuOpen, setLocaleMenuOpen] = useState<boolean>(false)
+  const localeMenuRef = useRef<HTMLDivElement>(null)
+  const localeTriggerRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     async function init() {
@@ -129,12 +142,39 @@ function App() {
   const progressPct = status?.progress.total
     ? Math.round((status.progress.current / status.progress.total) * 100)
     : 0
+  const activeLanguage = useMemo(
+    () => languageOptions.find((option) => option.value === language) ?? languageOptions[0],
+    [language],
+  )
+
+  useEffect(() => {
+    if (!localeMenuOpen) return
+
+    function handlePointerDown(event: MouseEvent) {
+      if (localeMenuRef.current && !localeMenuRef.current.contains(event.target as Node)) {
+        setLocaleMenuOpen(false)
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return
+      setLocaleMenuOpen(false)
+      localeTriggerRef.current?.focus()
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [localeMenuOpen])
 
   async function handleStart() {
     setError(null)
     setSelectedResult(null)
     try {
-      const customQueries = activeTab === 'advanced' ? parseQueries(queriesText) : []
+      const customQueries = parseQueries(queriesText)
       const payload = {
         mode,
         runs,
@@ -147,7 +187,7 @@ function App() {
       const initial = await getBenchmark(response.benchmark_id)
       setStatus(initial)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo iniciar benchmark')
+      setError(e instanceof Error ? e.message : t('error.benchmarkStart'))
     }
   }
 
@@ -163,18 +203,6 @@ function App() {
   function onModeChange(nextMode: BenchmarkMode) {
     setMode(nextMode)
     setRuns(MODE_RUNS[nextMode])
-  }
-
-  function onBasicModeChange(nextMode: BenchmarkMode) {
-    if (nextMode === 'exhaustive') return
-    onModeChange(nextMode)
-  }
-
-  function switchTab(nextTab: TabId) {
-    if (nextTab === 'basic' && mode === 'exhaustive') {
-      onModeChange('standard')
-    }
-    setActiveTab(nextTab)
   }
 
   function applyRecommendation() {
@@ -197,7 +225,7 @@ function App() {
         setSelectedResult(resolved)
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudieron cargar las muestras')
+      setError(e instanceof Error ? e.message : t('error.samples'))
     } finally {
       setLoadingSamples(false)
     }
@@ -209,291 +237,255 @@ function App() {
 
   return (
     <div className="app-shell">
-      <header className="hero">
-        <h1>DNS Speed Lab</h1>
-        <p>
-          Benchmark local de resolución DNS real (sin ping). Compara latencia, consistencia y timeouts con una vista clara
-          en español.
-        </p>
-      </header>
-
-      <section className="tab-shell">
-        <div className="tab-list" role="tablist" aria-label="Vistas de uso">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'basic'}
-            className={`tab-btn ${activeTab === 'basic' ? 'tab-btn-active' : ''}`}
-            onClick={() => switchTab('basic')}
-          >
-            Básico
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'advanced'}
-            className={`tab-btn ${activeTab === 'advanced' ? 'tab-btn-active' : ''}`}
-            onClick={() => switchTab('advanced')}
-          >
-            Avanzado
-          </button>
+      <header className="app-header">
+        <div className="hero">
+          <h1>{t('app.title')}</h1>
+          <p>{t('app.subtitle')}</p>
         </div>
 
-        {activeTab === 'basic' ? (
-          <section className="card">
-            <div className="card-header">
-              <h2>Flujo guiado</h2>
-              <p>Elige modo y tolerancia, luego inicia. La selección de resolvers queda gestionada automáticamente.</p>
-            </div>
-            <div className="basic-grid">
-              <div>
-                <p className="label-caption">Modo</p>
-                <div className="mode-grid">
-                  {(['quick', 'standard'] as BenchmarkMode[]).map((basicMode) => (
-                    <button
-                      key={basicMode}
-                      type="button"
-                      className={`chip ${mode === basicMode ? 'chip-active' : ''}`}
-                      onClick={() => onBasicModeChange(basicMode)}
-                      disabled={isRunning}
-                    >
-                      {basicMode === 'quick' ? 'Quick' : 'Standard'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="label-caption">Timeout</p>
-                <div className="mode-grid">
-                  {(['low', 'medium', 'high'] as TimeoutPreset[]).map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      className={`chip ${timeoutPreset === preset ? 'chip-active' : ''}`}
-                      onClick={() => {
-                        setTimeoutPreset(preset)
-                        setTimeoutSec(BASIC_TIMEOUT_PRESET[preset])
-                      }}
-                      disabled={isRunning}
-                    >
-                      {preset === 'low' ? 'Bajo' : preset === 'medium' ? 'Medio' : 'Alto'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="actions-row">
-              <button
-                className="btn-primary"
-                onClick={() => {
-                  void handleStart()
-                }}
-                disabled={isRunning || selectedResolvers.size === 0}
-              >
-                Iniciar benchmark
-              </button>
-              <p className="muted">Resolvers incluidos: {selectedResolvers.size}</p>
-            </div>
-          </section>
-        ) : (
-          <>
-            <DashboardControls
-              providers={providers}
-              selected={selectedResolvers}
-              mode={mode}
-              runs={runs}
-              timeoutSec={timeoutSec}
-              queriesText={queriesText}
-              systemResolvers={systemDns?.resolvers ?? []}
-              isRunning={isRunning}
-              onToggleResolver={toggleResolver}
-              onModeChange={onModeChange}
-              onRunsChange={(v) => setRuns(Math.max(1, Math.min(300, Number.isFinite(v) ? v : runs)))}
-              onTimeoutChange={(v) => setTimeoutSec(Math.max(0.2, Math.min(10, Number.isFinite(v) ? v : timeoutSec)))}
-              onQueriesTextChange={setQueriesText}
-              onStart={() => {
-                void handleStart()
-              }}
-            />
+        <div className="header-actions">
+          <button
+            className="btn-ghost icon-btn theme-toggle"
+            type="button"
+            onClick={toggleTheme}
+            aria-label={nextThemeLabel}
+            title={nextThemeLabel}
+          >
+            <span className="theme-icon" aria-hidden="true">
+              {theme === 'dark' ? '☀' : '☾'}
+            </span>
+          </button>
+          <div className="locale-menu" ref={localeMenuRef}>
+            <button
+              ref={localeTriggerRef}
+              className="select-inline locale-trigger"
+              type="button"
+              aria-label={t('header.language')}
+              aria-haspopup="menu"
+              aria-expanded={localeMenuOpen}
+              onClick={() => setLocaleMenuOpen((prev) => !prev)}
+            >
+              <span className="locale-current" aria-hidden="true">
+                {activeLanguage.flag} {activeLanguage.code}
+              </span>
+              <span className="select-caret" aria-hidden="true">
+                ▾
+              </span>
+            </button>
 
-            {systemDns && (
-              <section className="card compact">
-                <h3>DNS detectados del sistema</h3>
-                <p>
-                  Método: <strong>{systemDns.method}</strong> | Plataforma: <strong>{systemDns.platform}</strong>
-                </p>
-                <p>{systemDns.resolvers.length ? systemDns.resolvers.join(', ') : 'No se detectaron resolvers locales.'}</p>
-              </section>
-            )}
-          </>
-        )}
-      </section>
+            {localeMenuOpen ? (
+              <div className="locale-dropdown" role="menu" aria-label={t('header.language')}>
+                {languageOptions.map((option) => {
+                  const selected = option.value === language
+                  return (
+                    <button
+                      key={option.value}
+                      className={`locale-item${selected ? ' is-active' : ''}`}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={selected}
+                      onClick={() => {
+                        setLanguage(option.value)
+                        setLocaleMenuOpen(false)
+                        localeTriggerRef.current?.focus()
+                      }}
+                    >
+                      <span>{option.flag} {option.code}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </header>
+
+      <DashboardControls
+        providers={providers}
+        selected={selectedResolvers}
+        mode={mode}
+        runs={runs}
+        timeoutSec={timeoutSec}
+        timeoutPreset={timeoutPreset}
+        queriesText={queriesText}
+        systemResolvers={systemDns?.resolvers ?? []}
+        isRunning={isRunning}
+        advancedOpen={advancedOpen}
+        onToggleResolver={toggleResolver}
+        onModeChange={onModeChange}
+        onRunsChange={(v) => setRuns(Math.max(1, Math.min(300, Number.isFinite(v) ? v : runs)))}
+        onTimeoutChange={(v) => setTimeoutSec(Math.max(0.2, Math.min(10, Number.isFinite(v) ? v : timeoutSec)))}
+        onTimeoutPresetChange={(preset) => {
+          setTimeoutPreset(preset)
+          setTimeoutSec(BASIC_TIMEOUT_PRESET[preset])
+        }}
+        onQueriesTextChange={setQueriesText}
+        onToggleAdvanced={() => setAdvancedOpen((prev) => !prev)}
+        onStart={() => {
+          void handleStart()
+        }}
+      />
+
+      {systemDns && (
+        <section className="card compact">
+          <h3>{t('systemDns.title')}</h3>
+          <p>
+            {t('systemDns.method')}: <strong>{systemDns.method}</strong> | {t('systemDns.platform')}:{' '}
+            <strong>{systemDns.platform}</strong>
+          </p>
+          <p>{systemDns.resolvers.length ? systemDns.resolvers.join(', ') : t('systemDns.none')}</p>
+        </section>
+      )}
 
       {error && (
         <section className="error-box" role="alert">
           <p>
-            <strong>No se pudo completar la acción:</strong> {error}
+            <strong>{t('error.title')}</strong> {error}
           </p>
           <ul className="hint-list">
-            <li>Verifica que el backend esté activo y sin bloqueo de red.</li>
-            <li>Reduce timeout o cantidad de resolvers si el equipo está saturado.</li>
-            <li>Reintenta la prueba en unos segundos.</li>
+            <li>{t('error.hint1')}</li>
+            <li>{t('error.hint2')}</li>
+            <li>{t('error.hint3')}</li>
           </ul>
         </section>
       )}
 
       {status && (
         <section className={`card compact status-${status.status}`}>
-          <h3>Estado del benchmark</h3>
+          <h3>{t('status.title')}</h3>
           <p>
-            Estado: <strong>{status.status}</strong> | Motor: <strong>{status.engine ?? 'pendiente'}</strong>
+            {t('status.label')}: <strong>{status.status}</strong> | {t('status.engine')}:{' '}
+            <strong>{status.engine ?? t('status.pending')}</strong>
           </p>
-          {status.status === 'running' && <p>Ejecutando consultas. Mantén esta ventana abierta hasta completar el 100%.</p>}
+          {status.status === 'running' && <p>{t('status.runningHint')}</p>}
           {status.status === 'error' && (
             <p>
-              El benchmark reportó error: <strong>{status.error ?? 'sin detalle adicional'}</strong>
+              {t('status.errorHint', { error: status.error ?? t('status.pending') })}
             </p>
           )}
           <div className="progress-wrap">
             <div className="progress-bar" style={{ width: `${progressPct}%` }} />
           </div>
           <p>
-            Progreso: {status.progress.current}/{status.progress.total} ({progressPct}%)
+            {t('status.progress', { current: status.progress.current, total: status.progress.total, pct: progressPct })}
           </p>
-          <p>Resolver actual: {status.progress.current_resolver ?? 'N/A'}</p>
+          <p>{t('status.currentResolver', { resolver: status.progress.current_resolver ?? t('summary.na') })}</p>
         </section>
       )}
 
       {hasResults && sortedResults.length > 0 && (
         <>
           <section className="card compact next-actions">
-            <h3>Siguientes acciones</h3>
+            <h3>{t('nextActions.title')}</h3>
             <div className="actions-row">
               <button className="btn-primary" onClick={applyRecommendation} disabled={!recommendationAvailable}>
-                Aplicar recomendación
+                {t('nextActions.applyRecommendation')}
               </button>
               <a className="btn-secondary" href={`${API_BASE}/api/benchmarks/${benchmarkId}/export.json`}>
-                Descargar resumen
+                {t('nextActions.downloadSummary')}
               </a>
               <button className="btn-ghost" onClick={() => primaryResult && handleSelectResult(primaryResult)} disabled={!primaryResult}>
-                Ver detalle
+                {t('nextActions.viewDetail')}
               </button>
             </div>
           </section>
 
-          {activeTab === 'basic' && (
-            <>
-              <section className="card compact">
-                <h3>Recomendación</h3>
-                <p>
-                  Primario sugerido: <strong>{picks.primary ?? 'N/A'}</strong> | Secundario sugerido:{' '}
-                  <strong>{picks.secondary ?? 'N/A'}</strong>
-                </p>
-                <p>Recomendado para un equilibrio entre velocidad, estabilidad y fallos mínimos.</p>
-              </section>
+          <section className="card compact">
+            <h3>{t('recommendation.title')}</h3>
+            <p>{t('recommendation.primary', { resolver: picks.primary ?? t('summary.na') })}</p>
+            <p>{t('recommendation.secondary', { resolver: picks.secondary ?? t('summary.na') })}</p>
+            <p>{t('recommendation.copy')}</p>
+          </section>
 
-              <section className="card compact">
-                <h3>Resumen rápido</h3>
-                <div className="summary-grid">
-                  <article className="metric-card" title="Rápido = mediana (ms)">
-                    <h4>Rápido</h4>
-                    <p>{fmtMs(primaryResult?.stats.median_ms ?? null)}</p>
-                  </article>
-                  <article className="metric-card" title="Estable = p95 (ms)">
-                    <h4>Estable</h4>
-                    <p>{fmtMs(primaryResult?.stats.p95_ms ?? null)}</p>
-                  </article>
-                  <article className="metric-card" title="Confiable = 1 - timeout_rate">
-                    <h4>Confiable</h4>
-                    <p>{reliabilityPct === null ? 'NA' : `${reliabilityPct.toFixed(0)}%`}</p>
-                  </article>
-                </div>
-              </section>
+          <section className="card compact">
+            <h3>{t('summary.title')}</h3>
+            <div className="summary-grid">
+              <article className="metric-card" title="Rendimiento de mediana (ms)">
+                <h4>{t('summary.fast')}</h4>
+                <p>{fmtMs(primaryResult?.stats.median_ms ?? null)}</p>
+              </article>
+              <article className="metric-card" title="Estabilidad p95 (ms)">
+                <h4>{t('summary.stable')}</h4>
+                <p>{fmtMs(primaryResult?.stats.p95_ms ?? null)}</p>
+              </article>
+              <article className="metric-card" title="Confiabilidad = 1 - timeout_rate">
+                <h4>{t('summary.reliable')}</h4>
+                <p>{reliabilityPct === null ? t('summary.na') : `${reliabilityPct.toFixed(0)}%`}</p>
+              </article>
+            </div>
+          </section>
 
-              <ChartsPanel results={filteredResults} variant="minimal" />
-            </>
-          )}
+          <section className="card compact">
+            <h3>{t('guide.title')}</h3>
+            <p>{t('guide.line1')}</p>
+            <p>{t('guide.line2')}</p>
+          </section>
 
-          {activeTab === 'advanced' && (
-            <>
-              <section className="card compact">
-                <h3>Cómo leer los resultados</h3>
-                <p>
-                  <strong>Mediana:</strong> latencia típica. <strong>p95:</strong> estabilidad en escenarios malos.{' '}
-                  <strong>Timeouts:</strong> fallos por demora.
-                </p>
-                <p>
-                  Nota: <strong>hacer ping al DNS no mide resolución DNS</strong>; esta app sí mide el tiempo real de consulta.
-                </p>
-              </section>
+          <section className="card compact">
+            <h3>{t('filters.title')}</h3>
+            <div className="filters-grid">
+              <label>
+                {t('filters.searchLabel')}
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder={t('filters.searchPlaceholder')}
+                  disabled={isRunning}
+                />
+              </label>
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={onlyReliable}
+                  disabled={isRunning}
+                  onChange={(e) => setOnlyReliable(e.target.checked)}
+                />
+                {t('filters.onlyReliable')}
+              </label>
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={naLast}
+                  disabled={isRunning}
+                  onChange={(e) => setNaLast(e.target.checked)}
+                />
+                {t('filters.naLast')}
+              </label>
+            </div>
+          </section>
 
-              <section className="card compact">
-                <h3>Filtros de ranking</h3>
-                <div className="filters-grid">
-                  <label>
-                    Buscar (IP, proveedor, tags)
-                    <input
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="ej: cloudflare, 1.1.1.1, privacidad"
-                      disabled={isRunning}
-                    />
-                  </label>
-                  <label className="toggle">
-                    <input
-                      type="checkbox"
-                      checked={onlyReliable}
-                      disabled={isRunning}
-                      onChange={(e) => setOnlyReliable(e.target.checked)}
-                    />
-                    Solo confiables (timeout_rate ≤ 0.20)
-                  </label>
-                  <label className="toggle">
-                    <input
-                      type="checkbox"
-                      checked={naLast}
-                      disabled={isRunning}
-                      onChange={(e) => setNaLast(e.target.checked)}
-                    />
-                    Mostrar NA al final
-                  </label>
-                </div>
-              </section>
+          <ResultsTable
+            results={filteredResults}
+            primary={picks.primary}
+            secondary={picks.secondary}
+            emptyMessage={t('filters.empty')}
+            onSelect={handleSelectResult}
+          />
 
-              <ResultsTable
-                results={filteredResults}
-                primary={picks.primary}
-                secondary={picks.secondary}
-                emptyMessage="No hay resultados para los filtros aplicados. Ajusta búsqueda o desactiva filtros."
-                onSelect={handleSelectResult}
-              />
+          <ChartsPanel results={filteredResults} />
 
-              <ChartsPanel results={filteredResults} variant="full" />
-
-              <section className="card compact">
-                <h3>Exportar</h3>
-                <div className="actions-row">
-                  <a className="btn-secondary" href={`${API_BASE}/api/benchmarks/${benchmarkId}/export.csv`}>
-                    Descargar CSV
-                  </a>
-                  <a className="btn-secondary" href={`${API_BASE}/api/benchmarks/${benchmarkId}/export.json`}>
-                    Descargar JSON (resumen)
-                  </a>
-                  <a className="btn-secondary" href={`${API_BASE}/api/benchmarks/${benchmarkId}/export.json?include_samples=1`}>
-                    Descargar JSON (con muestras)
-                  </a>
-                </div>
-              </section>
-            </>
-          )}
+          <section className="card compact">
+            <h3>{t('exports.title')}</h3>
+            <div className="actions-row">
+              <a className="btn-secondary" href={`${API_BASE}/api/benchmarks/${benchmarkId}/export.csv`}>
+                {t('exports.csv')}
+              </a>
+              <a className="btn-secondary" href={`${API_BASE}/api/benchmarks/${benchmarkId}/export.json`}>
+                {t('exports.jsonSummary')}
+              </a>
+              <a className="btn-secondary" href={`${API_BASE}/api/benchmarks/${benchmarkId}/export.json?include_samples=1`}>
+                {t('exports.jsonSamples')}
+              </a>
+            </div>
+          </section>
         </>
       )}
 
       {hasResults && sortedResults.length === 0 && (
         <section className="card compact">
-          <h3>Sin datos de ranking</h3>
-          <p>La prueba terminó sin resultados utilizables. Reintenta con más timeout o menos resolvers.</p>
+          <h3>{t('noRanking.title')}</h3>
+          <p>{t('noRanking.text')}</p>
         </section>
       )}
 

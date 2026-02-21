@@ -1,15 +1,6 @@
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
+import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
+import { useI18n } from '@/lib/i18n'
 import type { Provider, ResolverResult } from '@/lib/types'
 import { fmtMs } from '@/lib/utils'
 
@@ -43,6 +34,7 @@ function makeHistogram(samples: number[]): Array<{ bucket: string; count: number
 const FAILURE_KINDS = ['timeout', 'nxdomain', 'servfail', 'refused', 'noanswer', 'other'] as const
 
 export function ResolverDetailModal({ result, provider, canLoadSamples, isLoadingSamples, onLoadSamples, onClose }: Props) {
+  const { t } = useI18n()
   const lineData = result.samples.map((s) => ({ run: s.run_index, ms: s.ms ?? null }))
   const okSamples = result.samples.filter((s) => s.ok && s.ms !== null).map((s) => s.ms as number)
   const histogram = makeHistogram(okSamples)
@@ -55,28 +47,42 @@ export function ResolverDetailModal({ result, provider, canLoadSamples, isLoadin
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h3>Detalle del resolver {result.resolver}</h3>
-          <button onClick={onClose}>Cerrar</button>
+          <h3>{t('modal.title', { resolver: result.resolver })}</h3>
+          <button onClick={onClose}>{t('modal.close')}</button>
         </div>
 
-        <p className="muted">Proveedor: {provider?.name ?? result.provider_name}</p>
-        <p className="muted">{provider?.notes_es ?? 'Sin descripción.'}</p>
+        <p className="muted">
+          {t('modal.provider')}: {provider?.name ?? result.provider_name}
+        </p>
+        <p className="muted">{provider?.notes_es ?? t('modal.noDescription')}</p>
 
         <div className="stats-grid">
-          <div><strong>Mediana:</strong> {fmtMs(result.stats.median_ms)}</div>
-          <div><strong>p95:</strong> {fmtMs(result.stats.p95_ms)}</div>
-          <div><strong>Promedio:</strong> {fmtMs(result.stats.avg_ms)}</div>
-          <div><strong>Mín/Máx:</strong> {fmtMs(result.stats.min_ms)} / {fmtMs(result.stats.max_ms)}</div>
-          <div><strong>OK:</strong> {result.stats.ok_count}</div>
-          <div><strong>Timeouts:</strong> {result.stats.timeout_count}</div>
+          <div>
+            <strong>{t('modal.median')}:</strong> {fmtMs(result.stats.median_ms)}
+          </div>
+          <div>
+            <strong>{t('modal.p95')}:</strong> {fmtMs(result.stats.p95_ms)}
+          </div>
+          <div>
+            <strong>{t('modal.average')}:</strong> {fmtMs(result.stats.avg_ms)}
+          </div>
+          <div>
+            <strong>{t('modal.minMax')}:</strong> {fmtMs(result.stats.min_ms)} / {fmtMs(result.stats.max_ms)}
+          </div>
+          <div>
+            <strong>{t('modal.ok')}:</strong> {result.stats.ok_count}
+          </div>
+          <div>
+            <strong>{t('modal.timeouts')}:</strong> {result.stats.timeout_count}
+          </div>
         </div>
 
         {result.samples.length === 0 ? (
           <section className="samples-callout">
-            <p>Este benchmark se cargó en modo resumen, por eso no hay muestras detalladas todavía.</p>
+            <p>{t('modal.samplesSummary')}</p>
             {canLoadSamples && (
               <button className="btn-primary" disabled={isLoadingSamples} onClick={onLoadSamples}>
-                {isLoadingSamples ? 'Cargando muestras...' : 'Cargar muestras'}
+                {isLoadingSamples ? t('modal.loadingSamples') : t('modal.loadSamples')}
               </button>
             )}
           </section>
@@ -93,27 +99,34 @@ export function ResolverDetailModal({ result, provider, canLoadSamples, isLoadin
 
             <div className="detail-charts">
               <div>
-                <h4>Serie temporal por corrida</h4>
+                <h4>{t('modal.timeSeries')}</h4>
                 <ResponsiveContainer width="100%" height={220}>
                   <LineChart data={lineData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="run" />
-                    <YAxis unit=" ms" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="run" stroke="var(--muted)" />
+                    <YAxis unit=" ms" stroke="var(--muted)" />
                     <Tooltip />
-                    <Line type="monotone" dataKey="ms" stroke="#0f766e" strokeWidth={2} dot={false} connectNulls={false} />
+                    <Line
+                      type="monotone"
+                      dataKey="ms"
+                      stroke="var(--primary)"
+                      strokeWidth={2}
+                      dot={false}
+                      connectNulls={false}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
 
               <div>
-                <h4>Distribución (histograma)</h4>
+                <h4>{t('modal.histogram')}</h4>
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={histogram}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="bucket" />
-                    <YAxis allowDecimals={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="bucket" stroke="var(--muted)" />
+                    <YAxis allowDecimals={false} stroke="var(--muted)" />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#0ea5e9" />
+                    <Bar dataKey="count" fill="var(--primary)" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
