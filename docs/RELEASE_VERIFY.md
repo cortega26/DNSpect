@@ -1,12 +1,12 @@
 # Release Artifact Verification
 
 DNSpect release assets include platform executables plus a `checksums.txt` file with SHA256 hashes.
+Current release channel publishes macOS as arm64-only.
 
 Expected artifact names:
 
 - `dnspect-linux-x64`
 - `dnspect-windows-x64.exe`
-- `dnspect-macos-x64`
 - `dnspect-macos-arm64`
 - `checksums.txt`
 - `checksums.txt.sig` (optional, if signing is enabled)
@@ -35,7 +35,6 @@ shasum -a 256 dnspect-linux-x64
 
 ```bash
 shasum -a 256 dnspect-macos-arm64
-shasum -a 256 dnspect-macos-x64
 ```
 
 Compare output against entries in `checksums.txt`.

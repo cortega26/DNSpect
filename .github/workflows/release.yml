@@ -32,11 +32,6 @@ jobs:
             asset_name: dnspect-macos-arm64
             node_arch: arm64
             python_arch: arm64
-          - os: macos-14
-            source_binary: dns-speed-lab-darwin
-            asset_name: dnspect-macos-x64
-            node_arch: x64
-            python_arch: x64
     env:
       PYTHONHASHSEED: "0"
       TZ: UTC
@@ -49,16 +44,6 @@ jobs:
       - name: Set deterministic build timestamp
         shell: bash
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
-
-      - name: Install Rosetta (macOS x64 build)
-        if: ${{ startsWith(matrix.os, 'macos') && matrix.python_arch == 'x64' }}
-        shell: bash
-        run: |
-          if /usr/bin/arch -x86_64 /usr/bin/true 2>/dev/null; then
-            echo "Rosetta already available."
-          else
-            sudo softwareupdate --install-rosetta --agree-to-license
-          fi
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -128,7 +113,6 @@ jobs:
           fi
 
           case "${{ matrix.asset_name }}" in
-            dnspect-macos-x64) expected_arch="x86_64" ;;
             dnspect-macos-arm64) expected_arch="arm64" ;;
             *)
               echo "::error::Unexpected macOS artifact name: ${{ matrix.asset_name }}"
@@ -154,10 +138,6 @@ jobs:
             echo "lipo -archs: $archs"
             if [[ "$archs" == *"x86_64"* && "$archs" == *"arm64"* ]]; then
               echo "::error::Universal binary detected for $artifact ($archs), but per-arch asset '${{ matrix.asset_name }}' is required. Publish as dnspect-macos-universal if desired."
-              exit 1
-            fi
-            if [[ "${{ matrix.asset_name }}" == "dnspect-macos-x64" && "$archs" != "x86_64" ]]; then
-              echo "::error::Architecture mismatch for $artifact. Expected exactly 'x86_64' from 'lipo -archs', got '$archs'."
               exit 1
             fi
             if [[ "${{ matrix.asset_name }}" == "dnspect-macos-arm64" && "$archs" != "arm64" ]]; then
@@ -197,7 +177,6 @@ jobs:
           cat > .artifact-list <<'EOF'
           dnspect-linux-x64
           dnspect-windows-x64.exe
-          dnspect-macos-x64
           dnspect-macos-arm64
           EOF
           : > checksums.txt
@@ -259,7 +238,6 @@ jobs:
           files: |
             release-assets/dnspect-linux-x64
             release-assets/dnspect-windows-x64.exe
-            release-assets/dnspect-macos-x64
             release-assets/dnspect-macos-arm64
             release-assets/checksums.txt
             release-assets/checksums.txt.sig
