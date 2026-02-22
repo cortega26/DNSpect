@@ -129,8 +129,21 @@ jobs:
           rm -f .artifact-list
           cat checksums.txt
 
+      - name: Detect GPG signing availability
+        id: gpg_setup
+        shell: bash
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          if [[ -n "$GPG_PRIVATE_KEY" && -n "$GPG_PASSPHRASE" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Import GPG key
-        if: ${{ secrets.GPG_PRIVATE_KEY != '' && secrets.GPG_PASSPHRASE != '' }}
+        if: ${{ steps.gpg_setup.outputs.enabled == 'true' }}
         shell: bash
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -144,7 +157,7 @@ jobs:
           fi
 
       - name: Sign checksums.txt
-        if: ${{ secrets.GPG_PRIVATE_KEY != '' && secrets.GPG_PASSPHRASE != '' }}
+        if: ${{ steps.gpg_setup.outputs.enabled == 'true' }}
         shell: bash
         env:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}

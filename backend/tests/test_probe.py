@@ -15,9 +15,21 @@ def test_probe_returns_median_and_failure_rate(monkeypatch) -> None:
         ],
         "8.8.8.8": [
             {"ok": True, "ms": 30.0, "query": "example.com", "error": None, "failure_kind": None},
-            {"ok": False, "ms": None, "query": "cloudflare.com", "error": "timeout", "failure_kind": "timeout"},
+            {
+                "ok": False,
+                "ms": None,
+                "query": "cloudflare.com",
+                "error": "timeout",
+                "failure_kind": "timeout",
+            },
             {"ok": True, "ms": 32.0, "query": "example.com", "error": None, "failure_kind": None},
-            {"ok": False, "ms": None, "query": "cloudflare.com", "error": "timeout", "failure_kind": "timeout"},
+            {
+                "ok": False,
+                "ms": None,
+                "query": "cloudflare.com",
+                "error": "timeout",
+                "failure_kind": "timeout",
+            },
         ],
     }
     cursor = {resolver: 0 for resolver in scripted}

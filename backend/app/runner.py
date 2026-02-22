@@ -385,7 +385,11 @@ class BenchmarkManager:
                     samples.append(sample)
                     if sample["ok"] and sample["ms"] is not None:
                         successful_ms.append(float(sample["ms"]))
-                    observed_latency = float(sample["ms"]) if sample["ok"] and sample["ms"] is not None else None
+                    observed_latency = (
+                        float(sample["ms"])
+                        if sample["ok"] and sample["ms"] is not None
+                        else None
+                    )
                     self._update_progress(
                         benchmark_id,
                         increment=1,

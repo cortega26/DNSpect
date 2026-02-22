@@ -13,7 +13,11 @@ def _ranked(results: list[dict]) -> list[dict]:
         key=lambda item: (
             item["stats"]["score_total"] if item["stats"]["score_total"] is not None else float("inf"),
             item["stats"]["avg_ms"] if item["stats"]["avg_ms"] is not None else float("inf"),
-            item["stats"]["score_stability"] if item["stats"]["score_stability"] is not None else float("inf"),
+            (
+                item["stats"]["score_stability"]
+                if item["stats"]["score_stability"] is not None
+                else float("inf")
+            ),
             item["resolver"],
         )
     )

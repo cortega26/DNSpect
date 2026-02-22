@@ -47,9 +47,14 @@ def test_detect_macos_dns_fallback_networksetup_ignores_none_set() -> None:
         if cmd == ["scutil", "--dns"]:
             return _completed(cmd, stdout="DNS configuration\n")
         if cmd == ["networksetup", "-listallnetworkservices"]:
+            service_list = (
+                "An asterisk (*) denotes that a network service is disabled.\n"
+                "Wi-Fi\n"
+                "Thunderbolt Bridge\n"
+            )
             return _completed(
                 cmd,
-                stdout="An asterisk (*) denotes that a network service is disabled.\nWi-Fi\nThunderbolt Bridge\n",
+                stdout=service_list,
             )
         if cmd == ["networksetup", "-getdnsservers", "Wi-Fi"]:
             return _completed(cmd, stdout="There aren't any DNS Servers set on Wi-Fi.\n")

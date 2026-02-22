@@ -124,7 +124,8 @@ export function serializeSavedLastRun(saved: SavedLastRunV1): string {
   return JSON.stringify(envelope)
 }
 
-function migrateSavedLastRunEnvelope(_parsed: Record<string, unknown>): SavedLastRunV1 | null {
+function migrateSavedLastRunEnvelope(parsed: Record<string, unknown>): SavedLastRunV1 | null {
+  void parsed
   // Placeholder for future migrations. Intentionally returns null in schema v1.
   return null
 }
