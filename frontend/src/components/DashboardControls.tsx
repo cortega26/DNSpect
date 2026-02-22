@@ -1,5 +1,5 @@
 import type { BenchmarkMode, Provider } from '@/lib/types'
-import { useI18n } from '@/lib/i18n'
+import { useI18n } from '@/lib/useI18n'
 import { resolverGroup } from '@/lib/utils'
 
 interface ResolverOption {

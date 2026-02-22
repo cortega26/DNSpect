@@ -1,4 +1,4 @@
-import type { Language, TranslationKey } from './i18n'
+import type { Language, TranslationKey } from './i18n-translations'
 import type { BenchmarkStatus, ResolverResult } from './types'
 import { fmtMs, resolverReliabilityScore } from './utils'
 

@@ -1,6 +1,6 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
-import { useI18n } from '@/lib/i18n'
+import { useI18n } from '@/lib/useI18n'
 import { resolveLiveMotionPolicy } from '@/lib/motion'
 import type { ResolverResult } from '@/lib/types'
 import { fmtMs, resolverReliabilityScore } from '@/lib/utils'

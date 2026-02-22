@@ -1,6 +1,6 @@
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
-import { useI18n } from '@/lib/i18n'
+import { useI18n } from '@/lib/useI18n'
 import type { Provider, ResolverResult } from '@/lib/types'
 import { fmtMs } from '@/lib/utils'
 

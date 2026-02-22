@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
-import { useI18n } from '@/lib/i18n'
+import { useI18n } from '@/lib/useI18n'
 import type { ResolverResult } from '@/lib/types'
 
 interface Props {

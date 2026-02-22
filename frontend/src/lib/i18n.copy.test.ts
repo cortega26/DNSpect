@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { translations } from './i18n'
+import { translations } from './i18n-translations'
 
 const COPY_REGRESSION = 'Copy regression: diacritics removed or altered'
 

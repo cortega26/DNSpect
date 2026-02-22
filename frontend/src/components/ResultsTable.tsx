@@ -1,4 +1,4 @@
-import { useI18n } from '@/lib/i18n'
+import { useI18n } from '@/lib/useI18n'
 import type { ResolverResult } from '@/lib/types'
 import { fmtMs } from '@/lib/utils'
 

@@ -8,7 +8,8 @@ import { RecommendedResolverPanel } from '@/components/RecommendedResolverPanel'
 import { ResolverDetailModal } from '@/components/ResolverDetailModal'
 import { ResolverRankingPanel } from '@/components/ResolverRankingPanel'
 import { buildDnsClipboardText, buildGuidedDnsSet, detectPlatformGroup } from '@/lib/applyGuide'
-import { useI18n, type Language } from '@/lib/i18n'
+import { useI18n } from '@/lib/useI18n'
+import type { Language } from '@/lib/i18n-translations'
 import { computeRunningEtaText, formatEtaRange } from '@/lib/eta'
 import { getBenchmark, getProviders, getSystemDns, probeResolvers, startBenchmark } from '@/lib/api'
 import { compareProbeSummaries, parseProbeResponse, type ProbeOutcome, type ProbeSummary } from '@/lib/probe'
@@ -29,7 +30,7 @@ import {
   shouldAcceptAsyncResult,
   shouldPollBenchmark,
 } from '@/lib/runtime'
-import { useTheme } from '@/lib/theme'
+import { useTheme } from '@/lib/useTheme'
 import type { BenchmarkMode, BenchmarkStatus, Provider, ResolverResult, SystemDnsPayload } from '@/lib/types'
 import { API_BASE, fmtMs, resolverReliabilityScore } from '@/lib/utils'
 

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 
-import { useI18n } from '@/lib/i18n'
+import { useI18n } from '@/lib/useI18n'
 import type { PlatformGroup } from '@/lib/applyGuide'
 import { fmtMs } from '@/lib/utils'
 import type { ProbeOutcome, ProbeSummary } from '@/lib/probe'
