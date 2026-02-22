@@ -25,6 +25,51 @@ const BASIC_TIMEOUT_PRESET: Record<TimeoutPreset, number> = {
   high: 3,
 }
 
+const FALLBACK_PROVIDERS: Provider[] = [
+  {
+    id: 'cloudflare',
+    name: 'Cloudflare',
+    dns: ['1.1.1.1', '1.0.0.1'],
+    tags: ['global', 'anycast', 'privacidad'],
+    features: {
+      filtering: 'no',
+      malware_protection: 'no',
+      family: 'no',
+      doh: 'yes',
+      dot: 'yes',
+    },
+    notes_es: 'Fallback provider list when backend providers API is unavailable.',
+  },
+  {
+    id: 'google',
+    name: 'Google Public DNS',
+    dns: ['8.8.8.8', '8.8.4.4'],
+    tags: ['global', 'anycast'],
+    features: {
+      filtering: 'no',
+      malware_protection: 'no',
+      family: 'no',
+      doh: 'yes',
+      dot: 'yes',
+    },
+    notes_es: 'Fallback provider list when backend providers API is unavailable.',
+  },
+  {
+    id: 'quad9',
+    name: 'Quad9',
+    dns: ['9.9.9.9', '149.112.112.112'],
+    tags: ['global', 'privacidad', 'seguridad'],
+    features: {
+      filtering: 'yes',
+      malware_protection: 'yes',
+      family: 'no',
+      doh: 'yes',
+      dot: 'yes',
+    },
+    notes_es: 'Fallback provider list when backend providers API is unavailable.',
+  },
+]
+
 const POLL_INTERVAL_MS = 1000
 const STALL_SLOW_THRESHOLD_MS = 4000
 const STALL_HARD_THRESHOLD_MS = 8000
@@ -122,21 +167,39 @@ function App() {
   const activePollBenchmarkIdRef = useRef<string | null>(null)
 
   useEffect(() => {
-    async function init() {
-      try {
-        const [providersRes, dnsRes] = await Promise.all([getProviders(), getSystemDns()])
-        setProviders(providersRes)
-        setSystemDns(dnsRes)
+    let cancelled = false
 
-        const defaults = new Set<string>()
-        providersRes.forEach((p) => p.dns.forEach((ip) => defaults.add(ip)))
-        dnsRes.resolvers.forEach((ip) => defaults.add(ip))
-        setSelectedResolvers(defaults)
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Error cargando datos iniciales')
+    async function init() {
+      const [providersResult, dnsResult] = await Promise.allSettled([getProviders(), getSystemDns()])
+      if (cancelled) return
+
+      const providersResRaw = providersResult.status === 'fulfilled' ? providersResult.value : []
+      const providersRes = providersResRaw.length > 0 ? providersResRaw : FALLBACK_PROVIDERS
+      const dnsRes = dnsResult.status === 'fulfilled' ? dnsResult.value : null
+
+      setProviders(providersRes)
+      setSystemDns(dnsRes)
+
+      const defaults = new Set<string>()
+      providersRes.forEach((p) => p.dns.forEach((ip) => defaults.add(ip)))
+      ;(dnsRes?.resolvers ?? []).forEach((ip) => defaults.add(ip))
+      setSelectedResolvers(defaults)
+
+      if (providersResult.status === 'rejected' || dnsResult.status === 'rejected') {
+        let reason: unknown = 'Error cargando datos iniciales'
+        if (providersResult.status === 'rejected') {
+          reason = providersResult.reason
+        } else if (dnsResult.status === 'rejected') {
+          reason = dnsResult.reason
+        }
+        setError(reason instanceof Error ? reason.message : 'Error cargando datos iniciales')
       }
     }
     void init()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const stopPolling = useCallback(() => {
