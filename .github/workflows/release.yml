@@ -170,6 +170,10 @@ jobs:
           path: release-assets
           merge-multiple: true
 
+      - name: Debug release-assets contents
+        shell: bash
+        run: ls -la release-assets
+
       - name: Generate SHA256 checksums
         shell: bash
         run: |
