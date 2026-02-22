@@ -13,12 +13,13 @@ Deterministic, local-first DNS resolver benchmarking with FastAPI + React.
 [![Formatting: Ruff format + Black](https://img.shields.io/badge/formatting-ruff%20format%20%2B%20black-111827)](.github/workflows/ci.yml)
 [![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20macOS%20%7C%20windows-0ea5e9)](.github/workflows/release.yml)
 
-![DNSpect app running (English, dark theme)](docs/screenshots/dark-main.png)
+![DNSpect benchmark in progress (dark theme, English)](docs/screenshots/readme-running-dark-en.png)
 
 ### README screenshot standard
-- Content: DNSpect app UI running locally (not terminal test output).
-- Language: English (`EN`) interface.
-- Theme: Dark theme.
+- Content: DNSpect app UI with an active benchmark (running progress or completed ranked results), not a static setup screen.
+- Evidence: Progress panel and/or ranking/results must be visible so the app is clearly working.
+- Language: Prefer English (`EN`) interface when available.
+- Theme: Dark preferred; light acceptable if it better shows benchmark activity.
 - Quality: high-resolution and clean capture.
 - Exclusions: no notifications, cursor artifacts, overlays, popups, or editor chrome.
 
