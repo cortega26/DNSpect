@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 
 from . import __version__
-from .models import BenchmarkRequest
+from .models import BenchmarkRequest, ProbeRequest
 from .runner import BenchmarkManager
 
 app = FastAPI(title="dns-speed-lab API", version=__version__)
@@ -72,6 +72,15 @@ def providers() -> list[dict]:
 @app.get("/api/dns/system")
 def system_dns() -> dict:
     return manager.system_dns_payload()
+
+
+@app.post("/api/probe")
+@app.post("/probe")
+def probe_resolvers(request: ProbeRequest) -> dict:
+    try:
+        return manager.probe(request)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/api/benchmarks")

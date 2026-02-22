@@ -21,6 +21,7 @@ export interface SystemDnsPayload {
   resolvers: string[]
   method: string
   platform: string
+  error_detail?: string | null
   detected_provider_id: string
 }
 
@@ -53,6 +54,11 @@ export interface ResolverStats {
   score_reliability: number
   score_stability: number | null
   score_total: number | null
+  normalized_latency?: number | null
+  normalized_reliability?: number | null
+  normalized_stability?: number | null
+  reliability_penalty?: number | null
+  max_rel_penalty?: number | null
 }
 
 export interface ResolverResult {
@@ -63,6 +69,7 @@ export interface ResolverResult {
   stats: ResolverStats
   samples: Sample[]
   sample_count?: number
+  is_unreliable?: boolean
 }
 
 export interface BenchmarkStatus {
@@ -83,4 +90,23 @@ export interface BenchmarkStatus {
   engine: string | null
   error: string | null
   results: ResolverResult[] | null
+  recommended_resolver?: string | null
+  recommendation_warning?: string | null
+}
+
+export interface ProbeResult {
+  resolver: string
+  provider_id: string
+  provider_name: string
+  engine: string
+  stats: ResolverStats
+  samples: Sample[]
+}
+
+export interface ProbeResponse {
+  engine: string
+  timeout_sec: number
+  runs_per_resolver: number
+  queried_at: string
+  results: ProbeResult[]
 }

@@ -10,7 +10,7 @@
 ## 2. CI Verification
 
 - [ ] `ci.yml` workflow green on `main`.
-- [ ] `release.yml` validated for tag trigger pattern `v*.*.*`.
+- [ ] `release.yml` validated for tag trigger pattern `v*`.
 - [ ] Backend gates pass: `ruff check .`, `ruff format --check .`, `mypy`, `pytest -q`.
 - [ ] Frontend gates pass: `npm ci`, `npm run lint`, `npm run typecheck`, `npm run build`.
 

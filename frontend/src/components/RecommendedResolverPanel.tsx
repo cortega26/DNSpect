@@ -7,9 +7,15 @@ interface Props {
   rank: number
   reliabilityPct: number | null
   improvementVsCurrentMs: number | null
+  recommendationWarning?: string | null
+  isSmallImprovement?: boolean
   copyStatus: 'idle' | 'success' | 'error'
+  summaryCopyStatus: 'idle' | 'success' | 'error'
   onApplyRecommended: () => void
   onCopyAddress: () => void
+  onCopySummary: () => void
+  onExportJson: () => void
+  onExportCsv: () => void
   onViewFullRanking?: () => void
 }
 
@@ -18,16 +24,33 @@ export function RecommendedResolverPanel({
   rank,
   reliabilityPct,
   improvementVsCurrentMs,
+  recommendationWarning,
+  isSmallImprovement,
   copyStatus,
+  summaryCopyStatus,
   onApplyRecommended,
   onCopyAddress,
+  onCopySummary,
+  onExportJson,
+  onExportCsv,
   onViewFullRanking,
 }: Props) {
   const { t } = useI18n()
+  const improvementLabel =
+    improvementVsCurrentMs === null
+      ? t('recommendation.improvementUnavailable')
+      : improvementVsCurrentMs >= 0
+        ? t('recommendation.improvement', { ms: improvementVsCurrentMs.toFixed(0) })
+        : t('recommendation.improvementSlower', { ms: Math.abs(improvementVsCurrentMs).toFixed(0) })
 
   return (
     <section className="card compact recommendation-card" aria-live="polite">
       <h3>{t('recommendation.cardLabel')}</h3>
+      {recommendationWarning ? (
+        <p className="recommendation-warning" role="alert">
+          {t('recommendation.warning', { warning: recommendationWarning })}
+        </p>
+      ) : null}
 
       <div className="recommendation-winner">
         <p className="recommendation-provider recommendation-provider-strong">{result.provider_name}</p>
@@ -54,10 +77,13 @@ export function RecommendedResolverPanel({
       </div>
 
       <p className="recommendation-improvement">
-        {improvementVsCurrentMs !== null
-          ? t('recommendation.improvement', { ms: improvementVsCurrentMs.toFixed(0) })
-          : t('recommendation.improvementUnavailable')}
+        {improvementLabel}
       </p>
+      {isSmallImprovement ? (
+        <p className="helper-text recommendation-small-improvement">
+          {t('recommendation.smallImprovement', { ms: Math.abs(improvementVsCurrentMs ?? 0).toFixed(1) })}
+        </p>
+      ) : null}
 
       <div className="actions-row">
         <button type="button" className="btn-primary" onClick={onApplyRecommended}>
@@ -72,9 +98,22 @@ export function RecommendedResolverPanel({
           </button>
         ) : null}
       </div>
+      <div className="actions-row">
+        <button type="button" className="btn-secondary" onClick={onExportJson}>
+          {t('nextActions.exportJson')}
+        </button>
+        <button type="button" className="btn-secondary" onClick={onExportCsv}>
+          {t('nextActions.exportCsv')}
+        </button>
+        <button type="button" className="btn-secondary" onClick={onCopySummary}>
+          {t('nextActions.copySummary')}
+        </button>
+      </div>
 
       {copyStatus === 'success' ? <p className="helper-text">{t('nextActions.copySuccess')}</p> : null}
       {copyStatus === 'error' ? <p className="helper-text">{t('nextActions.copyError')}</p> : null}
+      {summaryCopyStatus === 'success' ? <p className="helper-text">{t('nextActions.copySummarySuccess')}</p> : null}
+      {summaryCopyStatus === 'error' ? <p className="helper-text">{t('nextActions.copySummaryError')}</p> : null}
     </section>
   )
 }

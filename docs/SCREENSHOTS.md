@@ -6,6 +6,8 @@ Placeholders sugeridos (crear dentro de `docs/screenshots/`):
 - `ranking.png`
 - `detail.png`
 - `flow.gif` (opcional)
+- `guided-apply-modal.png`
+- `guided-apply-verify.png`
 
 ## Cómo generarlas
 

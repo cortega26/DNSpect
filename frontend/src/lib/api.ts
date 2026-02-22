@@ -1,4 +1,4 @@
-import type { BenchmarkMode, BenchmarkStatus, Provider, SystemDnsPayload } from './types'
+import type { BenchmarkMode, BenchmarkStatus, ProbeResponse, Provider, SystemDnsPayload } from './types'
 import { API_BASE } from './utils'
 
 interface StartBenchmarkPayload {
@@ -7,6 +7,13 @@ interface StartBenchmarkPayload {
   timeout_sec: number
   resolvers: string[]
   queries?: string[]
+}
+
+interface ProbePayload {
+  resolvers: string[]
+  queries?: string[]
+  timeout_sec?: number
+  runs_per_resolver?: number
 }
 
 export async function getProviders(): Promise<Provider[]> {
@@ -46,6 +53,26 @@ export async function getBenchmark(id: string, includeSamples = false, signal?: 
   const suffix = includeSamples ? '?include_samples=1' : ''
   const res = await fetch(`${API_BASE}/api/benchmarks/${id}${suffix}`, { signal })
   if (!res.ok) throw new Error('No se pudo consultar benchmark')
+  return res.json()
+}
+
+export async function probeResolvers(payload: ProbePayload): Promise<ProbeResponse> {
+  const body: Record<string, unknown> = {
+    resolvers: payload.resolvers,
+  }
+  if (payload.queries && payload.queries.length > 0) body.queries = payload.queries
+  if (payload.timeout_sec !== undefined) body.timeout_sec = payload.timeout_sec
+  if (payload.runs_per_resolver !== undefined) body.runs_per_resolver = payload.runs_per_resolver
+
+  const res = await fetch(`${API_BASE}/api/probe`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const detail = await safeError(res)
+    throw new Error(detail)
+  }
   return res.json()
 }
 

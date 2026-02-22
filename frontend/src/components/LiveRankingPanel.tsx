@@ -1,6 +1,7 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
 import { useI18n } from '@/lib/i18n'
+import { resolveLiveMotionPolicy } from '@/lib/motion'
 import type { ResolverResult } from '@/lib/types'
 import { fmtMs, resolverReliabilityScore } from '@/lib/utils'
 
@@ -41,7 +42,7 @@ const UpdatedAgoLabel = memo(function UpdatedAgoLabel({ updatedAtMs, isRunning, 
 
     const renderElapsed = () => {
       const elapsedSeconds = Math.max(0, (Date.now() - updatedAtMs) / 1000)
-      label.textContent = t('liveRanking.updatedAgo', { seconds: elapsedSeconds.toFixed(1) })
+      label.textContent = t('liveRanking.updatedAgo', { seconds: Math.floor(elapsedSeconds) })
     }
 
     renderElapsed()
@@ -56,7 +57,7 @@ const UpdatedAgoLabel = memo(function UpdatedAgoLabel({ updatedAtMs, isRunning, 
 
 interface DecoratedRankRow extends CanonicalLiveRow {
   confidence: number
-  confidencePct: number
+  qualityPct: number
   isEntering: boolean
   isActive: boolean
   isLeader: boolean
@@ -127,12 +128,16 @@ export function LiveRankingPanel({
     rankingUpdatedAtRef.current = Date.now()
   }
 
-  const isMotionBudgetExceeded = ranking.length > Math.max(1, motionRowBudget)
-  const allowReorderAnimation = !prefersReducedMotion && !isMotionBudgetExceeded
-  const allowHighlights = !isMotionBudgetExceeded
-  const updatedLabelIntervalMs = isMotionBudgetExceeded || prefersReducedMotion ? 1000 : 500
+  const liveMotionPolicy = resolveLiveMotionPolicy(ranking.length, motionRowBudget, prefersReducedMotion)
+  const { isMotionBudgetExceeded, allowReorderAnimation, allowHighlights, updatedLabelIntervalMs } = liveMotionPolicy
 
   const decoratedRows = useMemo(() => {
+    const finiteScores = ranking.map((row) => row.scoreTotal).filter((score) => Number.isFinite(score))
+    const bestScore = finiteScores.length > 0 ? Math.min(...finiteScores) : null
+    const worstScore = finiteScores.length > 0 ? Math.max(...finiteScores) : null
+    const scoreSpan =
+      bestScore !== null && worstScore !== null ? Math.max(0, worstScore - bestScore) : null
+
     return ranking.map<DecoratedRankRow>((row, index) => {
       const previousRank = previousRankRef.current.get(row.ip)
       const movementDelta = previousRank === undefined ? 0 : previousRank - index
@@ -141,11 +146,20 @@ export function LiveRankingPanel({
       movementSequenceRef.current.set(row.ip, movementSequence)
 
       const confidence = expectedSamples > 0 ? Math.min(1, row.samplesCompleted / expectedSamples) : 1
+      let qualityPct = 0
+      if (Number.isFinite(row.scoreTotal)) {
+        if (scoreSpan === null || scoreSpan <= 0 || bestScore === null || worstScore === null) {
+          qualityPct = 100
+        } else {
+          const normalizedQuality = ((worstScore - row.scoreTotal) / scoreSpan) * 100
+          qualityPct = Math.max(6, Math.min(100, normalizedQuality))
+        }
+      }
 
       return {
         ...row,
         confidence,
-        confidencePct: Math.round(confidence * 100),
+        qualityPct,
         isEntering: previousRank === undefined,
         isActive: Boolean(currentResolver && row.ip === currentResolver),
         isLeader: index === 0,
@@ -245,8 +259,12 @@ export function LiveRankingPanel({
             const provisional = row.confidence < 1
             const rankDeltaText =
               row.movementDelta > 0 ? `↑${row.movementDelta}` : row.movementDelta < 0 ? `↓${Math.abs(row.movementDelta)}` : ''
-            const confidenceBand =
-              row.confidence < 0.3 ? 'live-ranking-confidence-fill-low' : row.confidence < 0.8 ? 'live-ranking-confidence-fill-medium' : 'live-ranking-confidence-fill-high'
+            const qualityBand =
+              row.qualityPct < 34
+                ? 'live-ranking-confidence-fill-low'
+                : row.qualityPct < 67
+                  ? 'live-ranking-confidence-fill-medium'
+                  : 'live-ranking-confidence-fill-high'
             const rowStyle = !allowReorderAnimation || row.movementDelta === 0
               ? undefined
               : ({
@@ -288,8 +306,8 @@ export function LiveRankingPanel({
                   </span>
                   <span className="live-ranking-confidence" role="presentation" aria-hidden="true">
                     <span
-                      className={['live-ranking-confidence-fill', confidenceBand].join(' ')}
-                      style={{ width: `${row.confidencePct}%` }}
+                      className={['live-ranking-confidence-fill', qualityBand].join(' ')}
+                      style={{ width: `${row.qualityPct.toFixed(1)}%` }}
                     />
                   </span>
                 </div>

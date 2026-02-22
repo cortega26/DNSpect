@@ -71,9 +71,54 @@ def test_detect_macos_dns_fallback_networksetup_ignores_none_set() -> None:
     }
 
 
+def test_detect_macos_dns_fallback_combines_multiple_active_services() -> None:
+    def fake_run(cmd: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+        if cmd == ["scutil", "--dns"]:
+            return _completed(cmd, stdout="DNS configuration\n")
+        if cmd == ["networksetup", "-listallnetworkservices"]:
+            return _completed(
+                cmd,
+                stdout="An asterisk (*) denotes that a network service is disabled.\nWi-Fi\nVPN (Work)\n",
+            )
+        if cmd == ["networksetup", "-getdnsservers", "Wi-Fi"]:
+            return _completed(cmd, stdout="1.1.1.1\n2001:4860:4860::8888\n")
+        if cmd == ["networksetup", "-getdnsservers", "VPN (Work)"]:
+            return _completed(cmd, stdout="9.9.9.9\n2001:4860:4860::8888\n")
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    original_run = detect_dns.subprocess.run
+    detect_dns.subprocess.run = fake_run  # type: ignore[assignment]
+    try:
+        payload = detect_dns.detect_macos_dns()
+    finally:
+        detect_dns.subprocess.run = original_run  # type: ignore[assignment]
+
+    assert payload == {
+        "dns_servers": ["1.1.1.1", "2001:4860:4860::8888", "9.9.9.9"],
+        "method": "networksetup",
+        "platform": "macos",
+    }
+
+
 def test_parse_networksetup_dnsservers_mixed_ipv4_ipv6() -> None:
     output = "2001:4860:4860::8844\n8.8.4.4\nnot-an-ip\n"
     assert detect_dns._parse_networksetup_dnsservers(output) == ["2001:4860:4860::8844", "8.8.4.4"]
+
+
+def test_parse_scutil_nameservers_tolerates_suffixes_and_zone_indexes() -> None:
+    output = """
+DNS configuration
+
+resolver #1
+  nameserver[0] : 2001:4860:4860::8888%utun3
+  nameserver[1] : 1.1.1.1 (Reachable)
+  nameserver[2]: 9.9.9.9
+"""
+    assert detect_dns._parse_scutil_nameservers(output) == [
+        "2001:4860:4860::8888",
+        "1.1.1.1",
+        "9.9.9.9",
+    ]
 
 
 def test_normalize_ip_list_dedup_preserves_order() -> None:
@@ -104,6 +149,7 @@ def test_detect_system_dns_uses_macos_detector_on_darwin(monkeypatch) -> None:
         "resolvers": ["2001:4860:4860::8888", "8.8.8.8"],
         "method": "scutil",
         "platform": "macos",
+        "error_detail": None,
     }
 
 
@@ -120,4 +166,5 @@ def test_detect_system_dns_macos_error_is_non_fatal(monkeypatch) -> None:
         "resolvers": [],
         "method": "error:RuntimeError",
         "platform": "macos",
+        "error_detail": "simulated failure",
     }

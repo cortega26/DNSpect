@@ -19,7 +19,7 @@ import dns.exception
 import dns.resolver
 
 from .detect_dns import detect_system_dns
-from .models import BenchmarkRequest
+from .models import BenchmarkRequest, ProbeRequest
 from .providers import build_default_resolvers, load_default_queries, load_providers, resolver_provider_index
 from .stats import (
     apply_normalized_scoring,
@@ -223,6 +223,69 @@ class BenchmarkManager:
         self._persist_run(benchmark_id)
         self._executor.submit(self._run, benchmark_id, config)
         return benchmark_id
+
+    def probe(self, req: ProbeRequest) -> dict[str, Any]:
+        queries = req.queries or self.default_queries
+        if not queries:
+            raise ValueError("No hay dominios para consultar en probe")
+
+        engine = select_engine()
+        results: list[dict[str, Any]] = []
+        for resolver in req.resolvers:
+            successful_ms: list[float] = []
+            samples: list[dict[str, Any]] = []
+            timeout_count = 0
+            failure_count = 0
+
+            for run_idx in range(req.runs_per_resolver):
+                domain = queries[run_idx % len(queries)]
+                sample = measure_query(
+                    resolver=resolver,
+                    domain=domain,
+                    timeout_sec=float(req.timeout_sec),
+                    engine=engine,
+                )
+                sample["run_index"] = run_idx + 1
+                samples.append(sample)
+                if sample.get("ok") and sample.get("ms") is not None:
+                    successful_ms.append(float(sample["ms"]))
+                if sample.get("failure_kind") == "timeout":
+                    timeout_count += 1
+                if sample.get("failure_kind") in RELIABILITY_FAILURE_KINDS:
+                    failure_count += 1
+
+            stats = compute_stats(
+                successful_ms,
+                total_runs=req.runs_per_resolver,
+                timeout_count=timeout_count,
+                failure_count=failure_count,
+            )
+            provider = self.provider_index.get(
+                resolver,
+                {
+                    "id": "isp-detectado",
+                    "name": "ISP (Detectado)",
+                    "notes_es": "Resolver detectado desde el sistema local.",
+                },
+            )
+            results.append(
+                {
+                    "resolver": resolver,
+                    "provider_id": provider.get("id", "desconocido"),
+                    "provider_name": provider.get("name", "Desconocido"),
+                    "engine": engine,
+                    "stats": stats,
+                    "samples": samples,
+                }
+            )
+
+        return {
+            "engine": engine,
+            "timeout_sec": float(req.timeout_sec),
+            "runs_per_resolver": req.runs_per_resolver,
+            "queried_at": datetime.now(UTC).isoformat(),
+            "results": results,
+        }
 
     def get(self, benchmark_id: str, include_samples: bool = False) -> dict[str, Any] | None:
         with self._lock:

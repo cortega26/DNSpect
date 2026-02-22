@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 IP_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
-SCUTIL_NAMESERVER_RE = re.compile(r"^\s*nameserver\[\d+\]\s*:\s*(.+?)\s*$", re.IGNORECASE)
+SCUTIL_NAMESERVER_RE = re.compile(r"^\s*nameserver(?:\[\d+\])?\s*:\s*(.+?)\s*$", re.IGNORECASE)
 
 
 def _extract_ips(text: str) -> list[str]:
@@ -22,16 +22,31 @@ def _extract_ips(text: str) -> list[str]:
 def _normalize_ip_list(values: list[str]) -> list[str]:
     normalized: list[str] = []
     for raw in values:
-        candidate = raw.strip()
-        if not candidate:
+        candidate = _extract_first_ip_token(raw)
+        if candidate is None:
             continue
-        try:
-            ip = str(ipaddress.ip_address(candidate))
-        except ValueError:
-            continue
+        ip = candidate
         if ip not in normalized:
             normalized.append(ip)
     return normalized
+
+
+def _extract_first_ip_token(value: str) -> str | None:
+    if not value:
+        return None
+
+    tokens = re.split(r"[\s,;]+", value.strip())
+    for token in tokens:
+        candidate = token.strip().strip("()[]{}")
+        if not candidate:
+            continue
+        if "%" in candidate:
+            candidate = candidate.split("%", 1)[0]
+        try:
+            return str(ipaddress.ip_address(candidate))
+        except ValueError:
+            continue
+    return None
 
 
 def _parse_scutil_nameservers(scutil_output: str) -> list[str]:
@@ -223,12 +238,14 @@ def detect_system_dns() -> dict:
                 "resolvers": macos_payload.get("dns_servers", []),
                 "method": macos_payload.get("method", "none"),
                 "platform": macos_payload.get("platform", "macos"),
+                "error_detail": None,
             }
         except Exception as exc:  # noqa: BLE001
             return {
                 "resolvers": [],
                 "method": f"error:{exc.__class__.__name__}",
                 "platform": "macos",
+                "error_detail": str(exc),
             }
 
     system = platform.system().lower()
@@ -241,4 +258,5 @@ def detect_system_dns() -> dict:
         "resolvers": resolvers,
         "method": method,
         "platform": system,
+        "error_detail": None,
     }

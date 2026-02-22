@@ -3,22 +3,44 @@ name: Release
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "v*"
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
   build:
-    name: build-${{ matrix.os }}
+    name: build-${{ matrix.asset_name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            source_binary: dns-speed-lab-linux
+            asset_name: dnspect-linux-x64
+          - os: windows-latest
+            source_binary: dns-speed-lab-windows.exe
+            asset_name: dnspect-windows-x64.exe
+          - os: macos-13
+            source_binary: dns-speed-lab-darwin
+            asset_name: dnspect-macos-x64
+          - os: macos-latest
+            source_binary: dns-speed-lab-darwin
+            asset_name: dnspect-macos-arm64
+    env:
+      PYTHONHASHSEED: "0"
+      TZ: UTC
+      LC_ALL: C
+      LANG: C
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set deterministic build timestamp
+        shell: bash
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -29,6 +51,7 @@ jobs:
 
       - name: Build frontend
         working-directory: frontend
+        shell: bash
         run: |
           npm ci
           npm run build
@@ -40,35 +63,113 @@ jobs:
           cache: pip
           cache-dependency-path: backend/pyproject.toml
 
-      - name: Install backend deps + pack tools
-        working-directory: backend
+      - name: Install backend packaging deps
+        shell: bash
         run: |
           python -m pip install --upgrade pip
-          pip install -e .[dev,pack]
+          pip install -e "./backend[pack]"
 
-      - name: Build package
+      - name: Build packaged binary
+        shell: bash
         run: python scripts/package_backend.py
 
-      - name: Upload package artifact
+      - name: Rename release artifact
+        shell: bash
+        run: |
+          mkdir -p release-assets
+          python - <<'PY'
+          import os
+          import shutil
+          from pathlib import Path
+
+          src = Path("dist") / os.environ["SRC_BINARY"]
+          dst = Path("release-assets") / os.environ["ASSET_NAME"]
+          if not src.exists():
+              raise SystemExit(f"Expected build output not found: {src}")
+          shutil.copy2(src, dst)
+          if os.name != "nt":
+              dst.chmod(dst.stat().st_mode | 0o111)
+          print(f"Prepared release asset: {dst}")
+          PY
+        env:
+          SRC_BINARY: ${{ matrix.source_binary }}
+          ASSET_NAME: ${{ matrix.asset_name }}
+
+      - name: Upload executable artifact
         uses: actions/upload-artifact@v4
         with:
-          name: release-${{ matrix.os }}
-          path: release/*
+          name: ${{ matrix.asset_name }}
+          path: release-assets/${{ matrix.asset_name }}
+          if-no-files-found: error
 
   publish:
     name: publish-release
     runs-on: ubuntu-latest
     needs: build
+    env:
+      TZ: UTC
+      LC_ALL: C
+      LANG: C
     steps:
-      - name: Download all artifacts
+      - name: Download all executable artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
+          path: release-assets
+          merge-multiple: true
+
+      - name: Generate SHA256 checksums
+        shell: bash
+        run: |
+          cd release-assets
+          ls -1 dnspect-* | sort > .artifact-list
+          : > checksums.txt
+          while IFS= read -r artifact; do
+            sha256sum "$artifact" >> checksums.txt
+          done < .artifact-list
+          rm -f .artifact-list
+          cat checksums.txt
+
+      - name: Import GPG key
+        if: ${{ secrets.GPG_PRIVATE_KEY != '' && secrets.GPG_PASSPHRASE != '' }}
+        shell: bash
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.gnupg
+          chmod 700 ~/.gnupg
+          if [[ "$GPG_PRIVATE_KEY" == *"BEGIN PGP PRIVATE KEY BLOCK"* ]]; then
+            printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
+          else
+            printf '%s' "$GPG_PRIVATE_KEY" | base64 --decode | gpg --batch --import
+          fi
+
+      - name: Sign checksums.txt
+        if: ${{ secrets.GPG_PRIVATE_KEY != '' && secrets.GPG_PASSPHRASE != '' }}
+        shell: bash
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase "$GPG_PASSPHRASE" \
+            --output release-assets/checksums.txt.sig \
+            --detach-sign release-assets/checksums.txt
+
+      - name: Upload assembled release assets (workflow artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets-bundle
+          path: release-assets/*
 
       - name: Publish GitHub Release
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/**/*.zip
-            artifacts/**/*.tar.gz
+            release-assets/dnspect-linux-x64
+            release-assets/dnspect-windows-x64.exe
+            release-assets/dnspect-macos-x64
+            release-assets/dnspect-macos-arm64
+            release-assets/checksums.txt
+            release-assets/checksums.txt.sig
+          fail_on_unmatched_files: false
           generate_release_notes: true

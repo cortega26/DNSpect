@@ -703,8 +703,30 @@ textarea {
   margin-top: 0;
 }
 
+.last-run-card {
+  border-left: 4px solid color-mix(in srgb, var(--primary) 62%, var(--border));
+}
+
+.saved-run-notice {
+  border-left: 4px solid color-mix(in srgb, #d89a43 58%, var(--border));
+}
+
+.saved-run-viewing-badge {
+  border-left: 4px solid color-mix(in srgb, var(--primary) 60%, var(--border));
+  background: color-mix(in srgb, var(--surface-2) 88%, var(--surface));
+}
+
 .recommendation-card {
   background: color-mix(in srgb, var(--surface) 90%, var(--surface-2));
+}
+
+.recommendation-warning {
+  border: 1px solid color-mix(in srgb, #e3a35f 55%, var(--border));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, #ffcf96 22%, var(--surface-2));
+  color: color-mix(in srgb, #8a4b12 72%, var(--text));
+  padding: 8px 10px;
+  font-weight: 700;
 }
 
 .recommendation-winner {
@@ -750,6 +772,10 @@ textarea {
 .recommendation-improvement {
   font-weight: 700;
   color: color-mix(in srgb, var(--primary) 72%, var(--text));
+}
+
+.recommendation-small-improvement {
+  margin-top: 0;
 }
 
 .progress-wrap {
@@ -1181,6 +1207,40 @@ textarea {
   }
 }
 
+@keyframes modal-backdrop-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes guided-verify-appear {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .status-running {
   border-left: 4px solid #2588ff;
 }
@@ -1352,6 +1412,7 @@ tbody tr:hover {
   place-items: center;
   padding: var(--space-5);
   z-index: 30;
+  animation: modal-backdrop-fade 180ms ease-out both;
 }
 
 .modal {
@@ -1363,10 +1424,74 @@ tbody tr:hover {
   background: var(--surface);
   box-shadow: var(--shadow);
   padding: var(--space-5);
+  animation: modal-pop-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .resolver-list-modal {
   width: min(640px, 100%);
+}
+
+.guided-apply-modal {
+  width: min(760px, 100%);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.guided-section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface-2) 92%, var(--surface));
+  padding: var(--space-3);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.guided-dns-grid,
+.guided-verify-grid {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+}
+
+.guided-section code {
+  display: block;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+}
+
+.guided-verification {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: grid;
+  gap: var(--space-2);
+  background: color-mix(in srgb, var(--surface-2) 90%, var(--surface));
+  animation: guided-verify-appear 190ms ease-out both;
+}
+
+.guided-verification-good {
+  border-color: color-mix(in srgb, #2aa669 45%, var(--border));
+  background: color-mix(in srgb, #2aa669 10%, var(--surface));
+}
+
+.guided-verification-neutral {
+  border-color: color-mix(in srgb, #bd9a42 45%, var(--border));
+  background: color-mix(in srgb, #bd9a42 9%, var(--surface));
+}
+
+.guided-verification-bad {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+}
+
+.guided-safety-notes {
+  border: 1px solid color-mix(in srgb, var(--danger) 26%, var(--border));
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  background: color-mix(in srgb, var(--danger) 5%, var(--surface));
+  display: grid;
+  gap: 4px;
 }
 
 .resolver-modal-list {
@@ -1439,6 +1564,7 @@ tbody tr:hover {
 
 .live-ranking-panel.is-motion-budgeted .live-ranking-row {
   transition: none;
+  transform: none !important;
 }
 
 .live-ranking-panel.is-motion-budgeted .live-ranking-row.is-active {
@@ -1453,6 +1579,7 @@ tbody tr:hover {
 .live-ranking-panel.is-motion-budgeted .live-ranking-delta.is-up,
 .live-ranking-panel.is-motion-budgeted .live-ranking-delta.is-down {
   animation: none;
+  transform: none !important;
 }
 
 .detail-charts {
@@ -1484,6 +1611,14 @@ tbody tr:hover {
     max-height: none;
   }
 
+  .modal-backdrop,
+  .modal,
+  .guided-verification {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+
   .live-ranking-chip-dot,
   .live-ranking-row.is-entering,
   .live-ranking-row.is-rank-changing,
@@ -1513,6 +1648,8 @@ tbody tr:hover {
   .recommendation-grid,
   .summary-grid,
   .advanced-grid,
+  .guided-dns-grid,
+  .guided-verify-grid,
   .stats-grid,
   .failure-grid,
   .detail-charts {

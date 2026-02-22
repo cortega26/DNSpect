@@ -2,13 +2,33 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent a
 
 import { ChartsPanel } from '@/components/ChartsPanel'
 import { DashboardControls, type TimeoutPreset } from '@/components/DashboardControls'
+import { GuidedApplyModal } from '@/components/GuidedApplyModal'
 import { LiveRankingPanel } from '@/components/LiveRankingPanel'
 import { RecommendedResolverPanel } from '@/components/RecommendedResolverPanel'
 import { ResolverDetailModal } from '@/components/ResolverDetailModal'
 import { ResolverRankingPanel } from '@/components/ResolverRankingPanel'
+import { buildDnsClipboardText, buildGuidedDnsSet, detectPlatformGroup } from '@/lib/applyGuide'
 import { useI18n, type Language } from '@/lib/i18n'
 import { computeRunningEtaText, formatEtaRange } from '@/lib/eta'
-import { getBenchmark, getProviders, getSystemDns, startBenchmark } from '@/lib/api'
+import { getBenchmark, getProviders, getSystemDns, probeResolvers, startBenchmark } from '@/lib/api'
+import { compareProbeSummaries, parseProbeResponse, type ProbeOutcome, type ProbeSummary } from '@/lib/probe'
+import {
+  buildBenchmarkCsv,
+  buildShareSummary,
+  clearSavedLastRun,
+  type LoadSavedLastRunResult,
+  loadSavedLastRun,
+  persistSavedLastRun,
+  resolveRecommendedResult,
+  type SavedLastRunV1,
+} from '@/lib/reporting'
+import {
+  computeStallThresholds,
+  isActivePollSession,
+  isSmallImprovement,
+  shouldAcceptAsyncResult,
+  shouldPollBenchmark,
+} from '@/lib/runtime'
 import { useTheme } from '@/lib/theme'
 import type { BenchmarkMode, BenchmarkStatus, Provider, ResolverResult, SystemDnsPayload } from '@/lib/types'
 import { API_BASE, fmtMs, resolverReliabilityScore } from '@/lib/utils'
@@ -71,12 +91,18 @@ const FALLBACK_PROVIDERS: Provider[] = [
 ]
 
 const POLL_INTERVAL_MS = 1000
-const STALL_SLOW_THRESHOLD_MS = 4000
-const STALL_HARD_THRESHOLD_MS = 8000
 
 interface ResolverCatalogItem {
   resolver: string
   providerName: string
+}
+
+interface VerificationSummary {
+  outcome: ProbeOutcome
+  recommended: ProbeSummary | null
+  current: ProbeSummary | null
+  currentResolver: string | null
+  sampleSize: number
 }
 
 function parseQueries(value: string): string[] {
@@ -124,6 +150,18 @@ function parseTimestampMs(value: number | string | null | undefined): number | n
   return Number.isFinite(parsed) ? parsed : null
 }
 
+function triggerDownload(content: BlobPart, fileName: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType })
+  const url = window.URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = fileName
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  window.URL.revokeObjectURL(url)
+}
+
 const languageOptions: Array<{ value: Language; flag: string; code: string; srLabel: string }> = [
   { value: 'es', flag: '🇪🇸', code: 'ES', srLabel: 'Español' },
   { value: 'en', flag: '🇺🇸', code: 'EN', srLabel: 'English' },
@@ -154,9 +192,17 @@ function App() {
   const [onlyReliable, setOnlyReliable] = useState<boolean>(false)
   const [resolverListOpen, setResolverListOpen] = useState<boolean>(false)
   const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [summaryCopyStatus, setSummaryCopyStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [guidedApplyOpen, setGuidedApplyOpen] = useState<boolean>(false)
+  const [guidedCopyStatus, setGuidedCopyStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [isVerifyingGuided, setIsVerifyingGuided] = useState<boolean>(false)
+  const [guidedVerifyError, setGuidedVerifyError] = useState<string | null>(null)
+  const [guidedVerification, setGuidedVerification] = useState<VerificationSummary | null>(null)
+  const [savedLastRun, setSavedLastRun] = useState<SavedLastRunV1 | null>(null)
+  const [savedRunNotice, setSavedRunNotice] = useState<string | null>(null)
+  const [viewingSavedRun, setViewingSavedRun] = useState<boolean>(false)
   const [localeMenuOpen, setLocaleMenuOpen] = useState<boolean>(false)
   const [nowMs, setNowMs] = useState<number>(() => Date.now())
-  const applyGuideRef = useRef<HTMLElement | null>(null)
   const rankingPanelRef = useRef<HTMLElement | null>(null)
   const localeMenuRef = useRef<HTMLDivElement>(null)
   const localeTriggerRef = useRef<HTMLButtonElement>(null)
@@ -164,7 +210,43 @@ function App() {
   const pollTimerRef = useRef<number | null>(null)
   const pollAbortRef = useRef<AbortController | null>(null)
   const pollInFlightRef = useRef<boolean>(false)
+  const pollSessionIdRef = useRef<number>(0)
   const activePollBenchmarkIdRef = useRef<string | null>(null)
+  const startRequestSeqRef = useRef<number>(0)
+  const mountedRef = useRef<boolean>(false)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
+
+  const stopPolling = useCallback(() => {
+    pollSessionIdRef.current += 1
+    if (pollTimerRef.current !== null) {
+      window.clearTimeout(pollTimerRef.current)
+      pollTimerRef.current = null
+    }
+    if (pollAbortRef.current) {
+      pollAbortRef.current.abort()
+      pollAbortRef.current = null
+    }
+    pollInFlightRef.current = false
+    activePollBenchmarkIdRef.current = null
+  }, [])
+
+  useEffect(() => {
+    const loaded: LoadSavedLastRunResult = loadSavedLastRun()
+    setSavedLastRun(loaded.saved)
+    if (loaded.invalidationReason === 'schema_version_mismatch') {
+      setSavedRunNotice(t('lastRun.schemaMismatch'))
+    } else if (loaded.invalidationReason === 'malformed_payload') {
+      setSavedRunNotice(t('lastRun.invalidPayload'))
+    } else {
+      setSavedRunNotice(null)
+    }
+  }, [t])
 
   useEffect(() => {
     let cancelled = false
@@ -202,34 +284,27 @@ function App() {
     }
   }, [])
 
-  const stopPolling = useCallback(() => {
-    if (pollTimerRef.current !== null) {
-      window.clearTimeout(pollTimerRef.current)
-      pollTimerRef.current = null
-    }
-    if (pollAbortRef.current) {
-      pollAbortRef.current.abort()
-      pollAbortRef.current = null
-    }
-    pollInFlightRef.current = false
-    activePollBenchmarkIdRef.current = null
-  }, [])
-
   const startPolling = useCallback(
     (id: string) => {
       stopPolling()
       activePollBenchmarkIdRef.current = id
+      const sessionId = pollSessionIdRef.current
       let cancelled = false
 
+      const isCurrentSession = () =>
+        !cancelled &&
+        isActivePollSession(sessionId, pollSessionIdRef.current, id, activePollBenchmarkIdRef.current) &&
+        mountedRef.current
+
       const scheduleNext = (delayMs: number) => {
-        if (cancelled || activePollBenchmarkIdRef.current !== id) return
+        if (!isCurrentSession()) return
         pollTimerRef.current = window.setTimeout(() => {
           void pollOnce()
         }, delayMs)
       }
 
       const pollOnce = async () => {
-        if (cancelled || activePollBenchmarkIdRef.current !== id) return
+        if (!isCurrentSession()) return
         if (pollInFlightRef.current) {
           scheduleNext(120)
           return
@@ -241,7 +316,7 @@ function App() {
 
         try {
           const next = await getBenchmark(id, false, controller.signal)
-          if (cancelled || activePollBenchmarkIdRef.current !== id) return
+          if (!isCurrentSession()) return
           setStatus(next)
           if (next.status === 'running') {
             scheduleNext(POLL_INTERVAL_MS)
@@ -249,7 +324,7 @@ function App() {
             stopPolling()
           }
         } catch (e) {
-          if (controller.signal.aborted || cancelled || activePollBenchmarkIdRef.current !== id) return
+          if (controller.signal.aborted || !isCurrentSession()) return
           setError(e instanceof Error ? e.message : t('error.benchmarkPoll'))
           stopPolling()
         } finally {
@@ -264,7 +339,7 @@ function App() {
 
       return () => {
         cancelled = true
-        if (activePollBenchmarkIdRef.current === id) {
+        if (isActivePollSession(sessionId, pollSessionIdRef.current, id, activePollBenchmarkIdRef.current)) {
           stopPolling()
         }
       }
@@ -273,12 +348,18 @@ function App() {
   )
 
   useEffect(() => {
-    if (!benchmarkId) {
+    if (!shouldPollBenchmark(benchmarkId, viewingSavedRun)) {
       stopPolling()
       return
     }
     return startPolling(benchmarkId)
-  }, [benchmarkId, startPolling, stopPolling])
+  }, [benchmarkId, startPolling, stopPolling, viewingSavedRun])
+
+  useEffect(() => {
+    return () => {
+      stopPolling()
+    }
+  }, [stopPolling])
 
   useEffect(() => {
     setTimeoutPreset(nearestTimeoutPreset(timeoutSec))
@@ -313,19 +394,22 @@ function App() {
     [resolverCatalog, selectedResolvers, t],
   )
 
-  const decisiveRanking = status?.results ?? []
+  const decisiveRanking = useMemo(() => status?.results ?? [], [status?.results])
   const sortedResults = decisiveRanking
-  const picks = useMemo(
-    () => ({
-      primary: decisiveRanking[0]?.resolver,
-      secondary: decisiveRanking[1]?.resolver,
-    }),
-    [decisiveRanking],
-  )
-  const primaryResult = useMemo(
-    () => decisiveRanking.find((row) => row.resolver === picks.primary) ?? null,
-    [decisiveRanking, picks.primary],
-  )
+  const primaryResult = useMemo(() => resolveRecommendedResult(status), [status])
+  const picks = useMemo(() => {
+    const primary = primaryResult?.resolver ?? decisiveRanking[0]?.resolver
+    const secondary = decisiveRanking.find((item) => item.resolver !== primary)?.resolver
+    return { primary, secondary }
+  }, [decisiveRanking, primaryResult?.resolver])
+  const guidedDnsSet = useMemo(() => {
+    const providerDns = primaryResult ? providerById.get(primaryResult.provider_id)?.dns ?? [] : []
+    return buildGuidedDnsSet({
+      primaryResolver: primaryResult?.resolver ?? null,
+      secondaryResolver: picks.secondary ?? null,
+      providerDns,
+    })
+  }, [picks.secondary, primaryResult, providerById])
 
   const filteredResults = useMemo(() => {
     const term = searchTerm.trim().toLowerCase()
@@ -387,16 +471,17 @@ function App() {
     if (!isRunning || lastSampleAtMs === null) return null
     return Math.max(0, nowMs - lastSampleAtMs)
   }, [isRunning, lastSampleAtMs, nowMs])
+  const stallThresholds = useMemo(() => computeStallThresholds(status?.timeout_sec ?? timeoutSec), [status?.timeout_sec, timeoutSec])
   const runningHealthMessage = useMemo(() => {
     if (!isRunning) return t('status.runningHealthNormal')
-    if (lastProgressAgeMs === null || lastProgressAgeMs <= STALL_SLOW_THRESHOLD_MS) {
+    if (lastProgressAgeMs === null || lastProgressAgeMs <= stallThresholds.slowMs) {
       return t('status.runningHealthNormal')
     }
-    if (lastProgressAgeMs <= STALL_HARD_THRESHOLD_MS) {
+    if (lastProgressAgeMs <= stallThresholds.stalledMs) {
       return t('status.runningHealthSlow')
     }
     return t('status.runningHealthStalled')
-  }, [isRunning, lastProgressAgeMs, t])
+  }, [isRunning, lastProgressAgeMs, stallThresholds.slowMs, stallThresholds.stalledMs, t])
   const lastProgressLabel = useMemo(() => {
     if (lastProgressAgeMs === null) return t('status.lastProgressUnknown')
     return t('status.lastProgressAgo', { seconds: Math.floor(lastProgressAgeMs / 1000) })
@@ -470,6 +555,34 @@ function App() {
     const timer = window.setTimeout(() => setCopyStatus('idle'), 2200)
     return () => window.clearTimeout(timer)
   }, [copyStatus])
+
+  useEffect(() => {
+    if (summaryCopyStatus !== 'success') return
+    const timer = window.setTimeout(() => setSummaryCopyStatus('idle'), 2200)
+    return () => window.clearTimeout(timer)
+  }, [summaryCopyStatus])
+
+  useEffect(() => {
+    if (guidedCopyStatus !== 'success') return
+    const timer = window.setTimeout(() => setGuidedCopyStatus('idle'), 2200)
+    return () => window.clearTimeout(timer)
+  }, [guidedCopyStatus])
+
+  useEffect(() => {
+    if (!status || status.status !== 'done' || viewingSavedRun) return
+    const metadata = {
+      timestamp: new Date().toISOString(),
+      platform:
+        systemDns?.platform ??
+        (typeof window !== 'undefined' && typeof window.navigator?.platform === 'string' ? window.navigator.platform : null),
+      app_version:
+        typeof import.meta.env.VITE_APP_VERSION === 'string' && import.meta.env.VITE_APP_VERSION.length > 0
+          ? import.meta.env.VITE_APP_VERSION
+          : null,
+    }
+    const persisted = persistSavedLastRun(status, metadata)
+    if (persisted) setSavedLastRun(persisted)
+  }, [status, systemDns?.platform, viewingSavedRun])
 
   function closeLocaleMenu(restoreTriggerFocus = false) {
     setLocaleMenuOpen(false)
@@ -547,9 +660,24 @@ function App() {
   }
 
   async function handleStart() {
+    const requestSeq = startRequestSeqRef.current + 1
+    startRequestSeqRef.current = requestSeq
+
     setError(null)
     setSelectedResult(null)
     setCopyStatus('idle')
+    setSummaryCopyStatus('idle')
+    setGuidedApplyOpen(false)
+    setGuidedCopyStatus('idle')
+    setGuidedVerification(null)
+    setGuidedVerifyError(null)
+    setIsVerifyingGuided(false)
+    setSavedRunNotice(null)
+    setViewingSavedRun(false)
+    stopPolling()
+    setStatus(null)
+    setBenchmarkId(null)
+
     try {
       const customQueries = parseQueries(queriesText)
       const payload = {
@@ -560,9 +688,10 @@ function App() {
         ...(customQueries.length > 0 ? { queries: customQueries } : {}),
       }
       const response = await startBenchmark(payload)
-      setStatus(null)
+      if (!shouldAcceptAsyncResult(requestSeq, startRequestSeqRef.current, mountedRef.current)) return
       setBenchmarkId(response.benchmark_id)
     } catch (e) {
+      if (!shouldAcceptAsyncResult(requestSeq, startRequestSeqRef.current, mountedRef.current)) return
       setError(e instanceof Error ? e.message : t('error.benchmarkStart'))
     }
   }
@@ -582,11 +711,11 @@ function App() {
   }
 
   function applyRecommendation() {
-    const toApply = [picks.primary, picks.secondary].filter(Boolean) as string[]
-    if (toApply.length === 0) return
-    setSelectedResolvers(new Set(toApply))
-    setAdvancedOpen(false)
-    applyGuideRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    if (!primaryResult) return
+    setGuidedApplyOpen(true)
+    setGuidedCopyStatus('idle')
+    setGuidedVerifyError(null)
+    setGuidedVerification(null)
   }
 
   function handleViewFullRanking() {
@@ -600,6 +729,136 @@ function App() {
       setCopyStatus('success')
     } catch {
       setCopyStatus('error')
+    }
+  }
+
+  async function handleGuidedCopy(addresses: string[]) {
+    const text = buildDnsClipboardText(addresses)
+    if (!text) return
+    try {
+      await navigator.clipboard.writeText(text)
+      setGuidedCopyStatus('success')
+    } catch {
+      setGuidedCopyStatus('error')
+    }
+  }
+
+  async function handleGuidedVerify() {
+    if (!primaryResult) return
+    setGuidedVerifyError(null)
+    setGuidedVerification(null)
+    setIsVerifyingGuided(true)
+
+    try {
+      let latestSystemDns = systemDns
+      try {
+        latestSystemDns = await getSystemDns()
+        setSystemDns(latestSystemDns)
+      } catch {
+        // Keep the previously loaded system DNS if refresh fails.
+      }
+
+      const currentResolver = latestSystemDns?.resolvers?.[0] ?? null
+      const resolverTargets = Array.from(new Set([primaryResult.resolver, currentResolver].filter(Boolean))) as string[]
+      if (resolverTargets.length === 0) {
+        setGuidedVerification({
+          outcome: 'inconclusive',
+          recommended: null,
+          current: null,
+          currentResolver: null,
+          sampleSize: 0,
+        })
+        return
+      }
+
+      const probePayload = await probeResolvers({
+        resolvers: resolverTargets,
+        runs_per_resolver: 4,
+        timeout_sec: 1.5,
+      })
+      const parsed = parseProbeResponse(probePayload)
+      const recommendedProbe = parsed.get(primaryResult.resolver) ?? null
+      const currentProbe = currentResolver ? parsed.get(currentResolver) ?? null : null
+
+      const outcome = compareProbeSummaries(recommendedProbe, currentProbe)
+      const sampleSize = Math.min(
+        recommendedProbe?.sampleCount ?? 0,
+        currentProbe?.sampleCount ?? recommendedProbe?.sampleCount ?? 0,
+      )
+
+      setGuidedVerification({
+        outcome,
+        recommended: recommendedProbe,
+        current: currentProbe,
+        currentResolver,
+        sampleSize,
+      })
+    } catch (e) {
+      setGuidedVerifyError(e instanceof Error ? e.message : t('applyGuide.verifyUnknownError'))
+    } finally {
+      setIsVerifyingGuided(false)
+    }
+  }
+
+  function handleViewSavedRun() {
+    if (!savedLastRun) return
+    stopPolling()
+    setError(null)
+    setSelectedResult(null)
+    setLoadingSamples(false)
+    setCopyStatus('idle')
+    setSummaryCopyStatus('idle')
+    setStatus(savedLastRun.payload)
+    setBenchmarkId(savedLastRun.payload.id)
+    setViewingSavedRun(true)
+  }
+
+  function handleClearSavedRun() {
+    clearSavedLastRun()
+    setSavedLastRun(null)
+    setSavedRunNotice(null)
+  }
+
+  function exportJsonReport() {
+    if (!status || status.status !== 'done') return
+    triggerDownload(JSON.stringify(status, null, 2), `dnspect-${status.id}.json`, 'application/json')
+  }
+
+  async function exportCsvReport() {
+    if (!status || status.status !== 'done') return
+    const exportId = benchmarkId ?? status.id
+    if (exportId) {
+      try {
+        const response = await fetch(`${API_BASE}/api/benchmarks/${exportId}/export.csv`)
+        if (response.ok) {
+          const csvBlob = await response.blob()
+          triggerDownload(csvBlob, `dnspect-${exportId}.csv`, 'text/csv')
+          return
+        }
+      } catch {
+        // Fallback to local CSV generation.
+      }
+    }
+    const csv = buildBenchmarkCsv(status)
+    if (!csv) return
+    triggerDownload(csv, `dnspect-${status.id}.csv`, 'text/csv')
+  }
+
+  async function handleCopySummary() {
+    if (!status || status.status !== 'done') return
+    try {
+      const summary = buildShareSummary({
+        status,
+        language,
+        t,
+        recommended: primaryResult,
+        currentResolver: currentResolverForSummary,
+        improvementMs: improvementVsCurrentMs,
+      })
+      await navigator.clipboard.writeText(summary)
+      setSummaryCopyStatus('success')
+    } catch {
+      setSummaryCopyStatus('error')
     }
   }
 
@@ -630,13 +889,13 @@ function App() {
   const runningEtaText = useMemo(() => {
     return computeRunningEtaText(status, timeoutSec, (key) => t(key))
   }, [status, t, timeoutSec])
-  const detectedPlatformGroup = useMemo<'windows' | 'macos' | 'linux' | null>(() => {
-    const platform = systemDns?.platform?.toLowerCase() ?? ''
-    if (platform.includes('win')) return 'windows'
-    if (platform.includes('mac') || platform.includes('darwin') || platform.includes('osx')) return 'macos'
-    if (platform.includes('linux')) return 'linux'
-    return null
-  }, [systemDns?.platform])
+  const detectedPlatformLabel = useMemo(() => {
+    const fromSystem = systemDns?.platform?.trim()
+    if (fromSystem) return fromSystem
+    const fromNavigator = typeof window !== 'undefined' ? window.navigator.platform : ''
+    return fromNavigator || t('summary.na')
+  }, [systemDns?.platform, t])
+  const detectedPlatformGroup = useMemo(() => detectPlatformGroup(detectedPlatformLabel), [detectedPlatformLabel])
   const primaryRank = useMemo(() => {
     if (!primaryResult) return null
     const index = decisiveRanking.findIndex((item) => item.resolver === primaryResult.resolver)
@@ -657,6 +916,8 @@ function App() {
     if (currentAverage === null || recommendedAverage === null) return null
     return currentAverage - recommendedAverage
   }, [currentDnsEvaluation, primaryResult])
+  const currentAverageVsRecommendation = currentDnsEvaluation?.row.stats.score_latency ?? null
+  const isSmallImprovementLabel = isSmallImprovement(improvementVsCurrentMs, currentAverageVsRecommendation)
   const currentResolverLabel = useMemo(() => {
     const resolver = status?.progress.current_resolver
     if (!resolver) return t('summary.na')
@@ -666,6 +927,32 @@ function App() {
     }
     return t('status.currentResolverFallback', { resolver })
   }, [resolverCatalog, status?.progress.current_resolver, t])
+  const currentResolverForSummary = useMemo(() => {
+    if (currentDnsEvaluation) {
+      return `${currentDnsEvaluation.row.provider_name} (${currentDnsEvaluation.row.resolver})`
+    }
+    const resolver = systemDns?.resolvers?.[0]
+    if (!resolver) return t('summary.na')
+    const item = resolverCatalog.get(resolver)
+    const providerName = item?.providerName ?? t('summary.na')
+    return providerName === t('summary.na') ? resolver : `${providerName} (${resolver})`
+  }, [currentDnsEvaluation, resolverCatalog, systemDns?.resolvers, t])
+  const savedLastRunSummary = useMemo(() => {
+    if (!savedLastRun) return null
+    const savedPrimary = resolveRecommendedResult(savedLastRun.payload)
+    const topResult = savedLastRun.payload.results?.[0] ?? null
+    const timestamp = new Date(savedLastRun.metadata.timestamp)
+    const timestampLabel = Number.isNaN(timestamp.getTime())
+      ? savedLastRun.metadata.timestamp
+      : timestamp.toLocaleString(language === 'pt' ? 'pt-BR' : language === 'en' ? 'en-US' : 'es-ES')
+    return {
+      timestampLabel,
+      recommendedLabel: savedPrimary ? `${savedPrimary.provider_name} (${savedPrimary.resolver})` : t('summary.na'),
+      topLatency: fmtMs(topResult?.stats.score_latency ?? topResult?.stats.avg_ms ?? null),
+      topReliability:
+        topResult === null ? t('summary.na') : `${(resolverReliabilityScore(topResult) * 100).toFixed(1)}%`,
+    }
+  }, [language, savedLastRun, t])
 
   return (
     <div className="app-shell">
@@ -790,6 +1077,37 @@ function App() {
         }}
       />
 
+      {savedLastRunSummary && (
+        <section className="card compact last-run-card">
+          <h3>{t('lastRun.title')}</h3>
+          <p className="muted">{t('lastRun.savedAt', { timestamp: savedLastRunSummary.timestampLabel })}</p>
+          <p>{t('lastRun.recommended', { resolver: savedLastRunSummary.recommendedLabel })}</p>
+          <p>{t('lastRun.topLatency', { latency: savedLastRunSummary.topLatency })}</p>
+          <p>{t('lastRun.topReliability', { reliability: savedLastRunSummary.topReliability })}</p>
+          <div className="actions-row">
+            <button type="button" className="btn-secondary" onClick={handleViewSavedRun}>
+              {t('lastRun.view')}
+            </button>
+            <button type="button" className="btn-ghost" onClick={handleClearSavedRun}>
+              {t('lastRun.clear')}
+            </button>
+          </div>
+        </section>
+      )}
+
+      {savedRunNotice && (
+        <section className="card compact saved-run-notice" role="status">
+          <p>{savedRunNotice}</p>
+        </section>
+      )}
+
+      {viewingSavedRun && (
+        <section className="card compact saved-run-viewing-badge" role="status">
+          <h3>{t('lastRun.viewingSavedTitle')}</h3>
+          <p>{t('lastRun.viewingSavedBody')}</p>
+        </section>
+      )}
+
       {status?.status === 'running' && (
         <section className="card compact status-running">
           <h3>{t('status.progressPanelTitle')}</h3>
@@ -839,9 +1157,15 @@ function App() {
           rank={primaryRank ?? 1}
           reliabilityPct={reliabilityPct}
           improvementVsCurrentMs={improvementVsCurrentMs}
+          recommendationWarning={status?.recommendation_warning ?? null}
+          isSmallImprovement={isSmallImprovementLabel}
           copyStatus={copyStatus}
+          summaryCopyStatus={summaryCopyStatus}
           onApplyRecommended={applyRecommendation}
           onCopyAddress={() => void handleCopyRecommendedDns()}
+          onCopySummary={() => void handleCopySummary()}
+          onExportJson={exportJsonReport}
+          onExportCsv={() => void exportCsvReport()}
           onViewFullRanking={handleViewFullRanking}
         />
       )}
@@ -869,6 +1193,7 @@ function App() {
             <strong>{systemDns.platform}</strong>
           </p>
           <p>{systemDns.resolvers.length ? systemDns.resolvers.join(', ') : t('systemDns.none')}</p>
+          {systemDns.error_detail ? <p className="muted">{t('systemDns.errorDetail', { error: systemDns.error_detail })}</p> : null}
         </section>
       )}
 
@@ -905,52 +1230,6 @@ function App() {
               <p>{t('systemDns.evaluationUnavailable')}</p>
             )}
           </section>
-
-          {recommendationAvailable && (
-            <section ref={applyGuideRef} className="card compact system-guide">
-              <h3>{t('applyGuide.title')}</h3>
-              <p>{t('applyGuide.lead')}</p>
-              {systemDns?.platform ? (
-                <p className="muted">{t('applyGuide.detectedPlatform', { platform: systemDns.platform })}</p>
-              ) : null}
-
-              <details className="guide-platform" open={detectedPlatformGroup === 'windows' || detectedPlatformGroup === null}>
-                <summary>{t('applyGuide.windowsTitle')}</summary>
-                <ol className="guide-steps">
-                  <li>{t('applyGuide.windowsStep1')}</li>
-                  <li>{t('applyGuide.windowsStep2')}</li>
-                  <li>{t('applyGuide.windowsStep3')}</li>
-                </ol>
-              </details>
-
-              <details className="guide-platform" open={detectedPlatformGroup === 'macos'}>
-                <summary>{t('applyGuide.macosTitle')}</summary>
-                <ol className="guide-steps">
-                  <li>{t('applyGuide.macosStep1')}</li>
-                  <li>{t('applyGuide.macosStep2')}</li>
-                  <li>{t('applyGuide.macosStep3')}</li>
-                </ol>
-              </details>
-
-              <details className="guide-platform" open={detectedPlatformGroup === 'linux'}>
-                <summary>{t('applyGuide.linuxTitle')}</summary>
-                <ol className="guide-steps">
-                  <li>{t('applyGuide.linuxStep1')}</li>
-                  <li>{t('applyGuide.linuxStep2')}</li>
-                  <li>{t('applyGuide.linuxStep3')}</li>
-                </ol>
-              </details>
-
-              <details className="guide-platform">
-                <summary>{t('applyGuide.routerTitle')}</summary>
-                <ol className="guide-steps">
-                  <li>{t('applyGuide.routerStep1')}</li>
-                  <li>{t('applyGuide.routerStep2')}</li>
-                  <li>{t('applyGuide.routerStep3')}</li>
-                </ol>
-              </details>
-            </section>
-          )}
 
           <section className="card compact">
             <h3>{t('summary.title')}</h3>
@@ -1002,32 +1281,34 @@ function App() {
           </section>
 
           <ChartsPanel results={filteredResults} />
-
-          <section className="card compact">
-            <h3>{t('exports.title')}</h3>
-            <div className="actions-row export-actions">
-              <div className="export-action">
-                <a className="btn-secondary" href={`${API_BASE}/api/benchmarks/${benchmarkId}/export.csv`}>
-                  {t('exports.csv')}
-                </a>
-                <p className="helper-text export-help">{t('exports.csvPurpose')}</p>
-              </div>
-              <div className="export-action">
-                <a className="btn-secondary" href={`${API_BASE}/api/benchmarks/${benchmarkId}/export.json`}>
-                  {t('exports.jsonSummary')}
-                </a>
-                <p className="helper-text export-help">{t('exports.jsonSummaryPurpose')}</p>
-              </div>
-              <div className="export-action">
-                <a className="btn-secondary" href={`${API_BASE}/api/benchmarks/${benchmarkId}/export.json?include_samples=1`}>
-                  {t('exports.jsonSamples')}
-                </a>
-                <p className="helper-text export-help">{t('exports.jsonSamplesPurpose')}</p>
-              </div>
-            </div>
-          </section>
         </>
       )}
+
+      <GuidedApplyModal
+        open={guidedApplyOpen && Boolean(primaryResult)}
+        onClose={() => {
+          setGuidedApplyOpen(false)
+          setIsVerifyingGuided(false)
+        }}
+        detectedPlatformLabel={detectedPlatformLabel}
+        detectedPlatformGroup={detectedPlatformGroup}
+        resolverName={primaryResult?.provider_name ?? t('summary.na')}
+        recommendedPrimary={primaryResult?.resolver ?? null}
+        recommendedSecondary={picks.secondary ?? null}
+        ipv4Dns={guidedDnsSet.ipv4}
+        ipv6Dns={guidedDnsSet.ipv6}
+        allDns={guidedDnsSet.all}
+        copyStatus={guidedCopyStatus}
+        isVerifying={isVerifyingGuided}
+        verifyError={guidedVerifyError}
+        verification={guidedVerification}
+        onCopyIpv4={() => void handleGuidedCopy(guidedDnsSet.ipv4)}
+        onCopyIpv6={() => void handleGuidedCopy(guidedDnsSet.ipv6)}
+        onCopyAll={() => void handleGuidedCopy(guidedDnsSet.all)}
+        onVerify={() => {
+          void handleGuidedVerify()
+        }}
+      />
 
       {resolverListOpen && (
         <div className="modal-backdrop" onClick={() => setResolverListOpen(false)}>

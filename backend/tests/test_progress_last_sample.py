@@ -39,3 +39,34 @@ def test_last_sample_at_updates_monotonically() -> None:
     finally:
         with manager._lock:
             manager._states.pop(benchmark_id, None)
+
+
+def test_last_sample_at_does_not_move_backwards_when_existing_value_is_newer() -> None:
+    manager = BenchmarkManager()
+    benchmark_id = "test-last-sample-at-skew"
+
+    state = BenchmarkState(
+        id=benchmark_id,
+        status="running",
+        started_at=datetime.now(UTC).isoformat(),
+        progress_total=1,
+        mode="quick",
+        timeout_sec=1.0,
+        runs=1,
+    )
+    with manager._lock:
+        manager._states[benchmark_id] = state
+
+    try:
+        future_like_ts = int(datetime.now(UTC).timestamp() * 1000) + 60_000
+        with manager._lock:
+            manager._states[benchmark_id].last_sample_at = future_like_ts
+
+        manager._update_progress(benchmark_id, increment=1, resolver="1.1.1.1", observed_latency_ms=18.0)
+
+        updated = manager.get_state(benchmark_id)
+        assert updated is not None
+        assert updated.last_sample_at == future_like_ts
+    finally:
+        with manager._lock:
+            manager._states.pop(benchmark_id, None)

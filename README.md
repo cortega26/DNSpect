@@ -40,8 +40,12 @@ Optional env vars:
 DNSpect release artifacts bundle the built frontend served by FastAPI and a packaged backend.
 
 1. Download the latest asset from [GitHub Releases](https://github.com/cortega26/DNSpect/releases).
-2. Run the binary (`dns-speed-lab-linux` or `dns-speed-lab-windows.exe`).
+2. Run the binary (`dnspect-linux-x64`, `dnspect-macos-x64`, `dnspect-macos-arm64`, or `dnspect-windows-x64.exe`).
 3. Open `http://127.0.0.1:8000`.
+
+Release checksum/signature verification guide:
+
+- [`docs/RELEASE_VERIFY.md`](docs/RELEASE_VERIFY.md)
 
 Optional env vars:
 
