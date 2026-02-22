@@ -76,6 +76,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -c backend/constraints.txt -e "./backend[pack]"
 
+      - name: Verify backports packaging dependency
+        shell: bash
+        run: python -c "import backports, backports.tarfile"
+
       - name: Build packaged binary
         shell: bash
         run: python scripts/package_backend.py
@@ -101,6 +105,11 @@ jobs:
         env:
           SRC_BINARY: ${{ matrix.source_binary }}
           ASSET_NAME: ${{ matrix.asset_name }}
+
+      - name: Smoke test Linux packaged artifact
+        if: ${{ matrix.asset_name == 'dnspect-linux-x64' }}
+        shell: bash
+        run: bash scripts/smoke_packaged_linux.sh "release-assets/${{ matrix.asset_name }}"
 
       - name: Verify macOS artifact architecture
         if: ${{ startsWith(matrix.os, 'macos') }}

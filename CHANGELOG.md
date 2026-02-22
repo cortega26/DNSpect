@@ -55,6 +55,7 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 - Build/CI: Reworked release artifact matrix with explicit names/architectures and pinned Node/Python setup for reproducible packaging (`3642066`, `04a87d1`).
 - Build/CI: Added macOS artifact architecture verification (`file` + `lipo`) and strengthened mismatch/universal-binary rejection rules (`04a87d1`, `c774665`).
 - Build/CI: Added checksum manifest generation and optional GPG signature creation/publication in release workflow (`2b37d73`, `04a87d1`).
+- Fixed: Patched Linux PyInstaller packaging for Python 3.11 by bundling `backports.tarfile` and forcing hidden imports for `backports`/`backports.tarfile`; added packaged-binary smoke checks in CI/release to prevent regressions.
 - Changed: Removed macOS x64 artifacts from release publication and verification docs; retained arm64 artifact path only (`1b5f843`).
 
 #### Security & dependency updates
@@ -80,6 +81,7 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 - Added: API responses now include additive fields such as `run_storage_warning`, `recommended_resolver`, `recommendation_warning`, plus richer `progress` metadata (`425f363`, `3642066`).
 - Changed: Backward-compatibility concern: status enum changed (`error` -> `failed`) and now includes `queued`/`cancelled`; strict client parsers may require updates (`3642066`).
 - Changed: Backward-compatibility concern: macOS x64 consumers must migrate to arm64 artifacts for this channel (`1b5f843`).
+- Fixed: Linux packaged startup crash (`ModuleNotFoundError: backports`) was caused by PyInstaller collecting `setuptools` vendored `jaraco.context` on Python 3.11 without bundling `backports.tarfile`; release/CI now smoke-run the built executable.
 
 ## [0.2.0] - 2026-02-21
 

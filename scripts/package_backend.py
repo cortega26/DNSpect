@@ -55,6 +55,8 @@ def main() -> None:
         add_data_data,
         str(backend_entry),
     ]
+    for hidden_import in ("backports", "backports.tarfile"):
+        cmd.extend(["--hidden-import", hidden_import])
 
     subprocess.run(cmd, cwd=root, check=True)
 

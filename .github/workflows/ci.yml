@@ -104,3 +104,52 @@ jobs:
 
       - name: Frontend tests (vitest)
         run: npm test
+
+  packaged-linux-smoke:
+    name: packaged-linux-smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            backend/pyproject.toml
+            backend/constraints.txt
+
+      - name: Install backend packaging deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -c backend/constraints.txt -e "./backend[pack]"
+
+      - name: Verify backports packaging dependency
+        run: python -c "import backports, backports.tarfile"
+
+      - name: Build packaged binary
+        run: python scripts/package_backend.py
+
+      - name: Prepare Linux artifact name
+        run: |
+          mkdir -p release-assets
+          cp dist/dns-speed-lab-linux release-assets/dnspect-linux-x64
+          chmod +x release-assets/dnspect-linux-x64
+
+      - name: Smoke test packaged Linux artifact
+        run: bash scripts/smoke_packaged_linux.sh release-assets/dnspect-linux-x64
