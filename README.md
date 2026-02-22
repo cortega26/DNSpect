@@ -15,8 +15,6 @@ Deterministic, local-first DNS resolver benchmarking with FastAPI + React.
 
 ![DNSpect benchmark in progress (dark theme, English)](docs/screenshots/readme-running-dark-en.png)
 
-Coverage badge is intentionally omitted: this repository does not currently publish a coverage pipeline or threshold gate.
-
 ## 🎯 Problem Statement
 Most "DNS speed test" pages run from a remote browser context or cloud vantage point, so they measure someone else's network path. DNSpect runs on your machine, sends real DNS queries to candidate resolvers, and ranks outcomes using latency, failure rate, and stability metrics.
 
