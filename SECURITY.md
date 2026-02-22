@@ -2,8 +2,8 @@
 
 ## Reporting a Vulnerability
 
-Si encuentras una vulnerabilidad, por favor reporta de forma responsable por
-canal privado al mantenedor del repositorio (issue privada o contacto directo).
+Si encuentras una vulnerabilidad, por favor repórtala de forma responsable por
+canal privado al mantenedor del repositorio (issue privado o contacto directo).
 No publiques detalles explotables hasta coordinar una corrección.
 
 Incluye:

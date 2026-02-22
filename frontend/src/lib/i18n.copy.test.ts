@@ -46,7 +46,7 @@ describe('i18n copy contract gate', () => {
       ['applyGuide.windowsTitle', 'Windows'],
       ['applyGuide.windowsStep1', 'Abra Configurações > Rede e Internet.'],
       ['applyGuide.windowsStep2', 'Entre em Ethernet ou Wi-Fi e edite a atribuição de DNS.'],
-      ['applyGuide.windowsStep3', 'Informe DNS primario/secundario e salve as alterações.'],
+      ['applyGuide.windowsStep3', 'Informe DNS primário/secundário e salve as alterações.'],
       ['applyGuide.macosTitle', 'macOS'],
       ['applyGuide.macosStep1', 'Abra Ajustes do Sistema > Rede.'],
       ['applyGuide.macosStep2', 'Selecione sua rede e abra Detalhes > DNS.'],
@@ -58,7 +58,7 @@ describe('i18n copy contract gate', () => {
       ['applyGuide.routerTitle', 'Roteador'],
       ['applyGuide.routerStep1', 'Abra o painel do roteador no navegador.'],
       ['applyGuide.routerStep2', 'Procure Internet/WAN e os campos de DNS.'],
-      ['applyGuide.routerStep3', 'Salve DNS primario/secundario e reinicie clientes.'],
+      ['applyGuide.routerStep3', 'Salve DNS primário/secundário e reinicie os clientes.'],
     ])
   })
 
@@ -93,8 +93,8 @@ describe('i18n copy contract gate', () => {
     ])
 
     assertCopyContract('pt', [
-      ['controls.workloadSummary', 'Escopo: {{resolvers}} resolvers × {{runs}} execucoes · Timeout: {{timeout}}s · Est: {{eta}}'],
-      ['controls.workloadSummaryNoEta', 'Escopo: {{resolvers}} resolvers × {{runs}} execucoes · Timeout: {{timeout}}s'],
+      ['controls.workloadSummary', 'Escopo: {{resolvers}} resolvers × {{runs}} execuções · Timeout: {{timeout}}s · Est: {{eta}}'],
+      ['controls.workloadSummaryNoEta', 'Escopo: {{resolvers}} resolvers × {{runs}} execuções · Timeout: {{timeout}}s'],
     ])
   })
 

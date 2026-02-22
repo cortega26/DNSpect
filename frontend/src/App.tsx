@@ -46,6 +46,8 @@ const BASIC_TIMEOUT_PRESET: Record<TimeoutPreset, number> = {
   high: 3,
 }
 
+const FALLBACK_PROVIDER_NOTES_ES = 'Lista de proveedores de respaldo cuando la API de proveedores del backend no está disponible.'
+
 const FALLBACK_PROVIDERS: Provider[] = [
   {
     id: 'cloudflare',
@@ -59,7 +61,7 @@ const FALLBACK_PROVIDERS: Provider[] = [
       doh: 'yes',
       dot: 'yes',
     },
-    notes_es: 'Fallback provider list when backend providers API is unavailable.',
+    notes_es: FALLBACK_PROVIDER_NOTES_ES,
   },
   {
     id: 'google',
@@ -73,7 +75,7 @@ const FALLBACK_PROVIDERS: Provider[] = [
       doh: 'yes',
       dot: 'yes',
     },
-    notes_es: 'Fallback provider list when backend providers API is unavailable.',
+    notes_es: FALLBACK_PROVIDER_NOTES_ES,
   },
   {
     id: 'quad9',
@@ -87,7 +89,7 @@ const FALLBACK_PROVIDERS: Provider[] = [
       doh: 'yes',
       dot: 'yes',
     },
-    notes_es: 'Fallback provider list when backend providers API is unavailable.',
+    notes_es: FALLBACK_PROVIDER_NOTES_ES,
   },
 ]
 
@@ -269,13 +271,13 @@ function App() {
       setSelectedResolvers(defaults)
 
       if (providersResult.status === 'rejected' || dnsResult.status === 'rejected') {
-        let reason: unknown = 'Error cargando datos iniciales'
+        let reason: unknown = 'Error al cargar los datos iniciales'
         if (providersResult.status === 'rejected') {
           reason = providersResult.reason
         } else if (dnsResult.status === 'rejected') {
           reason = dnsResult.reason
         }
-        setError(reason instanceof Error ? reason.message : 'Error cargando datos iniciales')
+        setError(reason instanceof Error ? reason.message : 'Error al cargar los datos iniciales')
       }
     }
     void init()
@@ -1235,15 +1237,15 @@ function App() {
           <section className="card compact">
             <h3>{t('summary.title')}</h3>
             <div className="summary-grid">
-              <article className="metric-card" title="Rendimiento de mediana (ms)">
+              <article className="metric-card" title={t('summary.medianTitle')}>
                 <h4>{t('summary.fast')}</h4>
                 <p>{fmtMs(primaryResult?.stats.median_ms ?? null)}</p>
               </article>
-              <article className="metric-card" title="Estabilidad p95 (ms)">
+              <article className="metric-card" title={t('summary.p95Title')}>
                 <h4>{t('summary.stable')}</h4>
                 <p>{fmtMs(primaryResult?.stats.p95_ms ?? null)}</p>
               </article>
-              <article className="metric-card" title="Confiabilidad = 1 - failure_rate">
+              <article className="metric-card" title={t('summary.reliabilityTitle')}>
                 <h4>{t('summary.reliable')}</h4>
                 <p>{reliabilityPct === null ? t('summary.na') : `${reliabilityPct.toFixed(0)}%`}</p>
               </article>

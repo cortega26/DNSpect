@@ -1,6 +1,6 @@
-# Screenshots / GIF
+# Capturas y GIF
 
-Placeholders sugeridos (crear dentro de `docs/screenshots/`):
+Nombres sugeridos (crear dentro de `docs/screenshots/`):
 
 - `dashboard.png`
 - `ranking.png`
@@ -29,9 +29,9 @@ Placeholders sugeridos (crear dentro de `docs/screenshots/`):
    - Captura `docs/screenshots/live-motion-reduced.png`.
 3. Revisa que:
    - El chip LIVE no pulse.
-   - No haya heartbeat en filas lideres.
+   - No haya heartbeat en filas líderes.
    - No haya animaciones FLIP/reveal.
-   - El panel siga funcional y sin cambios de layout.
+   - El panel siga funcional y sin cambios de diseño.
 4. Presupuesto de motion por volumen:
    - Simula un ranking con más de 30 filas visibles.
    - Verifica que se desactiven animaciones de reorder/highlights y que los deltas permanezcan solo como texto.

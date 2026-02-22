@@ -2,7 +2,7 @@
 
 ## Resumen
 
-`dns-speed-lab` usa arquitectura local híbrida:
+`DNSpect` usa arquitectura local híbrida:
 
 - **Frontend**: React + Vite + TypeScript
 - **Backend**: FastAPI
@@ -13,18 +13,18 @@ Motivo: el navegador no puede realizar consultas DNS UDP directas de forma nativ
 
 Ruta: `backend/app/`
 
-- `main.py`: endpoints API, exportaciones y servido de frontend estático en modo empaquetado.
+- `main.py`: endpoints de API, exportaciones y servido del frontend estático en modo empaquetado.
 - `models.py`: validación estricta de entrada (`runs`, `timeout`, resolvers IP, hostnames).
-- `runner.py`: ejecución de benchmarks en background, clasificación de fallos, persistencia.
+- `runner.py`: ejecución de benchmarks en segundo plano, clasificación de fallos y persistencia.
 - `stats.py`: parser de `drill` y cálculo de métricas.
 - `detect_dns.py`: detección DNS del sistema (Linux/Windows).
-- `providers.py`: carga de dataset de proveedores y queries.
+- `providers.py`: carga del conjunto de datos de proveedores y consultas.
 - `cli.py`: arranque de servidor para binario empaquetado.
 
 ### Motores DNS
 
 - Linux: `drill` si está disponible.
-- Fallback/Windows: `dnspython`.
+- Fallback y Windows: `dnspython`.
 
 ### Contrato de BenchmarkStatus
 
@@ -49,7 +49,7 @@ Orden aplicado:
 2. `p95_ms` asc
 3. `timeout_count` asc
 
-Rationale: prioriza latencia típica, luego consistencia en cola alta, luego confiabilidad por timeouts.
+Justificación: prioriza la latencia típica, luego la consistencia en la cola alta y, por último, la confiabilidad según timeouts.
 
 ### Persistencia
 
@@ -62,13 +62,13 @@ Ruta: `frontend/src/`
 
 - Dashboard de configuración y progreso
 - Ranking con filtros (texto, confiabilidad, NA)
-- Recomendación primaria/secundaria aplicable en 1 click
+- Recomendación primaria/secundaria aplicable en 1 clic
 - Gráficos con límite Top-N para legibilidad
 - Modal detalle por resolver (muestras bajo demanda)
 
 ## Packaging (Release)
 
-Estrategia implementada: **Option B**
+Estrategia implementada: **Opción B**
 
 1. `frontend` se compila a estáticos (`frontend/dist`).
 2. `FastAPI` sirve esos estáticos en `/`.
@@ -81,8 +81,8 @@ Archivos relevantes:
 
 ## Seguridad
 
-- Resolver input: solo IP literal.
-- Queries: hostname validado.
+- Entrada de resolver: solo IP literal.
+- Consultas: hostname validado.
 - Límites de workload: `runs <= 300`, `timeout <= 10`.
-- Subprocess seguro sin `shell=True`.
+- Subproceso seguro sin `shell=True`.
 - Sin telemetría.

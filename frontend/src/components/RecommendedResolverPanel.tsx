@@ -67,7 +67,7 @@ export function RecommendedResolverPanel({
           <p>{reliabilityPct === null ? t('summary.na') : `${reliabilityPct.toFixed(1)}%`}</p>
         </article>
         <article className="metric-card">
-          <h4>Score</h4>
+          <h4>{t('recommendation.score')}</h4>
           <p>{result.stats.score_total === null ? t('summary.na') : result.stats.score_total.toFixed(3)}</p>
         </article>
         <article className="metric-card">

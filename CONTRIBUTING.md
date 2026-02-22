@@ -1,11 +1,11 @@
 # Contributing
 
-Gracias por contribuir a `dns-speed-lab`.
+Gracias por contribuir a `DNSpect`.
 
 ## Flujo de desarrollo
 
 1. Haz fork y crea una rama descriptiva (`feat/...`, `fix/...`, `docs/...`).
-2. Ejecuta calidad local antes de abrir PR:
+2. Ejecuta los controles de calidad locales antes de abrir el PR:
    - Backend: `ruff check . && ruff format --check . && black --check . && mypy && bandit -q -c pyproject.toml -r app && pytest -q`
    - Backend (SAST adicional): `make backend-semgrep`
    - Frontend: `npm run lint && npm run typecheck && npm run build`
