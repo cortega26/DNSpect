@@ -13,6 +13,8 @@ Deterministic, local-first DNS resolver benchmarking with FastAPI + React.
 [![Formatting: Ruff format + Black](https://img.shields.io/badge/formatting-ruff%20format%20%2B%20black-111827)](.github/workflows/ci.yml)
 [![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20macOS%20%7C%20windows-0ea5e9)](.github/workflows/release.yml)
 
+![DNSpect UI](docs/assets/screenshot.png)
+
 Coverage badge is intentionally omitted: this repository does not currently publish a coverage pipeline or threshold gate.
 
 ## 🎯 Problem Statement
