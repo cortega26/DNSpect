@@ -274,9 +274,7 @@ class BenchmarkManager:
             running_count = sum(1 for item in self._states.values() if item.status == "running")
             queued_count = sum(1 for item in self._states.values() if item.status == "queued")
             if running_count + queued_count >= (self.max_concurrent_jobs + self.max_queued_jobs):
-                raise ValueError(
-                    "Capacidad de benchmark agotada. Intenta nuevamente en unos minutos."
-                )
+                raise ValueError("Capacidad de benchmark agotada. Intenta nuevamente en unos minutos.")
             self._states[benchmark_id] = state
         self._persist_run(benchmark_id)
         try:
