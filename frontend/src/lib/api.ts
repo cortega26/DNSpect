@@ -42,9 +42,9 @@ export async function startBenchmark(payload: StartBenchmarkPayload): Promise<{ 
   return res.json()
 }
 
-export async function getBenchmark(id: string, includeSamples = false): Promise<BenchmarkStatus> {
+export async function getBenchmark(id: string, includeSamples = false, signal?: AbortSignal): Promise<BenchmarkStatus> {
   const suffix = includeSamples ? '?include_samples=1' : ''
-  const res = await fetch(`${API_BASE}/api/benchmarks/${id}${suffix}`)
+  const res = await fetch(`${API_BASE}/api/benchmarks/${id}${suffix}`, { signal })
   if (!res.ok) throw new Error('No se pudo consultar benchmark')
   return res.json()
 }

@@ -72,3 +72,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Frontend tests (vitest)
+        run: npm test

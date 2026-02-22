@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import ipaddress
 import platform
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 IP_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
+SCUTIL_NAMESERVER_RE = re.compile(r"^\s*nameserver\[\d+\]\s*:\s*(.+?)\s*$", re.IGNORECASE)
 
 
 def _extract_ips(text: str) -> list[str]:
@@ -14,6 +17,119 @@ def _extract_ips(text: str) -> list[str]:
         if match not in ips:
             ips.append(match)
     return ips
+
+
+def _normalize_ip_list(values: list[str]) -> list[str]:
+    normalized: list[str] = []
+    for raw in values:
+        candidate = raw.strip()
+        if not candidate:
+            continue
+        try:
+            ip = str(ipaddress.ip_address(candidate))
+        except ValueError:
+            continue
+        if ip not in normalized:
+            normalized.append(ip)
+    return normalized
+
+
+def _parse_scutil_nameservers(scutil_output: str) -> list[str]:
+    candidates: list[str] = []
+    in_resolver_block = False
+
+    for raw_line in scutil_output.splitlines():
+        line = raw_line.rstrip()
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.lower().startswith("resolver #"):
+            in_resolver_block = True
+            continue
+        if not in_resolver_block:
+            continue
+
+        match = SCUTIL_NAMESERVER_RE.match(line)
+        if match:
+            candidates.append(match.group(1).strip())
+
+    return _normalize_ip_list(candidates)
+
+
+def _parse_networksetup_dnsservers(output: str) -> list[str]:
+    lowered = output.lower()
+    if "there aren't any dns servers set" in lowered:
+        return []
+    if "there are no dns servers set" in lowered:
+        return []
+
+    candidates = [line.strip() for line in output.splitlines() if line.strip()]
+    return _normalize_ip_list(candidates)
+
+
+def detect_macos_dns() -> dict:
+    try:
+        proc = subprocess.run(
+            ["scutil", "--dns"],
+            capture_output=True,
+            text=True,
+            timeout=4,
+            check=False,
+        )
+        if proc.returncode == 0 and proc.stdout:
+            resolvers = _parse_scutil_nameservers(proc.stdout)
+            if resolvers:
+                return {
+                    "dns_servers": resolvers,
+                    "method": "scutil",
+                    "platform": "macos",
+                }
+    except (FileNotFoundError, subprocess.SubprocessError):
+        pass
+
+    services: list[str] = []
+    try:
+        list_proc = subprocess.run(
+            ["networksetup", "-listallnetworkservices"],
+            capture_output=True,
+            text=True,
+            timeout=4,
+            check=False,
+        )
+        if list_proc.returncode == 0 and list_proc.stdout:
+            for raw_line in list_proc.stdout.splitlines():
+                service = raw_line.strip()
+                if not service:
+                    continue
+                if service.lower().startswith("an asterisk"):
+                    continue
+                if service.startswith("*"):
+                    continue
+                services.append(service)
+    except (FileNotFoundError, subprocess.SubprocessError):
+        services = []
+
+    resolvers: list[str] = []
+    for service in services:
+        try:
+            proc = subprocess.run(
+                ["networksetup", "-getdnsservers", service],
+                capture_output=True,
+                text=True,
+                timeout=4,
+                check=False,
+            )
+        except (FileNotFoundError, subprocess.SubprocessError):
+            continue
+        if proc.returncode != 0:
+            continue
+        resolvers.extend(_parse_networksetup_dnsservers(proc.stdout))
+
+    return {
+        "dns_servers": _normalize_ip_list(resolvers),
+        "method": "networksetup",
+        "platform": "macos",
+    }
 
 
 def detect_linux_dns() -> tuple[list[str], str]:
@@ -100,6 +216,21 @@ def detect_windows_dns() -> tuple[list[str], str]:
 
 
 def detect_system_dns() -> dict:
+    if sys.platform == "darwin":
+        try:
+            macos_payload = detect_macos_dns()
+            return {
+                "resolvers": macos_payload.get("dns_servers", []),
+                "method": macos_payload.get("method", "none"),
+                "platform": macos_payload.get("platform", "macos"),
+            }
+        except Exception as exc:  # noqa: BLE001
+            return {
+                "resolvers": [],
+                "method": f"error:{exc.__class__.__name__}",
+                "platform": "macos",
+            }
+
     system = platform.system().lower()
     if "windows" in system:
         resolvers, method = detect_windows_dns()

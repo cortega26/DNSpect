@@ -22,6 +22,8 @@ interface Props {
   systemResolvers: string[]
   isRunning: boolean
   advancedOpen: boolean
+  workloadSummary: string
+  startHelperText: string
   onToggleResolver: (ip: string) => void
   onModeChange: (mode: BenchmarkMode) => void
   onRunsChange: (value: number) => void
@@ -29,6 +31,7 @@ interface Props {
   onTimeoutPresetChange: (value: TimeoutPreset) => void
   onQueriesTextChange: (value: string) => void
   onToggleAdvanced: () => void
+  onShowResolverList: () => void
   onStart: () => void
 }
 
@@ -96,7 +99,7 @@ export function DashboardControls(props: Props) {
         <div>
           <p className="label-caption">{t('controls.mode')}</p>
           <div className="mode-grid">
-            {(['quick', 'standard'] as BenchmarkMode[]).map((mode) => (
+            {(['quick', 'standard', 'exhaustive'] as BenchmarkMode[]).map((mode) => (
               <button
                 key={mode}
                 type="button"
@@ -108,6 +111,7 @@ export function DashboardControls(props: Props) {
               </button>
             ))}
           </div>
+          <p className="helper-text">{t('controls.modeHelp')}</p>
         </div>
         <div>
           <p className="label-caption">{t('controls.timeoutPreset')}</p>
@@ -124,17 +128,23 @@ export function DashboardControls(props: Props) {
               </button>
             ))}
           </div>
+          <p className="helper-text">{t('controls.timeoutHelp')}</p>
         </div>
       </div>
 
       <div className="actions-row controls-actions">
-        <button className="btn-primary" onClick={props.onStart} disabled={props.isRunning || props.selected.size === 0}>
-          {t('controls.start')}
+        <div className="start-cta">
+          <button className="btn-primary" onClick={props.onStart} disabled={props.isRunning || props.selected.size === 0}>
+            {t('controls.start')}
+          </button>
+          <p className="helper-text start-subtext">{props.startHelperText}</p>
+        </div>
+        <button type="button" className="inline-link resolver-count-link" onClick={props.onShowResolverList}>
+          {t('controls.selectedResolvers', { count: props.selected.size })}
         </button>
-        <p className="muted">{t('controls.selectedResolvers', { count: props.selected.size })}</p>
         <button
           type="button"
-          className="btn-ghost advanced-toggle"
+          className="text-link advanced-toggle-link"
           onClick={props.onToggleAdvanced}
           aria-expanded={props.advancedOpen}
           aria-controls="advanced-controls"
@@ -142,26 +152,13 @@ export function DashboardControls(props: Props) {
           {props.advancedOpen ? t('controls.closeAdvanced') : t('controls.openAdvanced')}
         </button>
       </div>
+      <p className="helper-text">{props.workloadSummary}</p>
 
       <div id="advanced-controls" className={`advanced-collapse ${props.advancedOpen ? 'is-open' : ''}`}>
         <div className="advanced-inner">
           <div className="card-header small">
             <h3>{t('controls.advancedTitle')}</h3>
             <p>{t('controls.advancedSubtitle')}</p>
-          </div>
-
-          <div className="mode-grid advanced-mode-grid">
-            {(['quick', 'standard', 'exhaustive'] as BenchmarkMode[]).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                className={`chip ${props.mode === mode ? 'chip-active' : ''}`}
-                onClick={() => props.onModeChange(mode)}
-                disabled={props.isRunning}
-              >
-                {t(MODE_LABEL_KEY[mode])}
-              </button>
-            ))}
           </div>
 
           <div className="advanced-grid">

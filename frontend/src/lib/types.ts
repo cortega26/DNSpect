@@ -44,8 +44,15 @@ export interface ResolverStats {
   timeout_count: number
   success_rate: number
   timeout_rate: number
+  success_count: number
+  failure_count: number
+  failure_rate: number
   consistency_ratio: number | null
   p95_minus_median_ms: number | null
+  score_latency: number | null
+  score_reliability: number
+  score_stability: number | null
+  score_total: number | null
 }
 
 export interface ResolverResult {
@@ -65,6 +72,8 @@ export interface BenchmarkStatus {
     current: number
     total: number
     current_resolver: string | null
+    last_sample_at?: number | string | null
+    avg_latency_ms?: number | null
   }
   started_at: string
   finished_at: string | null

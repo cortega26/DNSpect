@@ -37,8 +37,18 @@ def test_status_include_samples_toggle() -> None:
                     "timeout_count": 0,
                     "success_rate": 1.0,
                     "timeout_rate": 0.0,
+                    "success_count": 1,
+                    "failure_count": 0,
+                    "failure_rate": 0.0,
                     "consistency_ratio": 1.0,
                     "p95_minus_median_ms": 0.0,
+                    "score_latency": 12.0,
+                    "score_reliability": 0.0,
+                    "score_stability": 0.0,
+                    "score_total": 8.4,
+                    "normalized_latency": 1.0,
+                    "normalized_reliability": 0.0,
+                    "normalized_stability": 0.0,
                 },
                 "samples": [
                     {

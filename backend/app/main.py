@@ -133,8 +133,21 @@ def export_csv(benchmark_id: str) -> StreamingResponse:
             "timeout_count",
             "success_rate",
             "timeout_rate",
+            "success_count",
+            "failure_count",
+            "failure_rate",
             "consistency_ratio",
             "p95_minus_median_ms",
+            "score_latency",
+            "score_reliability",
+            "score_stability",
+            "score_total",
+            "normalized_latency",
+            "normalized_reliability",
+            "normalized_stability",
+            "reliability_penalty",
+            "max_rel_penalty",
+            "is_unreliable",
         ]
     )
     for item in state.get("results", []):
@@ -154,8 +167,21 @@ def export_csv(benchmark_id: str) -> StreamingResponse:
                 stats["timeout_count"],
                 stats["success_rate"],
                 stats["timeout_rate"],
+                stats.get("success_count"),
+                stats.get("failure_count"),
+                stats.get("failure_rate"),
                 stats["consistency_ratio"],
                 stats["p95_minus_median_ms"],
+                stats.get("score_latency"),
+                stats.get("score_reliability"),
+                stats.get("score_stability"),
+                stats.get("score_total"),
+                stats.get("normalized_latency"),
+                stats.get("normalized_reliability"),
+                stats.get("normalized_stability"),
+                stats.get("reliability_penalty"),
+                stats.get("max_rel_penalty"),
+                item.get("is_unreliable"),
             ]
         )
 

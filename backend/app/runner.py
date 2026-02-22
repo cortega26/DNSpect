@@ -21,12 +21,31 @@ import dns.resolver
 from .detect_dns import detect_system_dns
 from .models import BenchmarkRequest
 from .providers import build_default_resolvers, load_default_queries, load_providers, resolver_provider_index
-from .stats import compute_stats, parse_drill_query_time
+from .stats import (
+    apply_normalized_scoring,
+    compute_stats,
+    parse_drill_query_time,
+    select_recommended_resolver,
+)
 
 DATA_RUNS = Path(__file__).resolve().parents[1] / "data" / "runs"
 DATA_RUNS.mkdir(parents=True, exist_ok=True)
 
 DRILL_RCODE_RE = re.compile(r"rcode:\s*([A-Z]+)", re.IGNORECASE)
+RELIABILITY_FAILURE_KINDS = {"timeout", "servfail", "refused", "noanswer", "other"}
+
+
+def _resolver_rank_key(item: dict[str, Any]) -> tuple[float, float, float, str]:
+    stats = item.get("stats", {})
+    score_total = stats.get("score_total")
+    avg_latency = stats.get("avg_ms")
+    score_stability = stats.get("score_stability")
+    return (
+        float(score_total) if score_total is not None else float("inf"),
+        float(avg_latency) if avg_latency is not None else float("inf"),
+        float(score_stability) if score_stability is not None else float("inf"),
+        str(item.get("resolver", "")),
+    )
 
 
 @dataclass
@@ -38,6 +57,9 @@ class BenchmarkState:
     progress_current: int = 0
     progress_total: int = 0
     current_resolver: str | None = None
+    last_sample_at: int | None = None
+    observed_latency_total_ms: float = 0.0
+    observed_latency_count: int = 0
     mode: str = "standard"
     timeout_sec: float = 2.0
     runs: int = 30
@@ -46,9 +68,8 @@ class BenchmarkState:
     results: list[dict[str, Any]] | None = None
 
     def as_response(self, include_samples: bool = False) -> dict[str, Any]:
-        sanitized_results: list[dict[str, Any]] | None = None
-        if self.status == "done":
-            sanitized_results = _sanitize_results(self.results, include_samples=include_samples)
+        sanitized_results = _sanitize_results(self.results, include_samples=include_samples)
+        recommended_resolver, recommendation_warning = select_recommended_resolver(sanitized_results or [])
         return {
             "id": self.id,
             "status": self.status,
@@ -56,6 +77,10 @@ class BenchmarkState:
                 "current": self.progress_current,
                 "total": self.progress_total,
                 "current_resolver": self.current_resolver,
+                "last_sample_at": self.last_sample_at,
+                "avg_latency_ms": round(self.observed_latency_total_ms / self.observed_latency_count, 3)
+                if self.observed_latency_count > 0
+                else None,
             },
             "started_at": self.started_at,
             "finished_at": self.finished_at,
@@ -65,6 +90,8 @@ class BenchmarkState:
             "engine": self.engine,
             "error": self.error,
             "results": sanitized_results,
+            "recommended_resolver": recommended_resolver,
+            "recommendation_warning": recommendation_warning,
         }
 
 
@@ -185,6 +212,7 @@ class BenchmarkManager:
             id=benchmark_id,
             status="running",
             started_at=datetime.now(UTC).isoformat(),
+            last_sample_at=int(datetime.now(UTC).timestamp() * 1000),
             progress_total=len(config.resolvers) * config.runs,
             mode=config.mode,
             timeout_sec=config.timeout_sec,
@@ -207,22 +235,44 @@ class BenchmarkManager:
         with self._lock:
             return self._states.get(benchmark_id)
 
-    def _update_progress(self, benchmark_id: str, increment: int = 1, resolver: str | None = None) -> None:
+    def _update_progress(
+        self,
+        benchmark_id: str,
+        increment: int = 1,
+        resolver: str | None = None,
+        observed_latency_ms: float | None = None,
+    ) -> None:
         with self._lock:
             state = self._states[benchmark_id]
             state.progress_current += increment
             if resolver:
                 state.current_resolver = resolver
+            sample_timestamp_ms = int(datetime.now(UTC).timestamp() * 1000)
+            state.last_sample_at = max(state.last_sample_at or sample_timestamp_ms, sample_timestamp_ms)
+            if observed_latency_ms is not None:
+                state.observed_latency_total_ms += observed_latency_ms
+                state.observed_latency_count += 1
 
     def _set_done(self, benchmark_id: str, engine: str, results: list[dict[str, Any]]) -> None:
+        apply_normalized_scoring(results)
+        ranked_results = sorted(results, key=_resolver_rank_key)
         with self._lock:
             state = self._states[benchmark_id]
             state.status = "done"
             state.finished_at = datetime.now(UTC).isoformat()
-            state.results = results
+            state.results = ranked_results
             state.engine = engine
             state.current_resolver = None
         self._persist_run(benchmark_id)
+
+    def _append_partial_result(self, benchmark_id: str, result: dict[str, Any]) -> None:
+        with self._lock:
+            state = self._states[benchmark_id]
+            if state.results is None:
+                state.results = []
+            state.results.append(result)
+            apply_normalized_scoring(state.results)
+            state.results.sort(key=_resolver_rank_key)
 
     def _set_error(self, benchmark_id: str, message: str) -> None:
         with self._lock:
@@ -272,10 +322,26 @@ class BenchmarkManager:
                     samples.append(sample)
                     if sample["ok"] and sample["ms"] is not None:
                         successful_ms.append(float(sample["ms"]))
-                    self._update_progress(benchmark_id, increment=1, resolver=resolver)
+                    observed_latency = float(sample["ms"]) if sample["ok"] and sample["ms"] is not None else None
+                    self._update_progress(
+                        benchmark_id,
+                        increment=1,
+                        resolver=resolver,
+                        observed_latency_ms=observed_latency,
+                    )
 
                 timeout_count = sum(1 for sample in samples if sample.get("failure_kind") == "timeout")
-                stats = compute_stats(successful_ms, total_runs=config.runs, timeout_count=timeout_count)
+                failure_count = sum(
+                    1
+                    for sample in samples
+                    if sample.get("failure_kind") in RELIABILITY_FAILURE_KINDS
+                )
+                stats = compute_stats(
+                    successful_ms,
+                    total_runs=config.runs,
+                    timeout_count=timeout_count,
+                    failure_count=failure_count,
+                )
                 provider = self.provider_index.get(
                     resolver,
                     {
@@ -284,26 +350,18 @@ class BenchmarkManager:
                         "notes_es": "Resolver detectado desde el sistema local.",
                     },
                 )
-                results.append(
-                    {
-                        "resolver": resolver,
-                        "provider_id": provider.get("id", "desconocido"),
-                        "provider_name": provider.get("name", "Desconocido"),
-                        "engine": engine,
-                        "stats": stats,
-                        "samples": samples,
-                    }
-                )
+                resolver_result = {
+                    "resolver": resolver,
+                    "provider_id": provider.get("id", "desconocido"),
+                    "provider_name": provider.get("name", "Desconocido"),
+                    "engine": engine,
+                    "stats": stats,
+                    "samples": samples,
+                }
+                results.append(resolver_result)
+                self._append_partial_result(benchmark_id, resolver_result)
 
-            ranked = sorted(
-                results,
-                key=lambda item: (
-                    item["stats"]["median_ms"] if item["stats"]["median_ms"] is not None else float("inf"),
-                    item["stats"]["p95_ms"] if item["stats"]["p95_ms"] is not None else float("inf"),
-                    item["stats"]["timeout_count"],
-                ),
-            )
-            self._set_done(benchmark_id, engine=engine, results=ranked)
+            self._set_done(benchmark_id, engine=engine, results=results)
         except Exception as exc:  # noqa: BLE001
             self._set_error(benchmark_id, str(exc))
 
