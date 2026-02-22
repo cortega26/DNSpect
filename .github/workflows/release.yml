@@ -150,6 +150,20 @@ jobs:
               echo "::error::Architecture mismatch for $artifact. Expected token '$expected_arch' in 'lipo -info' output."
               exit 1
             fi
+            archs="$(lipo -archs "$artifact" | xargs)"
+            echo "lipo -archs: $archs"
+            if [[ "$archs" == *"x86_64"* && "$archs" == *"arm64"* ]]; then
+              echo "::error::Universal binary detected for $artifact ($archs), but per-arch asset '${{ matrix.asset_name }}' is required. Publish as dnspect-macos-universal if desired."
+              exit 1
+            fi
+            if [[ "${{ matrix.asset_name }}" == "dnspect-macos-x64" && "$archs" != "x86_64" ]]; then
+              echo "::error::Architecture mismatch for $artifact. Expected exactly 'x86_64' from 'lipo -archs', got '$archs'."
+              exit 1
+            fi
+            if [[ "${{ matrix.asset_name }}" == "dnspect-macos-arm64" && "$archs" != "arm64" ]]; then
+              echo "::error::Architecture mismatch for $artifact. Expected exactly 'arm64' from 'lipo -archs', got '$archs'."
+              exit 1
+            fi
           else
             echo "Skipping lipo validation because artifact is not Mach-O: $artifact"
           fi
