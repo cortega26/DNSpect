@@ -97,9 +97,7 @@ def apply_normalized_scoring(results: list[dict[str, Any]]) -> None:
         stats["score_stability"] = max(0.0, stability) if stability is not None else None
         bounded_failure_rate = max(0.0, min(1.0, failure_rate)) if failure_rate is not None else None
         success_rate = (
-            max(0.0, min(1.0, 1.0 - bounded_failure_rate))
-            if bounded_failure_rate is not None
-            else None
+            max(0.0, min(1.0, 1.0 - bounded_failure_rate)) if bounded_failure_rate is not None else None
         )
         stats["success_rate"] = (
             round(success_rate, 4) if success_rate is not None else stats.get("success_rate")
@@ -145,18 +143,12 @@ def apply_normalized_scoring(results: list[dict[str, Any]]) -> None:
             round(normalized_stability, 6) if normalized_stability is not None else None
         )
 
-        if (
-            normalized_latency is None
-            or normalized_reliability is None
-            or normalized_stability is None
-        ):
+        if normalized_latency is None or normalized_reliability is None or normalized_stability is None:
             stats["score_total"] = None
             continue
 
         score_total = (
-            (normalized_latency * 0.6)
-            + (normalized_reliability * 0.3)
-            + (normalized_stability * 0.1)
+            (normalized_latency * 0.6) + (normalized_reliability * 0.3) + (normalized_stability * 0.1)
         )
         stats["score_total"] = round(score_total, 6)
 

@@ -386,9 +386,7 @@ class BenchmarkManager:
                     if sample["ok"] and sample["ms"] is not None:
                         successful_ms.append(float(sample["ms"]))
                     observed_latency = (
-                        float(sample["ms"])
-                        if sample["ok"] and sample["ms"] is not None
-                        else None
+                        float(sample["ms"]) if sample["ok"] and sample["ms"] is not None else None
                     )
                     self._update_progress(
                         benchmark_id,
@@ -399,9 +397,7 @@ class BenchmarkManager:
 
                 timeout_count = sum(1 for sample in samples if sample.get("failure_kind") == "timeout")
                 failure_count = sum(
-                    1
-                    for sample in samples
-                    if sample.get("failure_kind") in RELIABILITY_FAILURE_KINDS
+                    1 for sample in samples if sample.get("failure_kind") in RELIABILITY_FAILURE_KINDS
                 )
                 stats = compute_stats(
                     successful_ms,

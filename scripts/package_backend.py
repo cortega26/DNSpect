@@ -12,7 +12,9 @@ def main() -> None:
     root = Path(__file__).resolve().parents[1]
     frontend_dist = root / "frontend" / "dist"
     if not frontend_dist.exists():
-        raise SystemExit("frontend/dist no existe. Ejecuta primero: cd frontend && npm run build")
+        raise SystemExit(
+            "frontend/dist no existe. Ejecuta primero: cd frontend && npm run build"
+        )
     data_dir = root / "data"
     if not data_dir.exists():
         raise SystemExit("data/ no existe.")
@@ -89,9 +91,19 @@ Variables opcionales:
 
     archive_base = release_dir / artifact_name
     if "windows" in target_os:
-        archive_path = shutil.make_archive(str(archive_base), "zip", root_dir=bundle_dir.parent, base_dir=bundle_dir.name)
+        archive_path = shutil.make_archive(
+            str(archive_base),
+            "zip",
+            root_dir=bundle_dir.parent,
+            base_dir=bundle_dir.name,
+        )
     else:
-        archive_path = shutil.make_archive(str(archive_base), "gztar", root_dir=bundle_dir.parent, base_dir=bundle_dir.name)
+        archive_path = shutil.make_archive(
+            str(archive_base),
+            "gztar",
+            root_dir=bundle_dir.parent,
+            base_dir=bundle_dir.name,
+        )
 
     print(f"Package ready: {archive_path}")
 
