@@ -1,0 +1,8 @@
+backend/.venv/
+backend/build/
+backend/data/
+backend/tests/
+dist/
+build/
+release/
+frontend/

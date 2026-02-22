@@ -318,7 +318,7 @@ function App() {
           const next = await getBenchmark(id, false, controller.signal)
           if (!isCurrentSession()) return
           setStatus(next)
-          if (next.status === 'running') {
+          if (next.status === 'running' || next.status === 'queued') {
             scheduleNext(POLL_INTERVAL_MS)
           } else {
             stopPolling()
@@ -462,7 +462,7 @@ function App() {
     })
   }, [selectedResolvers.size, t, workloadMetrics.estimatedSeconds])
 
-  const isRunning = status?.status === 'running'
+  const isRunning = status?.status === 'running' || status?.status === 'queued'
   const progressPct = status?.progress.total
     ? Math.min(100, Math.max(0, Math.round((status.progress.current / status.progress.total) * 100)))
     : 0
@@ -1108,7 +1108,7 @@ function App() {
         </section>
       )}
 
-      {status?.status === 'running' && (
+      {(status?.status === 'running' || status?.status === 'queued') && (
         <section className="card compact status-running">
           <h3>{t('status.progressPanelTitle')}</h3>
           <p className="muted">{runningHealthMessage}</p>
@@ -1144,7 +1144,7 @@ function App() {
         </section>
       )}
 
-      {status?.status === 'error' && (
+      {(status?.status === 'failed' || status?.status === 'cancelled') && (
         <section className="card compact status-error">
           <h3>{t('status.errorTitle')}</h3>
           <p>{t('status.errorHint', { error: status.error ?? t('status.pending') })}</p>

@@ -7,15 +7,23 @@ import subprocess
 import sys
 from pathlib import Path
 
-IP_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 SCUTIL_NAMESERVER_RE = re.compile(r"^\s*nameserver(?:\[\d+\])?\s*:\s*(.+?)\s*$", re.IGNORECASE)
 
 
 def _extract_ips(text: str) -> list[str]:
-    ips = []
-    for match in IP_RE.findall(text):
-        if match not in ips:
-            ips.append(match)
+    ips: list[str] = []
+    for token in re.split(r"[\s,;]+", text.strip()):
+        candidate = token.strip().strip("()[]{}").rstrip(".,;")
+        if not candidate:
+            continue
+        if "%" in candidate:
+            candidate = candidate.split("%", 1)[0]
+        try:
+            parsed = str(ipaddress.ip_address(candidate))
+        except ValueError:
+            continue
+        if parsed not in ips:
+            ips.append(parsed)
     return ips
 
 

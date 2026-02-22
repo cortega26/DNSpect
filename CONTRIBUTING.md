@@ -6,7 +6,8 @@ Gracias por contribuir a `dns-speed-lab`.
 
 1. Haz fork y crea una rama descriptiva (`feat/...`, `fix/...`, `docs/...`).
 2. Ejecuta calidad local antes de abrir PR:
-   - Backend: `ruff check . && ruff format --check . && mypy backend/app && pytest -q`
+   - Backend: `ruff check . && ruff format --check . && black --check . && mypy && bandit -q -c pyproject.toml -r app && pytest -q`
+   - Backend (SAST adicional): `make backend-semgrep`
    - Frontend: `npm run lint && npm run typecheck && npm run build`
 3. Escribe cambios pequeños y enfocados.
 4. Actualiza documentación y tests cuando aplique.

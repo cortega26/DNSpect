@@ -44,7 +44,7 @@ if [[ ! -d .venv ]]; then
   "$PYTHON_CMD" -m venv .venv
 fi
 source .venv/bin/activate
-python -m pip install -e .[dev] >/dev/null
+python -m pip install -c constraints.txt -e .[dev] >/dev/null
 uvicorn app.main:app --host "$BACKEND_HOST" --port "$BACKEND_PORT" >/tmp/dns-speed-lab-smoke.log 2>&1 &
 BACK_PID=$!
 
@@ -66,7 +66,7 @@ while true; do
   if [[ "$STATE" == "done" ]]; then
     break
   fi
-  if [[ "$STATE" == "error" ]]; then
+  if [[ "$STATE" == "failed" || "$STATE" == "cancelled" ]]; then
     echo "Smoke fail: benchmark terminó en error"
     exit 1
   fi

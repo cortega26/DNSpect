@@ -19,7 +19,7 @@ if (-not (Test-Path ".venv")) {
 
 .\.venv\Scripts\Activate.ps1
 python -m ensurepip --upgrade | Out-Null
-python -m pip install -e .[dev] | Out-Null
+python -m pip install -c constraints.txt -e .[dev] | Out-Null
 $backendProc = Start-Process -PassThru -NoNewWindow powershell -ArgumentList "-NoExit", "-Command", "cd '$root\backend'; .\.venv\Scripts\Activate.ps1; uvicorn app.main:app --reload --host $backendHost --port $backendPort"
 
 Set-Location "$root\frontend"

@@ -17,7 +17,7 @@ if (-not (Test-Path ".venv")) {
 
 .\.venv\Scripts\Activate.ps1
 python -m ensurepip --upgrade | Out-Null
-python -m pip install -e .[dev] | Out-Null
+python -m pip install -c constraints.txt -e .[dev] | Out-Null
 
 $backendProc = Start-Process -PassThru powershell -ArgumentList "-NoProfile", "-Command", "cd '$root\backend'; .\.venv\Scripts\Activate.ps1; uvicorn app.main:app --host $backendHost --port $backendPort"
 
@@ -43,7 +43,7 @@ try {
   while ($true) {
     $status = Invoke-RestMethod -Uri "http://$backendHost`:$backendPort/api/benchmarks/$benchmarkId"
     if ($status.status -eq "done") { break }
-    if ($status.status -eq "error") { throw "Smoke fail: benchmark en error" }
+    if ($status.status -eq "failed" -or $status.status -eq "cancelled") { throw "Smoke fail: benchmark en error" }
     if ((Get-Date) -gt $deadline) { throw "Smoke fail: timeout esperando benchmark" }
     Start-Sleep -Milliseconds 500
   }

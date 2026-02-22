@@ -7,6 +7,8 @@ from typing import Any
 
 QUERY_TIME_RE = re.compile(r"Query time:\s*(\d+(?:\.\d+)?)\s*msec", re.IGNORECASE)
 RELIABILITY_GUARDRAIL_THRESHOLD = 0.05
+# Fixed reliability reference keeps pairwise ordering stable regardless of cohort composition.
+RELIABILITY_REFERENCE_PENALTY = -math.log(1.0 - RELIABILITY_GUARDRAIL_THRESHOLD)
 RECOMMENDATION_WARNING_ALL_UNRELIABLE = (
     "All resolvers exceed reliability threshold; recommendation may be unstable."
 )
@@ -44,6 +46,12 @@ def _safe_float(value: Any) -> float | None:
         return None
 
 
+def _reliability_penalty(success_rate: float, total_samples: int) -> float:
+    eps = 1.0 / (max(total_samples, 0) + 1)
+    rel_penalty_input = min(1.0, max(0.0, success_rate) + eps)
+    return max(0.0, -math.log(rel_penalty_input))
+
+
 def apply_normalized_scoring(results: list[dict[str, Any]]) -> None:
     latency_values = [
         latency
@@ -59,27 +67,6 @@ def apply_normalized_scoring(results: list[dict[str, Any]]) -> None:
         if (stability := _safe_float(item.get("stats", {}).get("score_stability"))) is not None
     ]
     max_stability = max(stability_values) if stability_values else 0.0
-    rel_penalties: list[float] = []
-
-    for item in results:
-        stats = item.get("stats")
-        if not isinstance(stats, dict):
-            continue
-        failure_rate = _safe_float(stats.get("failure_rate"))
-        success_count = _safe_float(stats.get("success_count"))
-        failure_count = _safe_float(stats.get("failure_count"))
-        if failure_rate is None:
-            continue
-        bounded_failure_rate = max(0.0, min(1.0, failure_rate))
-        success_rate = max(0.0, min(1.0, 1.0 - bounded_failure_rate))
-        total_samples = max(0, int((success_count or 0) + (failure_count or 0)))
-        eps = 1.0 / (total_samples + 1)
-        rel_penalty_input = min(1.0, success_rate + eps)
-        reliability_penalty = max(0.0, -math.log(rel_penalty_input))
-        rel_penalties.append(reliability_penalty)
-
-    max_rel_penalty = max(rel_penalties) if rel_penalties else 0.0
-
     for item in results:
         stats = item.get("stats")
         if not isinstance(stats, dict):
@@ -105,15 +92,13 @@ def apply_normalized_scoring(results: list[dict[str, Any]]) -> None:
             round(success_rate_opt, 4) if success_rate_opt is not None else stats.get("success_rate")
         )
         total_samples = max(0, int((success_count or 0) + (failure_count or 0)))
-        eps = 1.0 / (total_samples + 1)
         reliability_penalty_opt: float | None = None
         if success_rate_opt is not None:
-            rel_penalty_input = min(1.0, success_rate_opt + eps)
-            reliability_penalty_opt = max(0.0, -math.log(rel_penalty_input))
+            reliability_penalty_opt = _reliability_penalty(success_rate_opt, total_samples)
         stats["reliability_penalty"] = (
             round(reliability_penalty_opt, 6) if reliability_penalty_opt is not None else None
         )
-        stats["max_rel_penalty"] = round(max_rel_penalty, 6)
+        stats["max_rel_penalty"] = round(RELIABILITY_REFERENCE_PENALTY, 6)
         item["is_unreliable"] = bool(
             bounded_failure_rate_opt is None or bounded_failure_rate_opt > RELIABILITY_GUARDRAIL_THRESHOLD
         )
@@ -127,7 +112,10 @@ def apply_normalized_scoring(results: list[dict[str, Any]]) -> None:
 
         normalized_reliability: float | None = None
         if reliability_penalty_opt is not None:
-            normalized_reliability = reliability_penalty_opt / max_rel_penalty if max_rel_penalty > 0 else 0.0
+            if RELIABILITY_REFERENCE_PENALTY > 0:
+                normalized_reliability = min(1.0, reliability_penalty_opt / RELIABILITY_REFERENCE_PENALTY)
+            else:
+                normalized_reliability = 0.0
 
         normalized_stability: float | None = None
         if stability is not None:

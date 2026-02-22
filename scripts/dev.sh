@@ -44,7 +44,7 @@ if [[ ! -d .venv ]]; then
   "$PYTHON_CMD" -m venv .venv
 fi
 source .venv/bin/activate
-python -m pip install -e .[dev] >/dev/null
+python -m pip install -c constraints.txt -e .[dev] >/dev/null
 uvicorn app.main:app --reload --host "$BACKEND_HOST" --port "$BACKEND_PORT" &
 BACK_PID=$!
 

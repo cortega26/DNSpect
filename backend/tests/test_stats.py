@@ -1,5 +1,6 @@
 from app.stats import (
     RECOMMENDATION_WARNING_ALL_UNRELIABLE,
+    RELIABILITY_REFERENCE_PENALTY,
     apply_normalized_scoring,
     compute_stats,
     percentile,
@@ -73,7 +74,7 @@ def test_tiny_failure_rate_penalty_exists_without_dominating_when_latency_gap_is
 
     assert ranked[0]["resolver"] == "1.1.1.1"
     assert ranked[0]["stats"]["reliability_penalty"] > 0
-    assert ranked[0]["stats"]["normalized_reliability"] == 1.0
+    assert 0.0 < ranked[0]["stats"]["normalized_reliability"] < 1.0
     assert ranked[0]["stats"]["score_total"] < ranked[1]["stats"]["score_total"]
 
 
@@ -92,6 +93,47 @@ def test_unreliable_fast_resolver_is_excluded_from_recommendation() -> None:
     recommended, warning = select_recommended_resolver(ranked)
     assert recommended == "8.8.8.8"
     assert warning is None
+
+
+def test_ab_order_is_invariant_when_unrelated_bad_resolver_is_added() -> None:
+    fast_with_small_fail = compute_stats([18.951] * 98, total_runs=100, timeout_count=0, failure_count=2)
+    slower_perfect = compute_stats([21.834] * 100, total_runs=100, timeout_count=0, failure_count=0)
+    very_bad = compute_stats([60.0] * 10, total_runs=100, timeout_count=0, failure_count=90)
+
+    ranked_ab = _ranked(
+        [
+            {"resolver": "A", "stats": fast_with_small_fail.copy()},
+            {"resolver": "B", "stats": slower_perfect.copy()},
+        ]
+    )
+    ranked_abc = _ranked(
+        [
+            {"resolver": "A", "stats": fast_with_small_fail.copy()},
+            {"resolver": "B", "stats": slower_perfect.copy()},
+            {"resolver": "C", "stats": very_bad.copy()},
+        ]
+    )
+
+    winner_ab = ranked_ab[0]["resolver"]
+    winner_abc = next(item["resolver"] for item in ranked_abc if item["resolver"] in {"A", "B"})
+    assert winner_ab == winner_abc
+    assert ranked_abc[2]["resolver"] == "C"
+
+
+def test_reliability_normalization_uses_fixed_reference_penalty() -> None:
+    stable = compute_stats([20.0] * 100, total_runs=100, timeout_count=0, failure_count=0)
+    slightly_unstable = compute_stats([20.0] * 98, total_runs=100, timeout_count=0, failure_count=2)
+    ranked = _ranked(
+        [
+            {"resolver": "stable", "stats": stable.copy()},
+            {"resolver": "slightly_unstable", "stats": slightly_unstable.copy()},
+        ]
+    )
+    by_name = {item["resolver"]: item for item in ranked}
+    assert by_name["stable"]["stats"]["max_rel_penalty"] == round(RELIABILITY_REFERENCE_PENALTY, 6)
+    assert by_name["slightly_unstable"]["stats"]["max_rel_penalty"] == round(RELIABILITY_REFERENCE_PENALTY, 6)
+    assert by_name["stable"]["stats"]["normalized_reliability"] == 0.0
+    assert by_name["slightly_unstable"]["stats"]["normalized_reliability"] > 0.0
 
 
 def test_all_unreliable_resolvers_emit_warning_and_deterministic_fallback() -> None:

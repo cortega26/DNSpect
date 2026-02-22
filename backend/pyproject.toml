@@ -10,18 +10,22 @@ requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "dns-speed-lab contributors" }]
 dependencies = [
-  "fastapi==0.116.1",
+  "fastapi==0.129.2",
+  "starlette==0.49.3",
   "uvicorn[standard]==0.35.0",
   "pydantic==2.11.7",
   "dnspython==2.7.0",
-  "python-multipart==0.0.22"
+  "python-multipart==0.0.22",
+  "platformdirs==4.4.0"
 ]
 
 [project.optional-dependencies]
 dev = [
   "pytest==8.4.1",
   "ruff==0.12.9",
+  "black==26.1.0",
   "mypy==1.17.1",
+  "bandit==1.9.3",
   "httpx==0.28.1",
   "types-PyYAML==6.0.12.20250822"
 ]
@@ -49,6 +53,15 @@ extend-exclude = ["build"]
 select = ["E", "F", "I", "UP", "B", "SIM", "N"]
 ignore = ["N805", "UP045"]
 
+[tool.black]
+line-length = 110
+target-version = ["py311"]
+extend-exclude = '''
+(
+  ^/build
+)
+'''
+
 [tool.mypy]
 python_version = "3.11"
 files = ["app"]
@@ -60,3 +73,7 @@ no_implicit_optional = true
 strict_equality = true
 pretty = true
 ignore_missing_imports = true
+
+[tool.bandit]
+exclude_dirs = ["tests", "build"]
+skips = ["B404", "B603", "B607"]

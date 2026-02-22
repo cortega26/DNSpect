@@ -9,6 +9,7 @@ import subprocess
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -17,6 +18,7 @@ from typing import Any
 
 import dns.exception
 import dns.resolver
+from platformdirs import user_data_path
 
 from .detect_dns import detect_system_dns
 from .models import BenchmarkRequest, ProbeRequest
@@ -28,8 +30,29 @@ from .stats import (
     select_recommended_resolver,
 )
 
-DATA_RUNS = Path(__file__).resolve().parents[1] / "data" / "runs"
-DATA_RUNS.mkdir(parents=True, exist_ok=True)
+TERMINAL_STATUSES = {"done", "failed", "cancelled"}
+
+
+def _resolve_runs_dir() -> Path:
+    override = os.getenv("DNS_SPEED_LAB_RUNS_DIR")
+    if override:
+        return Path(override).expanduser().resolve()
+    return user_data_path("dnspect", "DNSpect") / "runs"
+
+
+def _to_positive_int(raw: str | None, default: int) -> int:
+    if raw is None:
+        return default
+    try:
+        parsed = int(raw)
+    except ValueError:
+        return default
+    return max(parsed, 1)
+
+
+DATA_RUNS = _resolve_runs_dir()
+with suppress(OSError):
+    DATA_RUNS.mkdir(parents=True, exist_ok=True)
 
 DRILL_RCODE_RE = re.compile(r"rcode:\s*([A-Z]+)", re.IGNORECASE)
 RELIABILITY_FAILURE_KINDS = {"timeout", "servfail", "refused", "noanswer", "other"}
@@ -66,6 +89,7 @@ class BenchmarkState:
     engine: str | None = None
     error: str | None = None
     results: list[dict[str, Any]] | None = None
+    run_storage_warning: str | None = None
 
     def as_response(self, include_samples: bool = False) -> dict[str, Any]:
         sanitized_results = _sanitize_results(self.results, include_samples=include_samples)
@@ -78,9 +102,11 @@ class BenchmarkState:
                 "total": self.progress_total,
                 "current_resolver": self.current_resolver,
                 "last_sample_at": self.last_sample_at,
-                "avg_latency_ms": round(self.observed_latency_total_ms / self.observed_latency_count, 3)
-                if self.observed_latency_count > 0
-                else None,
+                "avg_latency_ms": (
+                    round(self.observed_latency_total_ms / self.observed_latency_count, 3)
+                    if self.observed_latency_count > 0
+                    else None
+                ),
             },
             "started_at": self.started_at,
             "finished_at": self.finished_at,
@@ -89,6 +115,7 @@ class BenchmarkState:
             "runs": self.runs,
             "engine": self.engine,
             "error": self.error,
+            "run_storage_warning": self.run_storage_warning,
             "results": sanitized_results,
             "recommended_resolver": recommended_resolver,
             "recommendation_warning": recommendation_warning,
@@ -159,10 +186,34 @@ def classify_dnspython_exception(exc: Exception) -> str:
 
 
 class BenchmarkManager:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        max_concurrent_jobs: int | None = None,
+        max_queued_jobs: int | None = None,
+        terminal_ttl_sec: int | None = None,
+        max_retained_states: int | None = None,
+        data_runs_dir: Path | None = None,
+    ) -> None:
         self._lock = threading.RLock()
         self._states: dict[str, BenchmarkState] = {}
-        self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="dnsbench")
+        self.max_concurrent_jobs = max_concurrent_jobs or _to_positive_int(
+            os.getenv("DNS_SPEED_LAB_MAX_CONCURRENT_JOBS"), 2
+        )
+        self.max_queued_jobs = max_queued_jobs or _to_positive_int(
+            os.getenv("DNS_SPEED_LAB_MAX_QUEUED_JOBS"), 5
+        )
+        self.terminal_ttl_sec = terminal_ttl_sec or _to_positive_int(
+            os.getenv("DNS_SPEED_LAB_TERMINAL_TTL_SEC"), 3600
+        )
+        self.max_retained_states = max_retained_states or _to_positive_int(
+            os.getenv("DNS_SPEED_LAB_MAX_RETAINED_STATES"), 256
+        )
+        self._data_runs_dir = data_runs_dir or DATA_RUNS
+        self._executor = ThreadPoolExecutor(
+            max_workers=self.max_concurrent_jobs,
+            thread_name_prefix="dnsbench",
+        )
         self.providers = load_providers()
         self.provider_index = resolver_provider_index(self.providers)
         self.default_queries = load_default_queries()
@@ -210,7 +261,7 @@ class BenchmarkManager:
         benchmark_id = uuid.uuid4().hex
         state = BenchmarkState(
             id=benchmark_id,
-            status="running",
+            status="queued",
             started_at=datetime.now(UTC).isoformat(),
             last_sample_at=int(datetime.now(UTC).timestamp() * 1000),
             progress_total=len(config.resolvers) * config.runs,
@@ -219,9 +270,21 @@ class BenchmarkManager:
             runs=config.runs,
         )
         with self._lock:
+            self._cleanup_terminal_states_locked()
+            running_count = sum(1 for item in self._states.values() if item.status == "running")
+            queued_count = sum(1 for item in self._states.values() if item.status == "queued")
+            if running_count + queued_count >= (self.max_concurrent_jobs + self.max_queued_jobs):
+                raise ValueError(
+                    "Capacidad de benchmark agotada. Intenta nuevamente en unos minutos."
+                )
             self._states[benchmark_id] = state
         self._persist_run(benchmark_id)
-        self._executor.submit(self._run, benchmark_id, config)
+        try:
+            self._executor.submit(self._run, benchmark_id, config)
+        except RuntimeError as exc:
+            with self._lock:
+                self._states.pop(benchmark_id, None)
+            raise ValueError("No se pudo iniciar benchmark en este momento.") from exc
         return benchmark_id
 
     def probe(self, req: ProbeRequest) -> dict[str, Any]:
@@ -289,6 +352,7 @@ class BenchmarkManager:
 
     def get(self, benchmark_id: str, include_samples: bool = False) -> dict[str, Any] | None:
         with self._lock:
+            self._cleanup_terminal_states_locked()
             state = self._states.get(benchmark_id)
             if not state:
                 return None
@@ -296,7 +360,51 @@ class BenchmarkManager:
 
     def get_state(self, benchmark_id: str) -> BenchmarkState | None:
         with self._lock:
+            self._cleanup_terminal_states_locked()
             return self._states.get(benchmark_id)
+
+    def _cleanup_terminal_states(self) -> None:
+        with self._lock:
+            self._cleanup_terminal_states_locked()
+
+    def _cleanup_terminal_states_locked(self) -> None:
+        now_ts = datetime.now(UTC).timestamp()
+        expired_ids: list[str] = []
+        for benchmark_id, state in self._states.items():
+            if state.status not in TERMINAL_STATUSES:
+                continue
+            if not state.finished_at:
+                continue
+            try:
+                finished_ts = datetime.fromisoformat(state.finished_at).timestamp()
+            except ValueError:
+                finished_ts = now_ts
+            if now_ts - finished_ts >= self.terminal_ttl_sec:
+                expired_ids.append(benchmark_id)
+
+        for benchmark_id in expired_ids:
+            self._states.pop(benchmark_id, None)
+
+        if len(self._states) <= self.max_retained_states:
+            return
+
+        terminal_candidates: list[tuple[float, str]] = []
+        for benchmark_id, state in self._states.items():
+            if state.status not in TERMINAL_STATUSES:
+                continue
+            if state.finished_at:
+                try:
+                    finished_ts = datetime.fromisoformat(state.finished_at).timestamp()
+                except ValueError:
+                    finished_ts = 0.0
+            else:
+                finished_ts = 0.0
+            terminal_candidates.append((finished_ts, benchmark_id))
+
+        terminal_candidates.sort()
+        while len(self._states) > self.max_retained_states and terminal_candidates:
+            _, benchmark_id = terminal_candidates.pop(0)
+            self._states.pop(benchmark_id, None)
 
     def _update_progress(
         self,
@@ -315,6 +423,15 @@ class BenchmarkManager:
             if observed_latency_ms is not None:
                 state.observed_latency_total_ms += observed_latency_ms
                 state.observed_latency_count += 1
+
+    def _set_running(self, benchmark_id: str) -> None:
+        with self._lock:
+            state = self._states.get(benchmark_id)
+            if not state:
+                return
+            if state.status == "cancelled":
+                return
+            state.status = "running"
 
     def _set_done(self, benchmark_id: str, engine: str, results: list[dict[str, Any]]) -> None:
         apply_normalized_scoring(results)
@@ -337,44 +454,77 @@ class BenchmarkManager:
             apply_normalized_scoring(state.results)
             state.results.sort(key=_resolver_rank_key)
 
-    def _set_error(self, benchmark_id: str, message: str) -> None:
+    def _set_failed(self, benchmark_id: str, message: str) -> None:
         with self._lock:
             state = self._states[benchmark_id]
-            state.status = "error"
+            state.status = "failed"
             state.error = message
             state.finished_at = datetime.now(UTC).isoformat()
             state.current_resolver = None
         self._persist_run(benchmark_id)
+
+    def _format_storage_warning(self, exc: OSError) -> str:
+        detail = str(exc).strip()
+        if detail:
+            detail = detail[:180]
+            return f"Persistence warning: {exc.__class__.__name__}: {detail}"
+        return f"Persistence warning: {exc.__class__.__name__}"
+
+    def _set_storage_warning(self, benchmark_id: str, warning: str) -> None:
+        with self._lock:
+            state = self._states.get(benchmark_id)
+            if not state:
+                return
+            state.run_storage_warning = warning
+
+    def _clear_storage_warning(self, benchmark_id: str) -> None:
+        with self._lock:
+            state = self._states.get(benchmark_id)
+            if not state:
+                return
+            state.run_storage_warning = None
+
+    def _write_json_file(self, path: Path, payload: str) -> None:
+        path.write_text(payload, encoding="utf-8")
 
     def _persist_run(self, benchmark_id: str) -> None:
         state = self.get_state(benchmark_id)
         if not state:
             return
 
-        metadata_path = DATA_RUNS / f"{benchmark_id}.json"
-        metadata_path.write_text(
-            json.dumps(state.as_response(include_samples=False), ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        try:
+            self._data_runs_dir.mkdir(parents=True, exist_ok=True)
 
-        if self.persist_samples and state.status == "done":
-            samples_path = DATA_RUNS / f"{benchmark_id}.samples.json"
-            samples_path.write_text(
-                json.dumps(state.as_response(include_samples=True), ensure_ascii=False, indent=2),
-                encoding="utf-8",
+            metadata_path = self._data_runs_dir / f"{benchmark_id}.json"
+            self._write_json_file(
+                metadata_path,
+                json.dumps(state.as_response(include_samples=False), ensure_ascii=False, indent=2),
             )
+
+            if self.persist_samples and state.status == "done":
+                samples_path = self._data_runs_dir / f"{benchmark_id}.samples.json"
+                self._write_json_file(
+                    samples_path,
+                    json.dumps(state.as_response(include_samples=True), ensure_ascii=False, indent=2),
+                )
+        except OSError as exc:
+            self._set_storage_warning(benchmark_id, self._format_storage_warning(exc))
+            return
+
+        self._clear_storage_warning(benchmark_id)
 
     def _run(self, benchmark_id: str, config: BenchmarkConfig) -> None:
         try:
+            self._set_running(benchmark_id)
             engine = select_engine()
             results: list[dict[str, Any]] = []
+            query_schedule = [config.queries[run_idx % len(config.queries)] for run_idx in range(config.runs)]
 
-            for resolver_idx, resolver in enumerate(config.resolvers):
+            for resolver in config.resolvers:
                 successful_ms: list[float] = []
                 samples: list[dict[str, Any]] = []
 
-                for run_idx in range(config.runs):
-                    domain = config.queries[(run_idx + resolver_idx) % len(config.queries)]
+                for run_idx, domain in enumerate(query_schedule):
                     sample = measure_query(
                         resolver=resolver,
                         domain=domain,
@@ -426,7 +576,7 @@ class BenchmarkManager:
 
             self._set_done(benchmark_id, engine=engine, results=results)
         except Exception as exc:  # noqa: BLE001
-            self._set_error(benchmark_id, str(exc))
+            self._set_failed(benchmark_id, str(exc))
 
 
 def select_engine() -> str:

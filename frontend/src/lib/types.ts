@@ -74,7 +74,7 @@ export interface ResolverResult {
 
 export interface BenchmarkStatus {
   id: string
-  status: 'running' | 'done' | 'error'
+  status: 'queued' | 'running' | 'done' | 'failed' | 'cancelled'
   progress: {
     current: number
     total: number
@@ -89,6 +89,7 @@ export interface BenchmarkStatus {
   runs: number
   engine: string | null
   error: string | null
+  run_storage_warning?: string | null
   results: ResolverResult[] | null
   recommended_resolver?: string | null
   recommendation_warning?: string | null

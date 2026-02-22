@@ -83,3 +83,17 @@ bash scripts/smoke_test.sh
 ```powershell
 .\scripts\smoke_test.ps1
 ```
+
+## Quality Checks
+
+Backend quality gate:
+
+```bash
+make backend-check
+```
+
+Semgrep scan (usa un entorno temporal aislado):
+
+```bash
+make backend-semgrep
+```
