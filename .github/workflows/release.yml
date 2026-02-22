@@ -111,6 +111,13 @@ jobs:
         shell: bash
         run: bash scripts/smoke_packaged_linux.sh "release-assets/${{ matrix.asset_name }}"
 
+      - name: Smoke test macOS arm64 packaged artifact
+        if: ${{ matrix.asset_name == 'dnspect-macos-arm64' }}
+        shell: bash
+        env:
+          DNSPECT_SMOKE_START_TIMEOUT_SECONDS: "20"
+        run: bash scripts/smoke_packaged_linux.sh "release-assets/${{ matrix.asset_name }}"
+
       - name: Verify macOS artifact architecture
         if: ${{ startsWith(matrix.os, 'macos') }}
         shell: bash

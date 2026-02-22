@@ -15,8 +15,9 @@ if [[ ! -x "$BIN_PATH" ]]; then
   chmod +x "$BIN_PATH"
 fi
 
-LOG_FILE="$(mktemp -t dnspect-linux-smoke-log.XXXXXX)"
-HEALTH_FILE="$(mktemp -t dnspect-linux-smoke-health.XXXXXX)"
+TMP_BASE="${TMPDIR:-/tmp}"
+LOG_FILE="$(mktemp "${TMP_BASE}/dnspect-smoke-log.XXXXXX")"
+HEALTH_FILE="$(mktemp "${TMP_BASE}/dnspect-smoke-health.XXXXXX")"
 BACK_PID=""
 
 cleanup() {
@@ -77,4 +78,4 @@ kill "$BACK_PID" 2>/dev/null || true
 wait "$BACK_PID" 2>/dev/null || true
 BACK_PID=""
 
-echo "Packaged Linux smoke test OK: $BIN_PATH"
+echo "Packaged artifact smoke test OK: $BIN_PATH"

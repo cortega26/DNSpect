@@ -128,7 +128,7 @@ describe('saved run serialization', () => {
       metadata: {
         timestamp: '2026-02-21T10:02:00Z',
         platform: 'linux',
-        app_version: '0.2.0',
+        app_version: '1.0.1',
       },
     })
 
@@ -163,7 +163,7 @@ describe('saved run serialization', () => {
         metadata: {
           timestamp: '2026-02-21T10:02:00Z',
           platform: 'linux',
-          app_version: '0.2.0',
+          app_version: '1.0.1',
         },
       }),
     )
@@ -192,7 +192,7 @@ describe('saved run serialization', () => {
         metadata: {
           timestamp: '2026-02-21T10:02:00Z',
           platform: 'linux',
-          app_version: '0.2.0',
+          app_version: '1.0.1',
         },
       }),
     )
