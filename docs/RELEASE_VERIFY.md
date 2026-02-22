@@ -73,4 +73,14 @@ If this happens, use Finder -> right click the binary -> Open, then confirm.
 
 ## 5) Runtime sanity check
 
-Run the executable and open `http://127.0.0.1:8000`.
+The DNSpect binary starts a local web server when launched.
+
+1. Run the executable.
+2. Open `http://127.0.0.1:8000` in your browser.
+3. Verify health endpoint:
+
+```bash
+curl -sS http://127.0.0.1:8000/api/health
+```
+
+Expected: HTTP 200 with a healthy status payload.
