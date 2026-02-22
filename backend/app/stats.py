@@ -95,25 +95,27 @@ def apply_normalized_scoring(results: list[dict[str, Any]]) -> None:
         stats["score_latency"] = latency
         stats["score_reliability"] = max(0.0, failure_rate) if failure_rate is not None else None
         stats["score_stability"] = max(0.0, stability) if stability is not None else None
-        bounded_failure_rate = max(0.0, min(1.0, failure_rate)) if failure_rate is not None else None
-        success_rate = (
-            max(0.0, min(1.0, 1.0 - bounded_failure_rate)) if bounded_failure_rate is not None else None
+        bounded_failure_rate_opt = max(0.0, min(1.0, failure_rate)) if failure_rate is not None else None
+        success_rate_opt = (
+            max(0.0, min(1.0, 1.0 - bounded_failure_rate_opt))
+            if bounded_failure_rate_opt is not None
+            else None
         )
         stats["success_rate"] = (
-            round(success_rate, 4) if success_rate is not None else stats.get("success_rate")
+            round(success_rate_opt, 4) if success_rate_opt is not None else stats.get("success_rate")
         )
         total_samples = max(0, int((success_count or 0) + (failure_count or 0)))
         eps = 1.0 / (total_samples + 1)
-        reliability_penalty: float | None = None
-        if success_rate is not None:
-            rel_penalty_input = min(1.0, success_rate + eps)
-            reliability_penalty = max(0.0, -math.log(rel_penalty_input))
+        reliability_penalty_opt: float | None = None
+        if success_rate_opt is not None:
+            rel_penalty_input = min(1.0, success_rate_opt + eps)
+            reliability_penalty_opt = max(0.0, -math.log(rel_penalty_input))
         stats["reliability_penalty"] = (
-            round(reliability_penalty, 6) if reliability_penalty is not None else None
+            round(reliability_penalty_opt, 6) if reliability_penalty_opt is not None else None
         )
         stats["max_rel_penalty"] = round(max_rel_penalty, 6)
         item["is_unreliable"] = bool(
-            bounded_failure_rate is None or bounded_failure_rate > RELIABILITY_GUARDRAIL_THRESHOLD
+            bounded_failure_rate_opt is None or bounded_failure_rate_opt > RELIABILITY_GUARDRAIL_THRESHOLD
         )
 
         normalized_latency: float | None = None
@@ -124,8 +126,8 @@ def apply_normalized_scoring(results: list[dict[str, Any]]) -> None:
                 normalized_latency = latency
 
         normalized_reliability: float | None = None
-        if reliability_penalty is not None:
-            normalized_reliability = reliability_penalty / max_rel_penalty if max_rel_penalty > 0 else 0.0
+        if reliability_penalty_opt is not None:
+            normalized_reliability = reliability_penalty_opt / max_rel_penalty if max_rel_penalty > 0 else 0.0
 
         normalized_stability: float | None = None
         if stability is not None:

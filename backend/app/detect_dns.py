@@ -124,7 +124,7 @@ def detect_macos_dns() -> dict:
     except (FileNotFoundError, subprocess.SubprocessError):
         services = []
 
-    resolvers: list[str] = []
+    resolvers = []
     for service in services:
         try:
             proc = subprocess.run(
