@@ -115,7 +115,7 @@ flowchart TD
   C --> D[BenchmarkManager Queue and State]
   D --> E{Engine Selection}
   E -->|Linux + drill available| F[drill Query Runner]
-  E -->|Windows or drill unavailable (macOS/Linux)| G[dnspython Query Runner]
+  E -->|Windows or drill unavailable on macOS or Linux| G[dnspython Query Runner]
   F --> H[Stats and Failure Classification]
   G --> H
   H --> I[Normalized Scoring and Ranking]
