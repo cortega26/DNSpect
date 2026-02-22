@@ -19,16 +19,16 @@ Expected artifact names:
 
 ## 2) Verify SHA256
 
-### Linux
+### Linux (or macOS)
 
 ```bash
-sha256sum --check checksums.txt
+shasum -a 256 -c checksums.txt
 ```
 
-Or verify only one file:
+Or verify one file directly:
 
 ```bash
-sha256sum dnspect-linux-x64
+shasum -a 256 dnspect-linux-x64
 ```
 
 ### macOS
@@ -40,13 +40,13 @@ shasum -a 256 dnspect-macos-x64
 
 Compare output against entries in `checksums.txt`.
 
-### Windows (PowerShell)
+### Windows (Command Prompt / PowerShell)
 
 ```powershell
-Get-FileHash .\dnspect-windows-x64.exe -Algorithm SHA256
+CertUtil -hashfile .\dnspect-windows-x64.exe SHA256
 ```
 
-Compare `Hash` value with `checksums.txt`.
+Compare the printed SHA256 value against the matching line in `checksums.txt`.
 
 ## 3) Verify GPG signature (optional)
 
@@ -66,14 +66,12 @@ gpg --verify checksums.txt.sig checksums.txt
 
 Expected result: valid signature from the trusted maintainer key.
 
-## 4) Runtime sanity check
+## 4) macOS Gatekeeper note
 
-Run the executable and open:
+Unsigned/notarized-open-source binaries can trigger Gatekeeper warnings on first launch.
 
-- `http://127.0.0.1:8000`
+If this happens, use Finder -> right click the binary -> Open, then confirm.
 
-Optional runtime environment variables:
+## 5) Runtime sanity check
 
-- `DNS_SPEED_LAB_HOST`
-- `DNS_SPEED_LAB_PORT`
-- `DNS_SPEED_LAB_OPEN_BROWSER`
+Run the executable and open `http://127.0.0.1:8000`.

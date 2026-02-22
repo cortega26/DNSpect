@@ -20,15 +20,23 @@ jobs:
           - os: ubuntu-latest
             source_binary: dns-speed-lab-linux
             asset_name: dnspect-linux-x64
+            node_arch: x64
+            python_arch: x64
           - os: windows-latest
             source_binary: dns-speed-lab-windows.exe
             asset_name: dnspect-windows-x64.exe
-          - os: macos-13
-            source_binary: dns-speed-lab-darwin
-            asset_name: dnspect-macos-x64
-          - os: macos-latest
+            node_arch: x64
+            python_arch: x64
+          - os: macos-14
             source_binary: dns-speed-lab-darwin
             asset_name: dnspect-macos-arm64
+            node_arch: arm64
+            python_arch: arm64
+          - os: macos-14
+            source_binary: dns-speed-lab-darwin
+            asset_name: dnspect-macos-x64
+            node_arch: x64
+            python_arch: x64
     env:
       PYTHONHASHSEED: "0"
       TZ: UTC
@@ -42,10 +50,21 @@ jobs:
         shell: bash
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
 
+      - name: Install Rosetta (macOS x64 build)
+        if: ${{ startsWith(matrix.os, 'macos') && matrix.python_arch == 'x64' }}
+        shell: bash
+        run: |
+          if /usr/bin/arch -x86_64 /usr/bin/true 2>/dev/null; then
+            echo "Rosetta already available."
+          else
+            sudo softwareupdate --install-rosetta --agree-to-license
+          fi
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22.14.0
+          architecture: ${{ matrix.node_arch }}
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -60,6 +79,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          architecture: ${{ matrix.python_arch }}
           cache: pip
           cache-dependency-path: |
             backend/pyproject.toml
@@ -97,6 +117,43 @@ jobs:
           SRC_BINARY: ${{ matrix.source_binary }}
           ASSET_NAME: ${{ matrix.asset_name }}
 
+      - name: Verify macOS artifact architecture
+        if: ${{ startsWith(matrix.os, 'macos') }}
+        shell: bash
+        run: |
+          artifact="release-assets/${{ matrix.asset_name }}"
+          if [[ ! -f "$artifact" ]]; then
+            echo "::error::Artifact not found for architecture validation: $artifact"
+            exit 1
+          fi
+
+          case "${{ matrix.asset_name }}" in
+            dnspect-macos-x64) expected_arch="x86_64" ;;
+            dnspect-macos-arm64) expected_arch="arm64" ;;
+            *)
+              echo "::error::Unexpected macOS artifact name: ${{ matrix.asset_name }}"
+              exit 1
+              ;;
+          esac
+
+          file_info="$(file "$artifact")"
+          echo "$file_info"
+          if ! echo "$file_info" | grep -q "$expected_arch"; then
+            echo "::error::Architecture mismatch for $artifact. Expected token '$expected_arch' in 'file' output."
+            exit 1
+          fi
+
+          if echo "$file_info" | grep -q "Mach-O"; then
+            lipo_info="$(lipo -info "$artifact")"
+            echo "$lipo_info"
+            if ! echo "$lipo_info" | grep -q "$expected_arch"; then
+              echo "::error::Architecture mismatch for $artifact. Expected token '$expected_arch' in 'lipo -info' output."
+              exit 1
+            fi
+          else
+            echo "Skipping lipo validation because artifact is not Mach-O: $artifact"
+          fi
+
       - name: Upload executable artifact
         uses: actions/upload-artifact@v4
         with:
@@ -123,9 +180,15 @@ jobs:
         shell: bash
         run: |
           cd release-assets
-          ls -1 dnspect-* | sort > .artifact-list
+          cat > .artifact-list <<'EOF'
+          dnspect-linux-x64
+          dnspect-windows-x64.exe
+          dnspect-macos-x64
+          dnspect-macos-arm64
+          EOF
           : > checksums.txt
           while IFS= read -r artifact; do
+            [[ -f "$artifact" ]] || { echo "Missing artifact: $artifact" >&2; exit 1; }
             sha256sum "$artifact" >> checksums.txt
           done < .artifact-list
           rm -f .artifact-list
