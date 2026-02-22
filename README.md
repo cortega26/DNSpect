@@ -201,12 +201,10 @@ cd frontend && npm run lint && npm run typecheck && npm test && npm run build
 | Validation guarantees | Usually undocumented | Enforced request validation and hard workload bounds |
 
 ## 🗺️ Roadmap
-A formal public roadmap is not currently published in this repository.
 
-Current planning artifacts:
-- `CHANGELOG.md`
-- `RELEASE_CHECKLIST.md`
-- GitHub Issues / PRs
+- [ ] Scheduled/recurring benchmarks with persistent history
+- [ ] Configurable alerting when a resolver degrades beyond threshold
+- [ ] CLI-only mode (headless, no UI dependency)
 
 ## 🤝 Contributing
 - Start here: `CONTRIBUTING.md`
