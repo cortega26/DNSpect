@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { ThemeContext, type Theme, type ThemeContextValue } from './theme-context'
 
-const STORAGE_KEY = 'dns-speed-lab-theme'
+const STORAGE_KEY = 'dnspect-theme'
 
 function detectInitialTheme(): Theme {
   const stored = window.localStorage.getItem(STORAGE_KEY)

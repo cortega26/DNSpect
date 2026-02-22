@@ -148,7 +148,7 @@ jobs:
       - name: Prepare Linux artifact name
         run: |
           mkdir -p release-assets
-          cp dist/dns-speed-lab-linux release-assets/dnspect-linux-x64
+          cp dist/dnspect-linux release-assets/dnspect-linux-x64
           chmod +x release-assets/dnspect-linux-x64
 
       - name: Smoke test packaged Linux artifact

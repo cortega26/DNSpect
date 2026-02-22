@@ -17,7 +17,7 @@ from . import __version__
 from .models import BenchmarkRequest, ProbeRequest
 from .runner import BenchmarkManager
 
-app = FastAPI(title="dns-speed-lab API", version=__version__)
+app = FastAPI(title="DNSpect API", version=__version__)
 manager = BenchmarkManager()
 
 app.add_middleware(

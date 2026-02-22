@@ -18,17 +18,17 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            source_binary: dns-speed-lab-linux
+            source_binary: dnspect-linux
             asset_name: dnspect-linux-x64
             node_arch: x64
             python_arch: x64
           - os: windows-latest
-            source_binary: dns-speed-lab-windows.exe
+            source_binary: dnspect-windows.exe
             asset_name: dnspect-windows-x64.exe
             node_arch: x64
             python_arch: x64
           - os: macos-14
-            source_binary: dns-speed-lab-darwin
+            source_binary: dnspect-darwin
             asset_name: dnspect-macos-arm64
             node_arch: arm64
             python_arch: arm64

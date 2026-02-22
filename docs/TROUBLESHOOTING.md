@@ -30,7 +30,7 @@ Solución:
   - Linux/macOS: `BACKEND_PORT=8010 bash scripts/dev.sh`
   - Windows: `$env:BACKEND_PORT="8010"; .\scripts\dev.ps1`
 - Binario:
-  - `DNS_SPEED_LAB_PORT=8010 ./dns-speed-lab-linux`
+  - `DNS_SPEED_LAB_PORT=8010 ./dnspect-linux`
 
 ## 4) `python3` existe pero no `pip`
 

@@ -24,7 +24,7 @@
 
 - [ ] Frontend production build exists in `frontend/dist`.
 - [ ] Packaging command succeeds: `python scripts/package_backend.py` (or project venv equivalent).
-- [ ] `dist/` contains platform binary (`dns-speed-lab-*`).
+- [ ] `dist/` contains platform binary (`dnspect-*`).
 - [ ] `release/` contains bundled artifact and compressed archive.
 
 ## 5. Artifact Verification

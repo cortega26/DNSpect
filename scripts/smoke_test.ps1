@@ -48,8 +48,8 @@ try {
     Start-Sleep -Milliseconds 500
   }
 
-  $csvResp = Invoke-WebRequest -Uri "http://$backendHost`:$backendPort/api/benchmarks/$benchmarkId/export.csv" -OutFile "$env:TEMP\dns-speed-lab-smoke.csv"
-  $jsonResp = Invoke-WebRequest -Uri "http://$backendHost`:$backendPort/api/benchmarks/$benchmarkId/export.json" -OutFile "$env:TEMP\dns-speed-lab-smoke.json"
+  $csvResp = Invoke-WebRequest -Uri "http://$backendHost`:$backendPort/api/benchmarks/$benchmarkId/export.csv" -OutFile "$env:TEMP\dnspect-smoke.csv"
+  $jsonResp = Invoke-WebRequest -Uri "http://$backendHost`:$backendPort/api/benchmarks/$benchmarkId/export.json" -OutFile "$env:TEMP\dnspect-smoke.json"
 
   if ($csvResp.StatusCode -ne 200 -or $jsonResp.StatusCode -ne 200) {
     throw "Smoke fail: export.csv=$($csvResp.StatusCode), export.json=$($jsonResp.StatusCode)"

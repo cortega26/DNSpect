@@ -16,11 +16,11 @@ anyio==4.12.1
     #   starlette
     #   watchfiles
 bandit==1.9.3
-    # via dns-speed-lab-backend (pyproject.toml)
+    # via dnspect-backend (pyproject.toml)
 backports-tarfile==1.2.0
-    # via dns-speed-lab-backend (pyproject.toml)
+    # via dnspect-backend (pyproject.toml)
 black==26.1.0
-    # via dns-speed-lab-backend (pyproject.toml)
+    # via dnspect-backend (pyproject.toml)
 certifi==2026.1.4
     # via
     #   httpcore
@@ -30,9 +30,9 @@ click==8.3.1
     #   black
     #   uvicorn
 dnspython==2.7.0
-    # via dns-speed-lab-backend (pyproject.toml)
+    # via dnspect-backend (pyproject.toml)
 fastapi==0.129.2
-    # via dns-speed-lab-backend (pyproject.toml)
+    # via dnspect-backend (pyproject.toml)
 h11==0.16.0
     # via
     #   httpcore
@@ -42,7 +42,7 @@ httpcore==1.0.9
 httptools==0.7.1
     # via uvicorn
 httpx==0.28.1
-    # via dns-speed-lab-backend (pyproject.toml)
+    # via dnspect-backend (pyproject.toml)
 idna==3.11
     # via
     #   anyio
@@ -54,7 +54,7 @@ markdown-it-py==4.0.0
 mdurl==0.1.2
     # via markdown-it-py
 mypy==1.17.1
-    # via dns-speed-lab-backend (pyproject.toml)
+    # via dnspect-backend (pyproject.toml)
 mypy-extensions==1.1.0
     # via
     #   black
@@ -72,12 +72,12 @@ pathspec==1.0.4
 platformdirs==4.4.0
     # via
     #   black
-    #   dns-speed-lab-backend (pyproject.toml)
+    #   dnspect-backend (pyproject.toml)
 pluggy==1.6.0
     # via pytest
 pydantic==2.11.7
     # via
-    #   dns-speed-lab-backend (pyproject.toml)
+    #   dnspect-backend (pyproject.toml)
     #   fastapi
 pydantic-core==2.33.2
     # via pydantic
@@ -86,15 +86,15 @@ pygments==2.19.2
     #   pytest
     #   rich
 pyinstaller==6.16.0
-    # via dns-speed-lab-backend (pyproject.toml)
+    # via dnspect-backend (pyproject.toml)
 pyinstaller-hooks-contrib==2026.1
     # via pyinstaller
 pytest==8.4.1
-    # via dns-speed-lab-backend (pyproject.toml)
+    # via dnspect-backend (pyproject.toml)
 python-dotenv==1.2.1
     # via uvicorn
 python-multipart==0.0.22
-    # via dns-speed-lab-backend (pyproject.toml)
+    # via dnspect-backend (pyproject.toml)
 pytokens==0.4.1
     # via black
 pyyaml==6.0.3
@@ -104,15 +104,15 @@ pyyaml==6.0.3
 rich==14.3.3
     # via bandit
 ruff==0.12.9
-    # via dns-speed-lab-backend (pyproject.toml)
+    # via dnspect-backend (pyproject.toml)
 starlette==0.49.3
     # via
-    #   dns-speed-lab-backend (pyproject.toml)
+    #   dnspect-backend (pyproject.toml)
     #   fastapi
 stevedore==5.7.0
     # via bandit
 types-pyyaml==6.0.12.20250822
-    # via dns-speed-lab-backend (pyproject.toml)
+    # via dnspect-backend (pyproject.toml)
 typing-extensions==4.15.0
     # via
     #   fastapi
@@ -125,7 +125,7 @@ typing-inspection==0.4.2
     #   fastapi
     #   pydantic
 uvicorn==0.35.0
-    # via dns-speed-lab-backend (pyproject.toml)
+    # via dnspect-backend (pyproject.toml)
 uvloop==0.22.1
     # via uvicorn
 watchfiles==1.1.1

@@ -25,11 +25,11 @@ def main() -> None:
 
     target_os = platform.system().lower()
     if "windows" in target_os:
-        artifact_name = "dns-speed-lab-windows"
+        artifact_name = "dnspect-windows"
     elif "linux" in target_os:
-        artifact_name = "dns-speed-lab-linux"
+        artifact_name = "dnspect-linux"
     else:
-        artifact_name = f"dns-speed-lab-{target_os}"
+        artifact_name = f"dnspect-{target_os}"
 
     dist_dir = root / "dist"
     build_dir = root / "build"
@@ -76,7 +76,7 @@ def main() -> None:
     readme = bundle_dir / "README-RUN.txt"
     readme.write_text(
         """
-DNS Speed Lab - Binario empaquetado
+DNSpect - Binario empaquetado
 
 1) Ejecuta el binario.
 2) Se levanta un servidor local en http://127.0.0.1:8000 (o DNS_SPEED_LAB_PORT).

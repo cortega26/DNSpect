@@ -45,7 +45,7 @@ if [[ ! -d .venv ]]; then
 fi
 source .venv/bin/activate
 python -m pip install -c constraints.txt -e .[dev] >/dev/null
-uvicorn app.main:app --host "$BACKEND_HOST" --port "$BACKEND_PORT" >/tmp/dns-speed-lab-smoke.log 2>&1 &
+uvicorn app.main:app --host "$BACKEND_HOST" --port "$BACKEND_PORT" >/tmp/dnspect-smoke.log 2>&1 &
 BACK_PID=$!
 
 sleep 1
@@ -77,8 +77,8 @@ while true; do
   sleep 0.5
 done
 
-CSV_CODE=$(curl -s -o /tmp/dns-speed-lab-smoke.csv -w '%{http_code}' "http://${BACKEND_HOST}:${BACKEND_PORT}/api/benchmarks/$BID/export.csv")
-JSON_CODE=$(curl -s -o /tmp/dns-speed-lab-smoke.json -w '%{http_code}' "http://${BACKEND_HOST}:${BACKEND_PORT}/api/benchmarks/$BID/export.json")
+CSV_CODE=$(curl -s -o /tmp/dnspect-smoke.csv -w '%{http_code}' "http://${BACKEND_HOST}:${BACKEND_PORT}/api/benchmarks/$BID/export.csv")
+JSON_CODE=$(curl -s -o /tmp/dnspect-smoke.json -w '%{http_code}' "http://${BACKEND_HOST}:${BACKEND_PORT}/api/benchmarks/$BID/export.json")
 
 if [[ "$CSV_CODE" != "200" || "$JSON_CODE" != "200" ]]; then
   echo "Smoke fail: export.csv=$CSV_CODE export.json=$JSON_CODE"

@@ -3,7 +3,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { I18nContext, type I18nContextValue } from './i18n-context'
 import { type Language, type TranslationParams, translations } from './i18n-translations'
 
-const STORAGE_KEY = 'dns-speed-lab-language'
+const STORAGE_KEY = 'dnspect-language'
 
 function interpolate(template: string, params?: TranslationParams): string {
   if (!params) return template
