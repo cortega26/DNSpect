@@ -12,8 +12,9 @@ Deterministic, local-first DNS resolver benchmarking with FastAPI + React.
 [![Code Quality: Ruff + mypy + ESLint + tsc](https://img.shields.io/badge/code%20quality-ruff%20%2B%20mypy%20%2B%20eslint%20%2B%20tsc-6366f1)](.github/workflows/ci.yml)
 [![Formatting: Ruff format + Black](https://img.shields.io/badge/formatting-ruff%20format%20%2B%20black-111827)](.github/workflows/ci.yml)
 [![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20macOS%20%7C%20windows-0ea5e9)](.github/workflows/release.yml)
+[![Last Commit](https://img.shields.io/github/last-commit/cortega26/DNSpect)](https://github.com/cortega26/DNSpect/commits/main/)
 
-![DNSpect benchmark in progress (dark theme, English)](docs/screenshots/readme-running-dark-en.png)
+![DNSpect live benchmark demo](docs/screenshots/readme-demo.gif)
 
 ## 🎯 Problem Statement
 Most "DNS speed test" pages run from a remote browser context or cloud vantage point, so they measure someone else's network path. DNSpect runs on your machine, sends real DNS queries to candidate resolvers, and ranks outcomes using latency, failure rate, and stability metrics.
@@ -125,6 +126,7 @@ flowchart TD
 ```
 
 Detailed design notes: `docs/ARCHITECTURE.md`.
+Architecture deep dive: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). <!-- TODO: replace with GitHub Pages URL once enabled -->
 
 ## 🛠️ Installation
 ### Option A: Run from source (dev)
