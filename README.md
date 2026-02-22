@@ -1,10 +1,6 @@
 # DNSpect
 Deterministic, local-first DNS resolver benchmarking with FastAPI + React.
 
-![DNSpect banner showing local DNS benchmark flow from input validation to ranked output](docs/assets/banner-dnspect.svg)
-
-Suggested banner size: `1600x420` (stored at `docs/assets/banner-dnspect.svg`).
-
 [![CI](https://github.com/cortega26/DNSpect/actions/workflows/ci.yml/badge.svg)](https://github.com/cortega26/DNSpect/actions/workflows/ci.yml)
 [![Release](https://github.com/cortega26/DNSpect/actions/workflows/release.yml/badge.svg)](https://github.com/cortega26/DNSpect/actions/workflows/release.yml)
 [![Version](https://img.shields.io/github/v/release/cortega26/DNSpect?display_name=tag)](https://github.com/cortega26/DNSpect/releases)
@@ -113,7 +109,7 @@ Most "DNS speed test" pages run from a remote browser context or cloud vantage p
 
 ## 🏗️ Architecture Overview
 ```mermaid
-flowchart LR
+flowchart TD
   A[User Input from React UI] --> B[FastAPI Endpoint]
   B --> C[Pydantic Validation and Normalization]
   C --> D[BenchmarkManager Queue and State]
@@ -124,7 +120,7 @@ flowchart LR
   G --> H
   H --> I[Normalized Scoring and Ranking]
   I --> J[Recommended Resolver Selection]
-  J --> K[API Response / JSON Export / CSV Export]
+  J --> K[API Response, JSON Export, CSV Export]
   I --> L[(Optional Run Persistence)]
 ```
 
