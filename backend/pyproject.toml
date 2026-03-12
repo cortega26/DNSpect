@@ -7,7 +7,7 @@ name = "dnspect-backend"
 version = "1.0.1"
 description = "Backend API for DNSpect"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = "MIT"
 authors = [{ name = "DNSpect contributors" }]
 dependencies = [
   "fastapi==0.129.2",
