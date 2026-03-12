@@ -16,10 +16,10 @@ Deterministic, local-first DNS resolver benchmarking with FastAPI + React.
 
 ![DNSpect live benchmark demo](docs/screenshots/readme-demo.gif)
 
-## 🎯 Problem Statement
+## Problem Statement
 Most "DNS speed test" pages run from a remote browser context or cloud vantage point, so they measure someone else's network path. DNSpect runs on your machine, sends real DNS queries to candidate resolvers, and ranks outcomes using latency, failure rate, and stability metrics.
 
-## ✨ Features
+## Features
 ### Core features
 - Local DNS benchmark API (`FastAPI`) and web UI (`React + Vite + TypeScript`).
 - Resolver benchmarking with per-run query samples and progress reporting.
@@ -71,7 +71,7 @@ Most "DNS speed test" pages run from a remote browser context or cloud vantage p
 - Benchmark metadata is persisted under a platform user data path resolved by `platformdirs` (`user_data_path("dnspect", "DNSpect") / "runs"`); sample persistence is disabled by default unless `DNS_SPEED_LAB_PERSIST_SAMPLES=1`.
 - UI stores "last run" in browser local storage for convenience.
 
-## 🔐 Security Model
+## Security Model
 ### Attack surface
 - Inbound surface: local HTTP server (`uvicorn`) on `127.0.0.1:8000` by default.
 - Browser/API surface: endpoints under `/api/*` for benchmark/probe/export.
@@ -108,7 +108,7 @@ Most "DNS speed test" pages run from a remote browser context or cloud vantage p
 - Boundary 2: Backend process is trusted code, but depends on local OS/network state and resolver responses (untrusted external systems).
 - Boundary 3: If host binding is changed from localhost to a network-accessible interface, threat model changes materially (auth/TLS are not built in).
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 ```mermaid
 flowchart TD
   A[User Input from React UI] --> B[FastAPI Endpoint]
@@ -128,7 +128,7 @@ flowchart TD
 Detailed design notes: `docs/ARCHITECTURE.md`.
 Architecture deep dive: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). <!-- TODO: replace with GitHub Pages URL once enabled -->
 
-## 🛠️ Installation
+## Installation
 ### Option A: Run from source (dev)
 Prerequisites:
 - Python `>=3.11`
@@ -151,7 +151,7 @@ Windows (PowerShell):
 
 Release verification guide: `docs/RELEASE_VERIFY.md`.
 
-## 🚀 Usage Examples
+## Usage Examples
 ### Start benchmark via UI
 - Open app.
 - Choose resolvers and mode (`quick`, `standard`, `exhaustive`).
@@ -200,16 +200,16 @@ cd frontend && npm run lint && npm run typecheck && npm test && npm run build
 | Reliability signaling | Usually simple latency-only ranking | Latency + failure + stability + reliability guardrail |
 | Validation guarantees | Usually undocumented | Enforced request validation and hard workload bounds |
 
-## 🗺️ Roadmap
+## Roadmap
 
 - [ ] Scheduled/recurring benchmarks with persistent history
 - [ ] Configurable alerting when a resolver degrades beyond threshold
 - [ ] CLI-only mode (headless, no UI dependency)
 
-## 🤝 Contributing
+## Contributing
 - Start here: `CONTRIBUTING.md`
 - Security reporting: `SECURITY.md`
 - Provider dataset notes: `docs/PROVIDERS.md`
 
-## 📄 License
+## License
 MIT. See `LICENSE`.
