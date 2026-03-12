@@ -4,7 +4,7 @@
 
 - App ID: `io.github.cortega26.DNSpect`
 - Verification path: GitHub-based Flathub verification, using the existing upstream repository `https://github.com/cortega26/DNSpect`
-- Architecture scope in this baseline: `x86_64`
+- Architecture scope in this baseline: `x86_64` and `aarch64`
 
 Why this ID:
 
@@ -42,7 +42,6 @@ Why this is the safest current path:
 ## Files added or updated
 
 - `io.github.cortega26.DNSpect.yaml`: Flatpak manifest for local validation and packaging.
-- `flathub.json`: restricts this baseline to `x86_64`, matching the validated Linux packaging path.
 - `packaging/flatpak/requirements.txt`: Flatpak-only Python runtime dependency list.
 - `packaging/flatpak/python3-requirements.json`: pinned Python source/wheel inputs for offline Flatpak builds.
 - `packaging/flatpak/generated-sources.json`: pinned npm sources for offline frontend builds inside Flatpak.
@@ -130,9 +129,8 @@ Why this is the safest current path:
   - If DNSpect needs host-accurate system DNS detection inside Flatpak, that will require a follow-up design decision, likely involving a more privileged host-call path.
 - The manifest is pinned to upstream `v1.0.1`.
   - To submit a newer release, update the `commit` in [io.github.cortega26.DNSpect.yaml](/home/carlos/VS_Code_Projects/DNS_app/io.github.cortega26.DNSpect.yaml), refresh `packaging/flatpak/generated-sources.json` if frontend dependencies changed, and rebuild locally before updating Flathub.
-- This baseline is intentionally `x86_64` only.
-  - Reason: the validated `pydantic-core` input is pinned to the `cp312` manylinux `x86_64` wheel to keep the first submission small and offline-buildable.
-  - If multi-arch support becomes necessary, revisit the Python dependency module and either add the required per-arch wheel handling or introduce the missing Rust build toolchain path.
+- The Python dependency module now pins `pydantic-core` wheels for both `x86_64` and `aarch64` using `only-arches`.
+  - If wider multi-arch support becomes necessary later, revisit the dependency module or add the missing Rust toolchain path for source builds.
 
 ## Exact next manual actions
 
@@ -141,7 +139,6 @@ Why this is the safest current path:
 3. Clone your fork on the `new-pr` branch and create a submission branch.
 4. Copy these files into the root of that Flathub branch:
    - `io.github.cortega26.DNSpect.yaml`
-   - `flathub.json`
    - `packaging/flatpak/python3-requirements.json`
    - `packaging/flatpak/generated-sources.json`
    - `packaging/flatpak/dnspect-launcher`
