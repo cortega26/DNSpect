@@ -93,7 +93,7 @@ pytest==8.4.1
     # via dnspect-backend (pyproject.toml)
 python-dotenv==1.2.1
     # via uvicorn
-python-multipart==0.0.22
+python-multipart==0.0.26
     # via dnspect-backend (pyproject.toml)
 pytokens==0.4.1
     # via black
