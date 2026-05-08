@@ -22,3 +22,13 @@ frontend/dist/
 .DS_Store
 .vscode/
 .idea/
+
+# Local planning
+.local-plans/
+
+# Agent rules/notes (non-versioned)
+.agents/
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md

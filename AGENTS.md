@@ -1,102 +1,37 @@
 # DNSpect — AGENTS.md
 
-## Project Identity
+## Identity
 
-DNSpect is a DNS performance laboratory.
+DNSpect is a DNS performance lab. Resolvers are test targets, not products. Value comes from measurement integrity, not catalog size.
 
-It is NOT:
-- A DNS catalog
-- A resolver directory
-- A marketing comparison tool
+## Architecture
 
-Resolvers are treated as test targets.
-Value comes from measurement integrity and interpretation.
+| Layer | Responsibility | Location |
+|-------|---------------|----------|
+| Data | Resolver dataset, query lists | `data/` |
+| Domain | Scoring, ranking, profiles | `backend/` |
+| Presentation | UI rendering | `frontend/` |
+| Measurement | DNS query execution | `backend/` |
 
----
+- **Determinism**: Same test results + same profile → identical ranking. No randomness in scoring.
+- **Profiles**: User Profiles (ranking policy) and Target Profiles (resolver selection) are independent. Never conflate.
+- **Guardrails**: Never recommend high failure-rate, unstable, or misleading-outlier resolvers.
 
-## Architectural Principles
+## Key Constraints
 
-### 1. Separation of Concerns
+- **Flatpak**: Desktop app → SEO/social meta tags irrelevant. See `.agents/flathub-compliance.md` for packaging rules.
+- **Translations**: ES is source of truth. All 263 ES keys must have EN and PT equivalents.
+- **Performance**: Recharts (382 kB) lazy-loaded via `React.lazy`. Keep heavy deps off main chunk.
+- **Accessibility**: Focus traps on modals, skip-link, keyboard-operable, ARIA labels.
 
-- Resolver dataset = data layer
-- Scoring logic = domain layer
-- UI = presentation layer
-- Test execution = measurement layer
+## Testing
 
-No mixing.
-
----
-
-### 2. Profiles Semantics
-
-There are two independent concepts:
-
-- User Profiles → affect ranking policy.
-- Target Profiles → affect resolver selection (future feature).
-
-They must NEVER be conflated.
-
----
-
-### 3. Determinism
-
-Given the same test results and same profile:
-- Ranking must be identical.
-- No randomness in scoring.
-
----
-
-### 4. Guardrails First
-
-Never recommend:
-- High failure-rate resolvers.
-- Statistically unstable resolvers.
-- Outliers with misleading medians.
-
----
-
-### 5. Resolver Expansion Rules
-
-Adding a resolver must:
-
-- Include metadata.
-- Serve a research purpose.
-- Improve comparison coverage.
-
-Never inflate list size without justification.
-
----
-
-### 6. Metrics Philosophy
-
-Prefer:
-- p95 over p50.
-- Consistency over peak speed.
-- Reliability over theoretical latency.
-
----
-
-## Testing Policy
-
-All scoring changes must:
-- Include unit tests.
-- Maintain determinism.
-- Preserve backward compatibility.
-
----
+All scoring/ranking changes require unit tests. Maintain determinism and backward compat.
 
 ## Non-Goals
 
-DNSpect will not:
-- Categorize resolvers by continent as primary grouping.
-- Recommend based on brand.
-- Act as a privacy claims validator.
+No continent-based grouping, brand-based recommendations, or privacy-claims validation.
 
----
+## Roadmap
 
-## Future Roadmap
-
-- Target Profiles
-- Region filter
-- DoH/DoT comparison
-- Exportable reports
+Target Profiles → Region filter → DoH/DoT comparison → Exportable reports

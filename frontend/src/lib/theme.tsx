@@ -16,6 +16,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     window.localStorage.setItem(STORAGE_KEY, theme)
+
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) {
+      meta.setAttribute('content', theme === 'dark' ? '#0e1521' : '#f4f7fb')
+    }
   }, [theme])
 
   const value = useMemo<ThemeContextValue>(

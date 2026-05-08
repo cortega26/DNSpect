@@ -5,6 +5,34 @@ import { translations } from './i18n-translations'
 const COPY_REGRESSION = 'Copy regression: diacritics removed or altered'
 
 type Locale = 'es' | 'pt'
+
+describe('i18n completeness gate', () => {
+  const esKeys = Object.keys(translations.es).sort()
+
+  it('all ES keys exist in EN', () => {
+    const enKeys = new Set(Object.keys(translations.en))
+    const missing = esKeys.filter((k) => !enKeys.has(k))
+    expect(missing, `EN missing ${missing.length} keys from ES`).toEqual([])
+  })
+
+  it('all ES keys exist in PT', () => {
+    const ptKeys = new Set(Object.keys(translations.pt))
+    const missing = esKeys.filter((k) => !ptKeys.has(k))
+    expect(missing, `PT missing ${missing.length} keys from ES`).toEqual([])
+  })
+
+  it('no stale keys in EN that no longer exist in ES', () => {
+    const esSet = new Set(esKeys)
+    const extra = Object.keys(translations.en).filter((k) => !esSet.has(k))
+    expect(extra, `EN has ${extra.length} stale keys`).toEqual([])
+  })
+
+  it('no stale keys in PT that no longer exist in ES', () => {
+    const esSet = new Set(esKeys)
+    const extra = Object.keys(translations.pt).filter((k) => !esSet.has(k))
+    expect(extra, `PT has ${extra.length} stale keys`).toEqual([])
+  })
+})
 type ContractEntry = [key: string, expected: string]
 
 function assertCopyContract(locale: Locale, entries: ContractEntry[]) {

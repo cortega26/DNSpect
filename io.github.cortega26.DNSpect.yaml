@@ -17,7 +17,6 @@ modules:
         XDG_CACHE_HOME: /run/build/dnspect/flatpak-node/cache
         npm_config_cache: /run/build/dnspect/flatpak-node/npm-cache
     build-commands:
-      - sed -i 's/license = { text = "MIT" }/license = "MIT"/' dnspect-src/backend/pyproject.toml
       - npm install --offline --prefix=dnspect-src/frontend
       - npm run --prefix=dnspect-src/frontend build
       - pip3 install --verbose --no-deps --no-build-isolation --prefix=/app ./dnspect-src/backend
@@ -29,6 +28,7 @@ modules:
       - install -Dm644 dnspect-src/packaging/flatpak/io.github.cortega26.DNSpect.desktop /app/share/applications/io.github.cortega26.DNSpect.desktop
       - install -Dm644 dnspect-src/packaging/flatpak/io.github.cortega26.DNSpect.metainfo.xml /app/share/metainfo/io.github.cortega26.DNSpect.metainfo.xml
       - install -Dm644 dnspect-src/packaging/flatpak/io.github.cortega26.DNSpect.svg /app/share/icons/hicolor/scalable/apps/io.github.cortega26.DNSpect.svg
+      - install -Dm644 dnspect-src/LICENSE /app/share/licenses/io.github.cortega26.DNSpect/LICENSE
     sources:
       - type: git
         url: https://github.com/cortega26/DNSpect.git

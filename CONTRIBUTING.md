@@ -13,6 +13,40 @@ Gracias por contribuir a `DNSpect`.
 4. Actualiza documentación y tests cuando aplique.
 5. Abre PR con descripción clara, motivación y evidencia de pruebas.
 
+## Flatpak / Flathub
+
+DNSpect se distribuye como Flatpak. Ver `.agents/flathub-compliance.md` para reglas de empaquetado.
+
+### Regenerar dependencias npm para Flatpak
+
+```bash
+make flatpak-deps
+```
+
+Esto actualiza `packaging/flatpak/generated-sources.json` desde el `package-lock.json`.
+
+### Validar build Flatpak
+
+```bash
+make flatpak-validate
+```
+
+Requiere `flatpak-builder` instalado. Corre el build y luego `flatpak-builder-lint`.
+
+### Verificar metainfo localmente
+
+```bash
+flatpak-builder-lint manifest io.github.cortega26.DNSpect.yaml
+```
+
+### Checklist pre-submit
+
+```bash
+make flatpak-validate     # build + lint
+npm run -C frontend test  # 32+ tests
+npm run -C frontend build # production build
+```
+
 ## Configuración rápida
 
 - Linux/macOS: `scripts/dev.sh`

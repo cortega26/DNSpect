@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 
+import { useFocusTrap } from '@/lib/useFocusTrap'
 import { useI18n } from '@/lib/useI18n'
 import type { PlatformGroup } from '@/lib/applyGuide'
 import { fmtMs } from '@/lib/utils'
@@ -66,6 +67,8 @@ export function GuidedApplyModal({
   onVerify,
 }: Props) {
   const { t } = useI18n()
+  const modalRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(modalRef, open)
 
   const openWindows = detectedPlatformGroup === 'windows' || detectedPlatformGroup === null
   const openMacos = detectedPlatformGroup === 'macos'
@@ -84,8 +87,8 @@ export function GuidedApplyModal({
   if (!open) return null
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal guided-apply-modal" onClick={(event) => event.stopPropagation()}>
+    <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label={t('applyGuide.modalTitle')}>
+      <div ref={modalRef} className="modal guided-apply-modal" onClick={(event) => event.stopPropagation()}>
         <div className="modal-head">
           <h3>{t('applyGuide.modalTitle')}</h3>
           <button type="button" onClick={onClose}>

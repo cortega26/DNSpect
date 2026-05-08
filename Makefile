@@ -32,3 +32,22 @@ dev:
 
 smoke:
 	bash scripts/smoke_test.sh
+
+# Flatpak
+FLATPAK_MANIFEST := io.github.cortega26.DNSpect.yaml
+FLATPAK_BUILDDIR := build-flatpak
+
+flatpak-deps:
+	cd frontend && flatpak-node-generator npm --ignore-shasums=rollup package-lock.json -o ../packaging/flatpak/generated-sources.json
+
+flatpak-build:
+	flatpak-builder --force-clean --repo=$(FLATPAK_BUILDDIR)/repo $(FLATPAK_BUILDDIR)/build $(FLATPAK_MANIFEST)
+
+flatpak-validate: flatpak-build
+	flatpak-builder-lint manifest $(FLATPAK_MANIFEST)
+	flatpak-builder-lint appdir $(FLATPAK_BUILDDIR)/build
+
+flatpak-install:
+	flatpak-builder --user --install --force-clean $(FLATPAK_BUILDDIR)/build $(FLATPAK_MANIFEST)
+
+.PHONY: flatpak-deps flatpak-build flatpak-validate flatpak-install

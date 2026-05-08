@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 
-import { ChartsPanel } from '@/components/ChartsPanel'
+import { useFocusTrap } from '@/lib/useFocusTrap'
 import { DashboardControls, type TimeoutPreset } from '@/components/DashboardControls'
 import { GuidedApplyModal } from '@/components/GuidedApplyModal'
 import { LiveRankingPanel } from '@/components/LiveRankingPanel'
 import { RecommendedResolverPanel } from '@/components/RecommendedResolverPanel'
-import { ResolverDetailModal } from '@/components/ResolverDetailModal'
 import { ResolverRankingPanel } from '@/components/ResolverRankingPanel'
+
+const ChartsPanel = lazy(() => import('@/components/ChartsPanel').then((m) => ({ default: m.ChartsPanel })))
+const ResolverDetailModal = lazy(() => import('@/components/ResolverDetailModal').then((m) => ({ default: m.ResolverDetailModal })))
 import { buildDnsClipboardText, buildGuidedDnsSet, detectPlatformGroup } from '@/lib/applyGuide'
 import { useI18n } from '@/lib/useI18n'
 import type { Language } from '@/lib/i18n-translations'
@@ -206,8 +208,11 @@ function App() {
   const [viewingSavedRun, setViewingSavedRun] = useState<boolean>(false)
   const [localeMenuOpen, setLocaleMenuOpen] = useState<boolean>(false)
   const [nowMs, setNowMs] = useState<number>(() => Date.now())
+  const [isInitializing, setIsInitializing] = useState<boolean>(true)
   const rankingPanelRef = useRef<HTMLElement | null>(null)
   const localeMenuRef = useRef<HTMLDivElement>(null)
+  const resolverListRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(resolverListRef, resolverListOpen)
   const localeTriggerRef = useRef<HTMLButtonElement>(null)
   const localeOptionRefs = useRef<Array<HTMLButtonElement | null>>([])
   const pollTimerRef = useRef<number | null>(null)
@@ -255,29 +260,33 @@ function App() {
     let cancelled = false
 
     async function init() {
-      const [providersResult, dnsResult] = await Promise.allSettled([getProviders(), getSystemDns()])
-      if (cancelled) return
+      try {
+        const [providersResult, dnsResult] = await Promise.allSettled([getProviders(), getSystemDns()])
+        if (cancelled) return
 
-      const providersResRaw = providersResult.status === 'fulfilled' ? providersResult.value : []
-      const providersRes = providersResRaw.length > 0 ? providersResRaw : FALLBACK_PROVIDERS
-      const dnsRes = dnsResult.status === 'fulfilled' ? dnsResult.value : null
+        const providersResRaw = providersResult.status === 'fulfilled' ? providersResult.value : []
+        const providersRes = providersResRaw.length > 0 ? providersResRaw : FALLBACK_PROVIDERS
+        const dnsRes = dnsResult.status === 'fulfilled' ? dnsResult.value : null
 
-      setProviders(providersRes)
-      setSystemDns(dnsRes)
+        setProviders(providersRes)
+        setSystemDns(dnsRes)
 
-      const defaults = new Set<string>()
-      providersRes.forEach((p) => p.dns.forEach((ip) => defaults.add(ip)))
-      ;(dnsRes?.resolvers ?? []).forEach((ip) => defaults.add(ip))
-      setSelectedResolvers(defaults)
+        const defaults = new Set<string>()
+        providersRes.forEach((p) => p.dns.forEach((ip) => defaults.add(ip)))
+        ;(dnsRes?.resolvers ?? []).forEach((ip) => defaults.add(ip))
+        setSelectedResolvers(defaults)
 
-      if (providersResult.status === 'rejected' || dnsResult.status === 'rejected') {
-        let reason: unknown = 'Error al cargar los datos iniciales'
-        if (providersResult.status === 'rejected') {
-          reason = providersResult.reason
-        } else if (dnsResult.status === 'rejected') {
-          reason = dnsResult.reason
+        if (providersResult.status === 'rejected' || dnsResult.status === 'rejected') {
+          let reason: unknown = 'Error al cargar los datos iniciales'
+          if (providersResult.status === 'rejected') {
+            reason = providersResult.reason
+          } else if (dnsResult.status === 'rejected') {
+            reason = dnsResult.reason
+          }
+          setError(reason instanceof Error ? reason.message : 'Error al cargar los datos iniciales')
         }
-        setError(reason instanceof Error ? reason.message : 'Error al cargar los datos iniciales')
+      } finally {
+        if (!cancelled) setIsInitializing(false)
       }
     }
     void init()
@@ -958,17 +967,29 @@ function App() {
   }, [language, savedLastRun, t])
 
   return (
-    <div className="app-shell">
+    <>
+      <a href="#main-content" className="skip-link">
+        {t('accessibility.skipToContent')}
+      </a>
+      <main className="app-shell" id="main-content">
       <header className="app-header">
-        <div className="hero">
-          <h1>{t('app.title')}</h1>
-          <p>{t('app.subtitle')}</p>
-          <details className="preview-collapse">
-            <summary>{t('app.previewTitle')}</summary>
-            <p>{t('app.previewLine1')}</p>
-            <p>{t('app.previewLine2')}</p>
-          </details>
-        </div>
+        {isInitializing ? (
+          <div className="hero" style={{ display: 'grid', gap: 'var(--space-3)' }} aria-busy="true" aria-label="Cargando">
+            <span className="skeleton skeleton-heading" style={{ width: '35%' }} />
+            <span className="skeleton skeleton-text" style={{ width: '55%' }} />
+            <span className="skeleton skeleton-text" style={{ width: '40%' }} />
+          </div>
+        ) : (
+          <div className="hero">
+            <h1>{t('app.title')}</h1>
+            <p>{t('app.subtitle')}</p>
+            <details className="preview-collapse">
+              <summary>{t('app.previewTitle')}</summary>
+              <p>{t('app.previewLine1')}</p>
+              <p>{t('app.previewLine2')}</p>
+            </details>
+          </div>
+        )}
 
         <div className="header-actions">
           <button
@@ -1051,34 +1072,53 @@ function App() {
         </div>
       </header>
 
-      <DashboardControls
-        providers={providers}
-        selected={selectedResolvers}
-        mode={mode}
-        runs={runs}
-        timeoutSec={timeoutSec}
-        timeoutPreset={timeoutPreset}
-        queriesText={queriesText}
-        systemResolvers={systemDns?.resolvers ?? []}
-        isRunning={isRunning}
-        advancedOpen={advancedOpen}
-        workloadSummary={workloadMetrics.summary}
-        startHelperText={startCtaHelpText}
-        onToggleResolver={toggleResolver}
-        onModeChange={onModeChange}
-        onRunsChange={(v) => setRuns(Math.max(1, Math.min(300, Number.isFinite(v) ? v : runs)))}
-        onTimeoutChange={(v) => setTimeoutSec(Math.max(0.2, Math.min(10, Number.isFinite(v) ? v : timeoutSec)))}
-        onTimeoutPresetChange={(preset) => {
-          setTimeoutPreset(preset)
-          setTimeoutSec(BASIC_TIMEOUT_PRESET[preset])
-        }}
-        onQueriesTextChange={setQueriesText}
-        onToggleAdvanced={() => setAdvancedOpen((prev) => !prev)}
-        onShowResolverList={() => setResolverListOpen(true)}
-        onStart={() => {
-          void handleStart()
-        }}
-      />
+      {isInitializing ? (
+        <section className="card" style={{ display: 'grid', gap: 'var(--space-4)' }} aria-busy="true" aria-label="Cargando">
+          <span className="skeleton skeleton-heading" style={{ width: '30%' }} />
+          <span className="skeleton skeleton-text" style={{ width: '50%' }} />
+          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+            <span className="skeleton skeleton-chip" />
+            <span className="skeleton skeleton-chip" />
+            <span className="skeleton skeleton-chip" />
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+            <span className="skeleton skeleton-chip" style={{ width: '120px' }} />
+            <span className="skeleton skeleton-chip" style={{ width: '120px' }} />
+            <span className="skeleton skeleton-chip" style={{ width: '120px' }} />
+          </div>
+          <span className="skeleton skeleton-btn" />
+          <span className="skeleton skeleton-text" style={{ width: '40%' }} />
+        </section>
+      ) : (
+        <DashboardControls
+          providers={providers}
+          selected={selectedResolvers}
+          mode={mode}
+          runs={runs}
+          timeoutSec={timeoutSec}
+          timeoutPreset={timeoutPreset}
+          queriesText={queriesText}
+          systemResolvers={systemDns?.resolvers ?? []}
+          isRunning={isRunning}
+          advancedOpen={advancedOpen}
+          workloadSummary={workloadMetrics.summary}
+          startHelperText={startCtaHelpText}
+          onToggleResolver={toggleResolver}
+          onModeChange={onModeChange}
+          onRunsChange={(v) => setRuns(Math.max(1, Math.min(300, Number.isFinite(v) ? v : runs)))}
+          onTimeoutChange={(v) => setTimeoutSec(Math.max(0.2, Math.min(10, Number.isFinite(v) ? v : timeoutSec)))}
+          onTimeoutPresetChange={(preset) => {
+            setTimeoutPreset(preset)
+            setTimeoutSec(BASIC_TIMEOUT_PRESET[preset])
+          }}
+          onQueriesTextChange={setQueriesText}
+          onToggleAdvanced={() => setAdvancedOpen((prev) => !prev)}
+          onShowResolverList={() => setResolverListOpen(true)}
+          onStart={() => {
+            void handleStart()
+          }}
+        />
+      )}
 
       {savedLastRunSummary && (
         <section className="card compact last-run-card">
@@ -1283,7 +1323,9 @@ function App() {
             </div>
           </section>
 
-          <ChartsPanel results={filteredResults} />
+          <Suspense fallback={<section className="card"><p>{t('charts.loading')}</p></section>}>
+            <ChartsPanel results={filteredResults} />
+          </Suspense>
         </>
       )}
 
@@ -1314,7 +1356,7 @@ function App() {
       />
 
       {resolverListOpen && (
-        <div className="modal-backdrop" onClick={() => setResolverListOpen(false)}>
+        <div ref={resolverListRef} className="modal-backdrop" onClick={() => setResolverListOpen(false)} role="dialog" aria-modal="true" aria-label={t('resolverModal.subtitle')}>
           <div className="modal resolver-list-modal" onClick={(event) => event.stopPropagation()}>
             <div className="modal-head">
               <h3>{t('resolverModal.title', { count: selectedResolverCatalog.length })}</h3>
@@ -1336,7 +1378,8 @@ function App() {
       )}
 
       {selectedResult && (
-        <ResolverDetailModal
+        <Suspense fallback={null}>
+          <ResolverDetailModal
           result={selectedResult}
           provider={providers.find((p) => p.id === selectedResult.provider_id)}
           isLoadingSamples={loadingSamples}
@@ -1349,8 +1392,10 @@ function App() {
             setLoadingSamples(false)
           }}
         />
+      </Suspense>
       )}
-    </div>
+    </main>
+    </>
   )
 }
 

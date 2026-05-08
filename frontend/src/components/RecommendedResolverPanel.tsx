@@ -44,7 +44,7 @@ export function RecommendedResolverPanel({
         : t('recommendation.improvementSlower', { ms: Math.abs(improvementVsCurrentMs).toFixed(0) })
 
   return (
-    <section className="card compact recommendation-card" aria-live="polite">
+    <section className="card card-strong compact" aria-live="polite">
       <h3>{t('recommendation.cardLabel')}</h3>
       {recommendationWarning ? (
         <p className="recommendation-warning" role="alert">

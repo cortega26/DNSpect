@@ -1,5 +1,7 @@
+import { useRef } from 'react'
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
+import { useFocusTrap } from '@/lib/useFocusTrap'
 import { useI18n } from '@/lib/useI18n'
 import type { Provider, ResolverResult } from '@/lib/types'
 import { fmtMs } from '@/lib/utils'
@@ -35,6 +37,8 @@ const FAILURE_KINDS = ['timeout', 'nxdomain', 'servfail', 'refused', 'noanswer',
 
 export function ResolverDetailModal({ result, provider, canLoadSamples, isLoadingSamples, onLoadSamples, onClose }: Props) {
   const { t } = useI18n()
+  const modalRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(modalRef, true)
   const lineData = result.samples.map((s) => ({ run: s.run_index, ms: s.ms ?? null }))
   const okSamples = result.samples.filter((s) => s.ok && s.ms !== null).map((s) => s.ms as number)
   const histogram = makeHistogram(okSamples)
@@ -44,8 +48,8 @@ export function ResolverDetailModal({ result, provider, canLoadSamples, isLoadin
   }))
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label={t('modal.title', { resolver: result.resolver })}>
+      <div ref={modalRef} className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h3>{t('modal.title', { resolver: result.resolver })}</h3>
           <button onClick={onClose}>{t('modal.close')}</button>

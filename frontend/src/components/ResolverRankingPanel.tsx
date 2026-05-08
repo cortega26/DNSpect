@@ -17,7 +17,13 @@ export function ResolverRankingPanel({ id, results, emptyMessage, onSelect }: Pr
       <h3>{t('ranking.title')}</h3>
 
       {results.length === 0 ? (
-        <div className="empty-state">{emptyMessage ?? t('results.empty')}</div>
+        <div className="empty-state">
+          <svg className="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 8v4M12 16h.01" />
+          </svg>
+          <span className="empty-state-title">{emptyMessage ?? t('results.empty')}</span>
+        </div>
       ) : (
         <details className="ranking-collapse" open>
           <summary>{t('ranking.collapseLabel', { count: results.length })}</summary>

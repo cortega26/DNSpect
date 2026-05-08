@@ -44,10 +44,11 @@ PY
 
 url="http://${DNS_SPEED_LAB_HOST}:${DNS_SPEED_LAB_PORT}"
 
-if command -v gio >/dev/null 2>&1; then
-  gio open "${url}" >/dev/null 2>&1 || true
-elif command -v xdg-open >/dev/null 2>&1; then
+# Prefer xdg-open for Flatpak portal compat, fall back to gio then python3.
+if command -v xdg-open >/dev/null 2>&1; then
   xdg-open "${url}" >/dev/null 2>&1 || true
+elif command -v gio >/dev/null 2>&1; then
+  gio open "${url}" >/dev/null 2>&1 || true
 else
   python3 -m webbrowser "${url}" >/dev/null 2>&1 || true
 fi
