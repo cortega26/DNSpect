@@ -85,7 +85,7 @@ DNSpect - Binario empaquetado
 Variables opcionales:
 - DNS_SPEED_LAB_HOST (default 127.0.0.1)
 - DNS_SPEED_LAB_PORT (default 8000)
-- DNS_SPEED_LAB_OPEN_BROWSER (1/0)
+- DNS_SPEED_LAB_GUI (auto|native|browser|headless)
 """.strip()
         + "\n",
         encoding="utf-8",

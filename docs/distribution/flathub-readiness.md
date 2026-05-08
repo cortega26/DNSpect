@@ -91,7 +91,7 @@ Why this is the safest current path:
 
 ### Flatpak runtime smoke validation
 
-- `flatpak run org.flatpak.Builder --run build-flatpak io.github.cortega26.DNSpect.yaml sh -lc 'DNS_SPEED_LAB_OPEN_BROWSER=0 DNS_SPEED_LAB_PORT=18083 DNS_SPEED_LAB_FRONTEND_DIR=/app/share/dnspect/frontend DNS_SPEED_LAB_DATA_DIR=/app/share/dnspect/data dnspect'`
+- `flatpak run org.flatpak.Builder --run build-flatpak io.github.cortega26.DNSpect.yaml sh -lc 'DNS_SPEED_LAB_GUI=headless DNS_SPEED_LAB_PORT=18083 DNS_SPEED_LAB_FRONTEND_DIR=/app/share/dnspect/frontend DNS_SPEED_LAB_DATA_DIR=/app/share/dnspect/data dnspect'`
   - Result: pass
 - `curl -fsS http://127.0.0.1:18083/api/health`
   - Result: pass
@@ -173,7 +173,7 @@ flatpak install --user -y flathub-user org.freedesktop.Sdk.Extension.node22//24.
 flatpak run org.flatpak.Builder --user --disable-rofiles-fuse --force-clean --install-deps-from=flathub-user build-flatpak io.github.cortega26.DNSpect.yaml
 
 # Sandbox smoke test
-flatpak run org.flatpak.Builder --run build-flatpak io.github.cortega26.DNSpect.yaml sh -lc 'DNS_SPEED_LAB_OPEN_BROWSER=0 DNS_SPEED_LAB_PORT=18083 DNS_SPEED_LAB_FRONTEND_DIR=/app/share/dnspect/frontend DNS_SPEED_LAB_DATA_DIR=/app/share/dnspect/data dnspect'
+flatpak run org.flatpak.Builder --run build-flatpak io.github.cortega26.DNSpect.yaml sh -lc 'DNS_SPEED_LAB_GUI=headless DNS_SPEED_LAB_PORT=18083 DNS_SPEED_LAB_FRONTEND_DIR=/app/share/dnspect/frontend DNS_SPEED_LAB_DATA_DIR=/app/share/dnspect/data dnspect'
 
 # Install the locally built Flatpak
 flatpak run org.flatpak.Builder --user --install --force-clean --install-deps-from=flathub-user build-flatpak io.github.cortega26.DNSpect.yaml

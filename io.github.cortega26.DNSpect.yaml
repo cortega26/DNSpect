@@ -7,6 +7,10 @@ sdk-extensions:
 command: dnspect-launcher
 finish-args:
   - --share=network
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --device=dri
 modules:
   - packaging/flatpak/python3-requirements.json
   - name: dnspect
