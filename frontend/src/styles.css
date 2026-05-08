@@ -26,11 +26,11 @@
   --text: #121b2a;
   --muted: #53617a;
   --border: #d4deec;
-  --accent: #0099CC;
+  --accent: #0D9488;
   --accent-contrast: #ffffff;
-  --accent-soft: rgba(0, 153, 204, 0.07);
-  --accent-warm: #C57100;
-  --accent-warm-soft: rgba(197, 113, 0, 0.10);
+  --accent-soft: rgba(13, 148, 136, 0.07);
+  --accent-warm: #6B7280;
+  --accent-warm-soft: rgba(107, 114, 128, 0.08);
   --primary: var(--accent);
   --primary-contrast: var(--accent-contrast);
   --success: #10B981;
@@ -43,7 +43,6 @@
   --danger-soft: rgba(220, 38, 38, 0.1);
   --shadow-sm: 0 7px 20px rgb(15 30 60 / 8%);
   --shadow: 0 16px 42px rgb(15 30 60 / 12%);
-  --glow: 0 0 20px color-mix(in srgb, var(--accent) 35%, transparent);
 
   --focus: #1682ff;
 }
@@ -59,11 +58,11 @@
   --text: #0B0E14;
   --muted: #5C677D;
   --border: #CBD2E0;
-  --accent: #0099CC;
-  --accent-contrast: #FFFFFF;
-  --accent-soft: rgba(0, 153, 204, 0.07);
-  --accent-warm: #C57100;
-  --accent-warm-soft: rgba(197, 113, 0, 0.10);
+  --accent: #0D9488;
+  --accent-contrast: #ffffff;
+  --accent-soft: rgba(13, 148, 136, 0.07);
+  --accent-warm: #6B7280;
+  --accent-warm-soft: rgba(107, 114, 128, 0.08);
   --primary: var(--accent);
   --primary-contrast: var(--accent-contrast);
   --success: #10B981;
@@ -76,7 +75,6 @@
   --danger-soft: rgba(220, 38, 38, 0.1);
   --shadow-sm: 0 7px 20px rgb(15 30 60 / 8%);
   --shadow: 0 14px 38px rgb(15 30 60 / 12%);
-  --glow: 0 0 16px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 [data-theme='dark'] {
@@ -90,11 +88,11 @@
   --text: #EDF0F5;
   --muted: #93A0B8;
   --border: #2A3650;
-  --accent: #00E5FF;
-  --accent-contrast: #001B1F;
-  --accent-soft: rgba(0, 229, 255, 0.08);
-  --accent-warm: #FFB300;
-  --accent-warm-soft: rgba(255, 179, 0, 0.10);
+  --accent: #2DD4BF;
+  --accent-contrast: #042F2A;
+  --accent-soft: rgba(45, 212, 191, 0.08);
+  --accent-warm: #9CA3AF;
+  --accent-warm-soft: rgba(156, 163, 175, 0.10);
   --primary: var(--accent);
   --primary-contrast: var(--accent-contrast);
   --success: #22c55e;
@@ -107,7 +105,6 @@
   --danger-soft: rgba(239, 106, 116, 0.1);
   --shadow-sm: 0 8px 24px rgb(2 6 14 / 32%);
   --shadow: 0 18px 44px rgb(2 6 14 / 42%);
-  --glow: 0 0 24px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 * {
@@ -155,13 +152,8 @@ body {
   font-family: var(--font-ui);
   color: var(--text);
   background:
-    linear-gradient(to right, color-mix(in srgb, var(--accent) 4%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--accent) 4%, transparent) 1px, transparent 1px),
-    radial-gradient(ellipse at 15% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 50%),
-    radial-gradient(ellipse at 90% 100%, color-mix(in srgb, var(--accent-warm) 6%, transparent), transparent 50%),
-    linear-gradient(180deg, color-mix(in srgb, var(--accent) 4%, var(--bg-soft)), var(--bg));
-  background-size: 60px 60px, 60px 60px, 100% 100%, 100% 100%, 100% 100%;
-  background-attachment: fixed;
+    radial-gradient(ellipse at 20% 0%, color-mix(in srgb, var(--accent) 6%, var(--bg-soft)), transparent 50%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-soft) 70%, var(--bg)), var(--bg));
   line-height: 1.45;
 }
 
@@ -210,28 +202,14 @@ a:focus-visible {
 }
 
 .hero {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
   border-radius: var(--radius-lg);
   background:
-    radial-gradient(ellipse at 25% 50%, color-mix(in srgb, var(--accent) 15%, var(--surface)), transparent 60%),
-    linear-gradient(135deg, color-mix(in srgb, var(--accent) 9%, var(--surface)), var(--surface) 50%);
+    radial-gradient(ellipse at 20% 40%, color-mix(in srgb, var(--accent) 8%, var(--surface)), transparent 60%),
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 5%, var(--surface)), var(--surface) 50%);
   color: var(--text);
   padding: var(--space-6) var(--space-6) var(--space-5);
-  box-shadow: var(--glow), var(--shadow-sm);
-  border-left: 3px solid var(--accent);
-}
-
-.hero::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 40%, var(--accent-warm)), transparent);
-  pointer-events: none;
+  box-shadow: var(--shadow-sm);
 }
 
 .hero h1 {
@@ -365,6 +343,20 @@ a:focus-visible {
   background: color-mix(in srgb, var(--primary) 28%, var(--surface-2));
 }
 
+.locale-code-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface-2));
+  color: color-mix(in srgb, var(--accent) 88%, var(--text));
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+
 .locale-item.is-active:focus-visible {
   border-color: color-mix(in srgb, var(--focus) 58%, var(--primary));
   background: color-mix(in srgb, var(--primary) 34%, var(--surface-2));
@@ -396,11 +388,11 @@ a:focus-visible {
 
 .card-strong {
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent) 6%, var(--surface)), var(--surface) 60%);
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 4%, var(--surface)), var(--surface) 60%);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
   border-radius: var(--radius-lg);
   padding: var(--space-5);
-  box-shadow: var(--glow), var(--shadow);
+  box-shadow: var(--shadow);
   border-left: 3px solid var(--accent);
 }
 
@@ -549,10 +541,9 @@ a:focus-visible {
 }
 
 .chip-active {
-  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #0066FF));
+  background: var(--accent);
   color: var(--accent-contrast);
   border-color: var(--accent);
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 34%, transparent);
 }
 
 .chip:disabled,
@@ -717,14 +708,12 @@ textarea {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #0066FF));
+  background: var(--accent);
   color: var(--accent-contrast);
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 .btn-primary:hover {
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--accent) 40%, transparent);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 90%, #ffffff), color-mix(in srgb, var(--accent) 55%, #0066FF));
+  background: color-mix(in srgb, var(--accent) 88%, #ffffff);
 }
 
 .btn-secondary {
@@ -818,9 +807,8 @@ textarea {
 }
 
 .last-run-card {
-  border-left: 4px solid var(--accent-warm);
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent-warm) 4%, var(--surface)), var(--surface) 60%);
+  border-left: 4px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: color-mix(in srgb, var(--accent) 3%, var(--surface));
 }
 
 .saved-run-notice {
@@ -842,16 +830,12 @@ textarea {
 }
 
 .recommendation-winner {
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
-  border-left: 3px solid var(--accent-warm);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
   border-radius: var(--radius-md);
-  background:
-    radial-gradient(ellipse at 80% 30%, color-mix(in srgb, var(--accent-warm) 6%, transparent), transparent 60%),
-    color-mix(in srgb, var(--surface) 85%, var(--accent-soft));
+  background: color-mix(in srgb, var(--surface) 85%, var(--accent-soft));
   padding: var(--space-4);
   display: grid;
   gap: 2px;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
 .recommendation-grid {
@@ -905,8 +889,7 @@ textarea {
 
 .progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 50%, #A855F7));
-  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 35%, transparent);
+  background: var(--accent);
   transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -1004,11 +987,10 @@ textarea {
 }
 
 .ranking-row-rank-1 {
-  border-color: color-mix(in srgb, var(--accent-warm) 50%, var(--border));
-  border-left: 3px solid var(--accent-warm);
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+  border-left: 3px solid var(--accent);
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent-warm) 5%, var(--surface)), color-mix(in srgb, var(--surface) 94%, var(--surface-2)));
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-warm) 15%, transparent);
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 5%, var(--surface)), color-mix(in srgb, var(--surface) 94%, var(--surface-2)));
 }
 
 .ranking-row-rank-2 {
@@ -1674,8 +1656,7 @@ tbody tr:last-child td {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: color-mix(in srgb, var(--bg) 85%, transparent);
-  backdrop-filter: blur(4px);
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
   display: grid;
   place-items: center;
   padding: var(--space-5);
@@ -1840,14 +1821,8 @@ tbody tr:last-child td {
   box-shadow: none;
 }
 
-.live-ranking-panel.is-motion-budgeted .live-ranking-row.is-running-leader .live-ranking-accent {
+.live-ranking-panel.is-motion-budgeted .live-ranking-row.is-running-leader .race-bar-fill {
   animation: none;
-}
-
-.live-ranking-panel.is-motion-budgeted .live-ranking-delta.is-up,
-.live-ranking-panel.is-motion-budgeted .live-ranking-delta.is-down {
-  animation: none;
-  transform: none !important;
 }
 
 .detail-charts {
@@ -1855,6 +1830,90 @@ tbody tr:last-child td {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-3);
+}
+
+/* ── Race barchart ── */
+.live-ranking-row.race-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 44px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--border) 84%, var(--primary));
+  background: var(--surface);
+}
+
+.live-ranking-row.race-row.is-active {
+  border-color: color-mix(in srgb, var(--primary) 48%, var(--border));
+  background: color-mix(in srgb, var(--accent-soft) 60%, var(--surface));
+}
+
+.live-ranking-row.race-row.is-running-leader {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+.race-bar-track {
+  position: relative;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface-3) 55%, var(--surface));
+  overflow: hidden;
+  min-width: 60px;
+}
+
+.race-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 450ms cubic-bezier(0.22, 1, 0.36, 1);
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.race-bar-fill-rank-1 {
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 85%, transparent));
+}
+
+.race-bar-fill-rank-2 {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 75%, transparent), color-mix(in srgb, var(--accent) 45%, transparent));
+}
+
+.race-bar-fill-rank-3 {
+  background: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.race-bar-fill.is-provisional {
+  opacity: 0.7;
+}
+
+.race-bar-name {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  font-weight: 700;
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+
+.race-bar-pct {
+  font-weight: 800;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  min-width: 4ch;
+  text-align: right;
+  color: var(--muted);
+}
+
+.race-row .live-ranking-rank {
+  min-width: 34px;
+  font-size: 0.82rem;
+  padding: 2px 6px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1890,17 +1949,15 @@ tbody tr:last-child td {
   .live-ranking-chip-dot,
   .live-ranking-row.is-entering,
   .live-ranking-row.is-rank-changing,
-  .live-ranking-row.is-running-leader .live-ranking-accent,
-  .live-ranking-delta.is-up,
-  .live-ranking-delta.is-down,
+  .live-ranking-row.is-running-leader .race-bar-fill,
+  .race-bar-fill,
   .progress-panel--live .progress-wrap::after,
   .progress-current-dot {
     animation: none !important;
   }
 
   .live-ranking-row,
-  .live-ranking-confidence-fill,
-  .live-ranking-delta,
+  .race-bar-fill,
   .progress-bar {
     transition: none !important;
     transform: none !important;

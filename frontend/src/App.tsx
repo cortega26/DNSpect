@@ -167,10 +167,10 @@ function triggerDownload(content: BlobPart, fileName: string, mimeType: string) 
   window.URL.revokeObjectURL(url)
 }
 
-const languageOptions: Array<{ value: Language; flag: string; code: string; srLabel: string }> = [
-  { value: 'es', flag: '🇪🇸', code: 'ES', srLabel: 'Español' },
-  { value: 'en', flag: '🇺🇸', code: 'EN', srLabel: 'English' },
-  { value: 'pt', flag: '🇧🇷', code: 'PT', srLabel: 'Português' },
+const languageOptions: Array<{ value: Language; code: string; srLabel: string }> = [
+  { value: 'es', code: 'ES', srLabel: 'Español' },
+  { value: 'en', code: 'EN', srLabel: 'English' },
+  { value: 'pt', code: 'PT', srLabel: 'Português' },
 ]
 
 function App() {
@@ -1034,7 +1034,7 @@ function App() {
               onKeyDown={onLocaleTriggerKeyDown}
             >
               <span className="locale-current" aria-hidden="true">
-                {activeLanguage.flag} {activeLanguage.code}
+                <span className="locale-code-badge">{activeLanguage.code}</span>
               </span>
               <span className="select-caret" aria-hidden="true">
                 ▾
@@ -1062,7 +1062,7 @@ function App() {
                         closeLocaleMenu(true)
                       }}
                     >
-                      <span>{option.flag} {option.code}</span>
+                      <span className="locale-code-badge">{option.code}</span>
                     </button>
                   )
                 })}

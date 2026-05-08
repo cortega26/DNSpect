@@ -1,9 +1,9 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { useI18n } from '@/lib/useI18n'
 import { resolveLiveMotionPolicy } from '@/lib/motion'
 import type { ResolverResult } from '@/lib/types'
-import { fmtMs, resolverReliabilityScore } from '@/lib/utils'
+import { resolverReliabilityScore } from '@/lib/utils'
 
 interface CanonicalLiveRow {
   ip: string
@@ -255,76 +255,42 @@ export function LiveRankingPanel({
         <p className="muted">{t('liveRanking.waiting')}</p>
       ) : (
         <ol className="live-ranking-list">
-          {decoratedRows.map((row, index) => {
-            const provisional = row.confidence < 1
-            const rankDeltaText =
-              row.movementDelta > 0 ? `↑${row.movementDelta}` : row.movementDelta < 0 ? `↓${Math.abs(row.movementDelta)}` : ''
-            const qualityBand =
-              row.qualityPct < 34
-                ? 'live-ranking-confidence-fill-low'
-                : row.qualityPct < 67
-                  ? 'live-ranking-confidence-fill-medium'
-                  : 'live-ranking-confidence-fill-high'
-            const rowStyle = !allowReorderAnimation || row.movementDelta === 0
-              ? undefined
-              : ({
-                  '--rank-row-change-animation': row.movementSequence % 2 === 0 ? 'rank-row-change-a' : 'rank-row-change-b',
-                } as CSSProperties)
-            const deltaStyle = !allowReorderAnimation || row.movementDelta === 0
-              ? undefined
-              : ({
-                  '--rank-delta-change-animation': row.movementSequence % 2 === 0 ? 'rank-delta-change-a' : 'rank-delta-change-b',
-                } as CSSProperties)
-            return (
-              <li
-                key={row.ip}
-                ref={(node) => {
-                  if (node) rowElementRef.current.set(row.ip, node)
-                  else rowElementRef.current.delete(row.ip)
-                }}
-                className={[
-                  'live-ranking-row',
-                  allowReorderAnimation && row.movementDelta !== 0 ? 'is-rank-changing' : '',
-                  allowReorderAnimation && row.isEntering ? 'is-entering' : '',
-                  allowHighlights && row.isActive ? 'is-active' : '',
-                  allowHighlights && row.isLeader && isRunning ? 'is-running-leader' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                style={rowStyle}
-              >
-                <span className="live-ranking-accent" aria-hidden="true" />
-                <span className="live-ranking-rank">#{index + 1}</span>
-                <div className="live-ranking-main">
-                  <strong>
-                    {row.name} - {row.ip}
-                  </strong>
-                  <span className="muted">
-                    Score: {Number.isFinite(row.scoreTotal) ? row.scoreTotal.toFixed(3) : 'NA'} · {fmtMs(row.scoreLatency)} ·{' '}
-                    {(row.reliability * 100).toFixed(1)}%
-                    {provisional ? ` (${t('liveRanking.provisional')})` : ''}
-                  </span>
-                  <span className="live-ranking-confidence" role="presentation" aria-hidden="true">
-                    <span
-                      className={['live-ranking-confidence-fill', qualityBand].join(' ')}
-                      style={{ width: `${row.qualityPct.toFixed(1)}%` }}
-                    />
-                  </span>
-                </div>
-                <span
+          {decoratedRows.map((row, index) => (
+            <li
+              key={row.ip}
+              ref={(node) => {
+                if (node) rowElementRef.current.set(row.ip, node)
+                else rowElementRef.current.delete(row.ip)
+              }}
+              className={[
+                'live-ranking-row',
+                'race-row',
+                allowReorderAnimation && row.isEntering ? 'is-entering' : '',
+                allowHighlights && row.isActive ? 'is-active' : '',
+                allowHighlights && row.isLeader && isRunning ? 'is-running-leader' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              <span className="live-ranking-rank">#{index + 1}</span>
+              <div className="race-bar-track">
+                <div
                   className={[
-                    'live-ranking-delta',
-                    isMotionBudgetExceeded ? 'is-text-only' : '',
-                    row.movementDelta > 0 ? 'is-up' : row.movementDelta < 0 ? 'is-down' : 'is-idle',
-                  ].join(' ')}
-                  style={deltaStyle}
-                  aria-hidden={row.movementDelta === 0}
-                >
-                  {rankDeltaText || '\u00A0'}
-                </span>
-              </li>
-            )
-          })}
+                    'race-bar-fill',
+                    index === 0 ? 'race-bar-fill-rank-1' : '',
+                    index === 1 ? 'race-bar-fill-rank-2' : '',
+                    index === 2 ? 'race-bar-fill-rank-3' : '',
+                    row.confidence < 1 ? 'is-provisional' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  style={{ width: `${row.qualityPct.toFixed(1)}%` }}
+                />
+                <span className="race-bar-name">{row.name} - {row.ip}</span>
+              </div>
+              <span className="race-bar-pct">{row.qualityPct.toFixed(0)}%</span>
+            </li>
+          ))}
         </ol>
       )}
     </section>
