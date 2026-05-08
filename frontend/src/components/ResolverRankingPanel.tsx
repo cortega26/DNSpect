@@ -31,11 +31,12 @@ export function ResolverRankingPanel({ id, results, emptyMessage, onSelect }: Pr
             {results.map((row, index) => {
               const reliabilityPct = (resolverReliabilityScore(row) * 100).toFixed(1)
               const scoreTotal = row.stats.score_total === null ? 'NA' : row.stats.score_total.toFixed(3)
+              const rankLabel = index === 0 ? '#' : index === 1 ? '#' : index === 2 ? '#' : `#${index + 1}`
               return (
-                <li key={row.resolver} className="ranking-row">
+                <li key={row.resolver} className={`ranking-row${index < 3 ? ` ranking-row-rank-${index + 1}` : ''}`}>
                   <div className="ranking-main">
                     <p className="ranking-line">
-                      <span className="ranking-rank">#{index + 1}</span> {row.provider_name} - {row.resolver}
+                      <span className="ranking-rank">{rankLabel}{index + 1}</span> {row.provider_name} - {row.resolver}
                     </p>
                     <p className="muted ranking-meta">
                       Score {scoreTotal} - {fmtMs(row.stats.score_latency)} - {reliabilityPct}%

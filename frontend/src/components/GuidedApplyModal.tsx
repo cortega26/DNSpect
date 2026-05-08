@@ -125,8 +125,8 @@ export function GuidedApplyModal({
               {t('applyGuide.copyAll')}
             </button>
           </div>
-          {copyStatus === 'success' ? <p className="helper-text">{t('applyGuide.copySuccess')}</p> : null}
-          {copyStatus === 'error' ? <p className="helper-text">{t('applyGuide.copyError')}</p> : null}
+          {copyStatus === 'success' ? <p className="helper-text" aria-live="polite">{t('applyGuide.copySuccess')}</p> : null}
+          {copyStatus === 'error' ? <p className="helper-text" aria-live="polite">{t('applyGuide.copyError')}</p> : null}
         </section>
 
         <section className="guided-section">

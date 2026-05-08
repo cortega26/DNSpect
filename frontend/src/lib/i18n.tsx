@@ -30,6 +30,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       setLanguage: (nextLanguage) => {
         setLanguage(nextLanguage)
         window.localStorage.setItem(STORAGE_KEY, nextLanguage)
+        document.documentElement.lang = nextLanguage
       },
       t: (key, params) => {
         const localized = translations[language][key] ?? translations.es[key]

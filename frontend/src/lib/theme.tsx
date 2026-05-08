@@ -19,7 +19,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
     const meta = document.querySelector('meta[name="theme-color"]')
     if (meta) {
-      meta.setAttribute('content', theme === 'dark' ? '#0e1521' : '#f4f7fb')
+      meta.setAttribute('content', theme === 'dark' ? '#080C14' : '#F0F2F5')
     }
   }, [theme])
 

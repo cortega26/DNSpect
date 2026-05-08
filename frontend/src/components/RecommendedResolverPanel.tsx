@@ -110,10 +110,10 @@ export function RecommendedResolverPanel({
         </button>
       </div>
 
-      {copyStatus === 'success' ? <p className="helper-text">{t('nextActions.copySuccess')}</p> : null}
-      {copyStatus === 'error' ? <p className="helper-text">{t('nextActions.copyError')}</p> : null}
-      {summaryCopyStatus === 'success' ? <p className="helper-text">{t('nextActions.copySummarySuccess')}</p> : null}
-      {summaryCopyStatus === 'error' ? <p className="helper-text">{t('nextActions.copySummaryError')}</p> : null}
+      {copyStatus === 'success' ? <p className="helper-text" aria-live="polite">{t('nextActions.copySuccess')}</p> : null}
+      {copyStatus === 'error' ? <p className="helper-text" aria-live="polite">{t('nextActions.copyError')}</p> : null}
+      {summaryCopyStatus === 'success' ? <p className="helper-text" aria-live="polite">{t('nextActions.copySummarySuccess')}</p> : null}
+      {summaryCopyStatus === 'error' ? <p className="helper-text" aria-live="polite">{t('nextActions.copySummaryError')}</p> : null}
     </section>
   )
 }

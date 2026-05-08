@@ -26,65 +26,75 @@
   --text: #121b2a;
   --muted: #53617a;
   --border: #d4deec;
-  --accent: #0b7769;
-  --accent-contrast: #f5fffd;
-  --accent-soft: rgba(11, 119, 105, 0.08);
+  --accent: #0099CC;
+  --accent-contrast: #ffffff;
+  --accent-soft: rgba(0, 153, 204, 0.07);
+  --accent-warm: #C57100;
+  --accent-warm-soft: rgba(197, 113, 0, 0.10);
   --primary: var(--accent);
   --primary-contrast: var(--accent-contrast);
-  --success: #16a34a;
-  --success-soft: rgba(22, 163, 74, 0.1);
+  --success: #10B981;
+  --success-soft: rgba(16, 185, 129, 0.1);
   --warning: #d97706;
   --warning-soft: rgba(217, 119, 6, 0.1);
-  --info: #2563eb;
-  --info-soft: rgba(37, 99, 235, 0.1);
-  --danger: #c83b46;
+  --info: #3b82f6;
+  --info-soft: rgba(59, 130, 246, 0.1);
+  --danger: #dc2626;
+  --danger-soft: rgba(220, 38, 38, 0.1);
   --shadow-sm: 0 7px 20px rgb(15 30 60 / 8%);
   --shadow: 0 16px 42px rgb(15 30 60 / 12%);
+  --glow: 0 0 20px color-mix(in srgb, var(--accent) 35%, transparent);
 
   --focus: #1682ff;
 }
 
 [data-theme='light'] {
   color-scheme: light;
-  --bg: #f4f7fb;
-  --bg-soft: #e9f0f9;
-  --surface: #ffffff;
-  --surface-2: #f1f5fb;
-  --surface-3: #eaf1fb;
-  --surface-elevated: #ffffff;
-  --text: #121b2a;
-  --muted: #53617a;
-  --border: #d4deec;
-  --accent: #0b7769;
-  --accent-contrast: #f5fffd;
-  --accent-soft: rgba(11, 119, 105, 0.08);
+  --bg: #F0F2F5;
+  --bg-soft: #E5E8EE;
+  --surface: #FFFFFF;
+  --surface-2: #F0F2F8;
+  --surface-3: #E6EAF2;
+  --surface-elevated: #FFFFFF;
+  --text: #0B0E14;
+  --muted: #5C677D;
+  --border: #CBD2E0;
+  --accent: #0099CC;
+  --accent-contrast: #FFFFFF;
+  --accent-soft: rgba(0, 153, 204, 0.07);
+  --accent-warm: #C57100;
+  --accent-warm-soft: rgba(197, 113, 0, 0.10);
   --primary: var(--accent);
   --primary-contrast: var(--accent-contrast);
-  --success: #16a34a;
-  --success-soft: rgba(22, 163, 74, 0.1);
+  --success: #10B981;
+  --success-soft: rgba(16, 185, 129, 0.1);
   --warning: #d97706;
   --warning-soft: rgba(217, 119, 6, 0.1);
-  --info: #2563eb;
-  --info-soft: rgba(37, 99, 235, 0.1);
-  --danger: #c83b46;
+  --info: #3b82f6;
+  --info-soft: rgba(59, 130, 246, 0.1);
+  --danger: #dc2626;
+  --danger-soft: rgba(220, 38, 38, 0.1);
   --shadow-sm: 0 7px 20px rgb(15 30 60 / 8%);
   --shadow: 0 14px 38px rgb(15 30 60 / 12%);
+  --glow: 0 0 16px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 [data-theme='dark'] {
   color-scheme: dark;
-  --bg: #0b1120;
-  --bg-soft: #0f1a2e;
-  --surface: #141d2f;
-  --surface-2: #1a253b;
-  --surface-3: #1f2d48;
-  --surface-elevated: #1e2d48;
-  --text: #ebf1fb;
-  --muted: #aebad3;
-  --border: #334155;
-  --accent: #50c7ae;
-  --accent-contrast: #042821;
-  --accent-soft: rgba(80, 199, 174, 0.1);
+  --bg: #080C14;
+  --bg-soft: #0D1220;
+  --surface: #111827;
+  --surface-2: #1A2330;
+  --surface-3: #243044;
+  --surface-elevated: #1C273C;
+  --text: #EDF0F5;
+  --muted: #93A0B8;
+  --border: #2A3650;
+  --accent: #00E5FF;
+  --accent-contrast: #001B1F;
+  --accent-soft: rgba(0, 229, 255, 0.08);
+  --accent-warm: #FFB300;
+  --accent-warm-soft: rgba(255, 179, 0, 0.10);
   --primary: var(--accent);
   --primary-contrast: var(--accent-contrast);
   --success: #22c55e;
@@ -94,8 +104,10 @@
   --info: #3b82f6;
   --info-soft: rgba(59, 130, 246, 0.1);
   --danger: #ef6a74;
+  --danger-soft: rgba(239, 106, 116, 0.1);
   --shadow-sm: 0 8px 24px rgb(2 6 14 / 32%);
   --shadow: 0 18px 44px rgb(2 6 14 / 42%);
+  --glow: 0 0 24px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 * {
@@ -143,9 +155,13 @@ body {
   font-family: var(--font-ui);
   color: var(--text);
   background:
-    radial-gradient(circle at 10% -12%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 34%),
-    radial-gradient(circle at 95% 0%, color-mix(in srgb, var(--accent) 14%, var(--bg-soft)), transparent 28%),
-    linear-gradient(180deg, color-mix(in srgb, var(--bg-soft) 70%, var(--bg)), var(--bg));
+    linear-gradient(to right, color-mix(in srgb, var(--accent) 4%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--accent) 4%, transparent) 1px, transparent 1px),
+    radial-gradient(ellipse at 15% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 50%),
+    radial-gradient(ellipse at 90% 100%, color-mix(in srgb, var(--accent-warm) 6%, transparent), transparent 50%),
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 4%, var(--bg-soft)), var(--bg));
+  background-size: 60px 60px, 60px 60px, 100% 100%, 100% 100%, 100% 100%;
+  background-attachment: fixed;
   line-height: 1.45;
 }
 
@@ -194,14 +210,28 @@ a:focus-visible {
 }
 
 .hero {
-  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+  position: relative;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--border));
   border-radius: var(--radius-lg);
   background:
-    radial-gradient(ellipse at 20% 50%, color-mix(in srgb, var(--accent) 12%, var(--surface)), transparent 60%),
-    linear-gradient(135deg, color-mix(in srgb, var(--accent) 7%, var(--surface)), var(--surface) 50%);
+    radial-gradient(ellipse at 25% 50%, color-mix(in srgb, var(--accent) 15%, var(--surface)), transparent 60%),
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 9%, var(--surface)), var(--surface) 50%);
   color: var(--text);
   padding: var(--space-6) var(--space-6) var(--space-5);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--glow), var(--shadow-sm);
+  border-left: 3px solid var(--accent);
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 40%, var(--accent-warm)), transparent);
+  pointer-events: none;
 }
 
 .hero h1 {
@@ -365,11 +395,12 @@ a:focus-visible {
 }
 
 .card-strong {
-  background: var(--surface);
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 6%, var(--surface)), var(--surface) 60%);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
   border-radius: var(--radius-lg);
   padding: var(--space-5);
-  box-shadow: var(--shadow);
+  box-shadow: var(--glow), var(--shadow);
   border-left: 3px solid var(--accent);
 }
 
@@ -518,10 +549,10 @@ a:focus-visible {
 }
 
 .chip-active {
-  background: var(--primary);
-  color: var(--primary-contrast);
-  border-color: var(--primary);
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--primary) 34%, transparent);
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #0066FF));
+  color: var(--accent-contrast);
+  border-color: var(--accent);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 34%, transparent);
 }
 
 .chip:disabled,
@@ -686,13 +717,14 @@ textarea {
 }
 
 .btn-primary {
-  background: var(--primary);
-  color: var(--primary-contrast);
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--primary) 30%, transparent);
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #0066FF));
+  color: var(--accent-contrast);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 .btn-primary:hover {
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--primary) 38%, transparent);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--accent) 40%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 90%, #ffffff), color-mix(in srgb, var(--accent) 55%, #0066FF));
 }
 
 .btn-secondary {
@@ -786,7 +818,9 @@ textarea {
 }
 
 .last-run-card {
-  border-left: 4px solid color-mix(in srgb, var(--primary) 62%, var(--border));
+  border-left: 4px solid var(--accent-warm);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-warm) 4%, var(--surface)), var(--surface) 60%);
 }
 
 .saved-run-notice {
@@ -808,12 +842,16 @@ textarea {
 }
 
 .recommendation-winner {
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  border-left: 3px solid var(--accent-warm);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--surface) 88%, var(--accent-soft));
+  background:
+    radial-gradient(ellipse at 80% 30%, color-mix(in srgb, var(--accent-warm) 6%, transparent), transparent 60%),
+    color-mix(in srgb, var(--surface) 85%, var(--accent-soft));
   padding: var(--space-4);
   display: grid;
   gap: 2px;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
 .recommendation-grid {
@@ -867,8 +905,9 @@ textarea {
 
 .progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary), color-mix(in srgb, var(--primary) 65%, #6ac8ff));
-  transition: width 0.32s ease;
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 50%, #A855F7));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 35%, transparent);
+  transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .progress-panel {
@@ -890,12 +929,14 @@ textarea {
   inset: 0;
   background: linear-gradient(
     100deg,
-    transparent 12%,
-    color-mix(in srgb, #ffffff 26%, transparent),
-    transparent 88%
+    transparent 8%,
+    color-mix(in srgb, var(--accent) 18%, transparent) 30%,
+    color-mix(in srgb, #ffffff 18%, transparent) 55%,
+    color-mix(in srgb, var(--accent) 18%, transparent) 80%,
+    transparent
   );
   transform: translateX(-100%);
-  animation: progress-heartbeat-sheen 2.6s ease-in-out infinite;
+  animation: progress-heartbeat-sheen 2.2s ease-in-out infinite;
   pointer-events: none;
 }
 
@@ -959,6 +1000,29 @@ textarea {
   justify-content: space-between;
   align-items: center;
   gap: var(--space-2);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.ranking-row-rank-1 {
+  border-color: color-mix(in srgb, var(--accent-warm) 50%, var(--border));
+  border-left: 3px solid var(--accent-warm);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-warm) 5%, var(--surface)), color-mix(in srgb, var(--surface) 94%, var(--surface-2)));
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-warm) 15%, transparent);
+}
+
+.ranking-row-rank-2 {
+  border-color: color-mix(in srgb, #94A3B8 50%, var(--border));
+  border-left: 3px solid #94A3B8;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, #94A3B8 5%, var(--surface)), color-mix(in srgb, var(--surface) 94%, var(--surface-2)));
+}
+
+.ranking-row-rank-3 {
+  border-color: color-mix(in srgb, #CD7F32 45%, var(--border));
+  border-left: 3px solid #CD7F32;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, #CD7F32 5%, var(--surface)), color-mix(in srgb, var(--surface) 94%, var(--surface-2)));
 }
 
 .ranking-main {
@@ -1610,7 +1674,8 @@ tbody tr:last-child td {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgb(5 10 20 / 56%);
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(4px);
   display: grid;
   place-items: center;
   padding: var(--space-5);
@@ -1835,7 +1900,8 @@ tbody tr:last-child td {
 
   .live-ranking-row,
   .live-ranking-confidence-fill,
-  .live-ranking-delta {
+  .live-ranking-delta,
+  .progress-bar {
     transition: none !important;
     transform: none !important;
   }
