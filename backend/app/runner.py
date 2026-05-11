@@ -84,6 +84,7 @@ class BenchmarkState:
     observed_latency_total_ms: float = 0.0
     observed_latency_count: int = 0
     mode: str = "standard"
+    goal: str = "speed"
     timeout_sec: float = 2.0
     runs: int = 30
     engine: str | None = None
@@ -129,6 +130,7 @@ class BenchmarkConfig:
     runs: int
     timeout_sec: float
     mode: str
+    goal: str
 
 
 def _sanitize_results(
@@ -254,6 +256,7 @@ class BenchmarkManager:
             runs=runs,
             timeout_sec=timeout_sec,
             mode=req.mode.value,
+            goal=req.goal.value,
         )
 
     def start(self, req: BenchmarkRequest) -> str:
@@ -266,6 +269,7 @@ class BenchmarkManager:
             last_sample_at=int(datetime.now(UTC).timestamp() * 1000),
             progress_total=len(config.resolvers) * config.runs,
             mode=config.mode,
+            goal=config.goal,
             timeout_sec=config.timeout_sec,
             runs=config.runs,
         )
@@ -432,7 +436,8 @@ class BenchmarkManager:
             state.status = "running"
 
     def _set_done(self, benchmark_id: str, engine: str, results: list[dict[str, Any]]) -> None:
-        apply_normalized_scoring(results)
+        state = self.get_state(benchmark_id)
+        apply_normalized_scoring(results, goal=state.goal if state else None)
         ranked_results = sorted(results, key=_resolver_rank_key)
         with self._lock:
             state = self._states[benchmark_id]
@@ -449,7 +454,7 @@ class BenchmarkManager:
             if state.results is None:
                 state.results = []
             state.results.append(result)
-            apply_normalized_scoring(state.results)
+            apply_normalized_scoring(state.results, goal=state.goal)
             state.results.sort(key=_resolver_rank_key)
 
     def _set_failed(self, benchmark_id: str, message: str) -> None:

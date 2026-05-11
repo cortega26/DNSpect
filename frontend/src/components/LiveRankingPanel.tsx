@@ -252,7 +252,20 @@ export function LiveRankingPanel({
         <p>{t('liveRanking.subtitle')}</p>
       </div>
       {ranking.length === 0 ? (
-        <p className="muted">{t('liveRanking.waiting')}</p>
+        <div className="live-ranking-waiting">
+          <div className="live-ranking-waiting-bars" aria-hidden="true">
+            <span className="live-ranking-waiting-bar" />
+            <span className="live-ranking-waiting-bar" />
+            <span className="live-ranking-waiting-bar" />
+            <span className="live-ranking-waiting-bar" />
+            <span className="live-ranking-waiting-bar" />
+          </div>
+          <p className="muted">
+            {isRunning
+              ? t('liveRanking.waitingSamples', { count: expectedSamples })
+              : t('liveRanking.waiting')}
+          </p>
+        </div>
       ) : (
         <ol className="live-ranking-list">
           {decoratedRows.map((row, index) => (

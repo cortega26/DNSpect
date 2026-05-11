@@ -1,13 +1,13 @@
 .PHONY: backend-install backend-dev backend-check backend-semgrep frontend-install frontend-dev frontend-check dev smoke
 
 backend-install:
-	cd backend && python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
+	cd backend && python3 -m venv .venv && . .venv/bin/activate && pip install -c constraints.txt -e .[dev]
 
 backend-dev:
 	cd backend && . .venv/bin/activate && uvicorn app.main:app --reload
 
 backend-check:
-	cd backend && . .venv/bin/activate && ruff check . && ruff format --check . && black --check . && mypy && bandit -q -c pyproject.toml -r app && pytest -q
+	cd backend && . .venv/bin/activate && ruff check . && ruff format --check . && mypy && bandit -q -c pyproject.toml -r app && pytest -q
 
 backend-semgrep:
 	@TMP_SEMGREP_ENV=$$(mktemp -d); \

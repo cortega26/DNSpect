@@ -13,6 +13,17 @@ RECOMMENDATION_WARNING_ALL_UNRELIABLE = (
     "All resolvers exceed reliability threshold; recommendation may be unstable."
 )
 
+# Goal-aware scoring weights: latency, reliability, stability
+GOAL_WEIGHTS: dict[str, tuple[float, float, float]] = {
+    "speed": (0.6, 0.3, 0.1),
+    "security": (0.35, 0.50, 0.15),
+    "privacy": (0.40, 0.40, 0.20),
+    "ad-blocking": (0.35, 0.50, 0.15),
+    "family": (0.30, 0.55, 0.15),
+}
+
+DEFAULT_GOAL = "speed"
+
 
 def parse_drill_query_time(output: str) -> float | None:
     match = QUERY_TIME_RE.search(output)
@@ -52,7 +63,8 @@ def _reliability_penalty(success_rate: float, total_samples: int) -> float:
     return max(0.0, -math.log(rel_penalty_input))
 
 
-def apply_normalized_scoring(results: list[dict[str, Any]]) -> None:
+def apply_normalized_scoring(results: list[dict[str, Any]], goal: str | None = None) -> None:
+    lat_weight, rel_weight, stab_weight = GOAL_WEIGHTS.get(goal or DEFAULT_GOAL, GOAL_WEIGHTS[DEFAULT_GOAL])
     latency_values = [
         latency
         for item in results
@@ -138,7 +150,9 @@ def apply_normalized_scoring(results: list[dict[str, Any]]) -> None:
             continue
 
         score_total = (
-            (normalized_latency * 0.6) + (normalized_reliability * 0.3) + (normalized_stability * 0.1)
+            normalized_latency * lat_weight
+            + normalized_reliability * rel_weight
+            + normalized_stability * stab_weight
         )
         stats["score_total"] = round(score_total, 6)
 

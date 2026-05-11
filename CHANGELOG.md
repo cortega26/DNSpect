@@ -4,7 +4,98 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
-## [1.0.1] - 2026-02-22
+## [1.1.0] - 2026-05-09
+
+### Highlights
+
+- Added: **Goal system** — five benchmark goals (speed, security, privacy, ad-blocking, family) with goal-aware scoring weights and provider filtering. Segmented control UI replaces single-mode selection. `BenchmarkGoal` enum, `GOAL_WEIGHTS` in stats engine, `goal` field in benchmark state and request.
+- Added: **GeoIP integration** — new `/api/geoip` endpoint with optional MaxMind database lookup, `geoip.py` module, client-side public IP detection via ipify, and automatic region detection from browser locale.
+- Added: **Region-based provider grouping** — `region`, `country`, and `goals` fields on every provider; UI filters providers by detected region; region override selector in dashboard.
+- Added: **7 new DNS providers** — dns0.eu, CZ.NIC, Digitalcourage, AliDNS, DNSPod, Neustar, Comodo — expanding the catalog from 9 to 16 providers.
+- Added: **UI overhaul (May 2026)** — hero SVG illustration with decorative network graph, compact header with brand icon, redesigned controls with segmented mode/goal selectors, refined dark theme palette (lower contrast, cooler tones), layered shadow system, reduced border radii, tightened layout (max-width 1180→1000px), live ranking waiting animation, rank badges (#1/#2/#3), fade-in sections, and richer empty states.
+- Added: **~60 new translation keys** across ES/EN/PT covering goals, regions, provider counts, live ranking status, and empty state messages.
+- Added: **Optional GeoIP dependency** `maxminddb==2.7.0` under `[tool.poetry.extras] geoip` in `pyproject.toml`.
+- Accessibility: WCAG 2.2 improvements — proper `role` attributes on segmented controls, keyboard navigation in locale dropdown (`role=menuitemradio`, arrow keys), `aria-busy` on loading states, `focus-visible` ring refinements.
+- Build/CI: Updated GitHub Actions workflows and dependency version to v6; bumped rollup dependency via dependabot.
+- Fixed: aarch64 pydantic-core Flatpak source URL for ARM64 builds.
+- Flatpak: GUI options improvements, enhanced Flatpak integration paths.
+
+### Full details by area
+
+#### Goal System & Scoring
+
+- Added: `BenchmarkGoal` enum (`speed`, `security`, `privacy`, `ad-blocking`, `family`) in `models.py`.
+- Added: `GOAL_WEIGHTS` dictionary mapping each goal to latency/reliability/stability weight triples. Speed favors latency (0.6/0.3/0.1); family favors reliability (0.30/0.55/0.15).
+- Added: Goal parameter accepted in `BenchmarkRequest`, propagated through `BenchmarkConfig` → `BenchmarkState` → `apply_normalized_scoring()`.
+- Changed: `apply_normalized_scoring()` now accepts optional `goal` parameter; scoring uses goal-specific weights instead of hardcoded (0.6, 0.3, 0.1).
+- Added: Goal selector in `DashboardControls.tsx` — segmented control with 5 options, each with label and help text tooltip.
+- Added: Provider filtering by goal — non-speed goals filter the provider catalog to only those matching the selected goal.
+- Added: `providersByGoal()` utility and `onGoalChange()` handler that auto-selects matching resolvers on goal switch.
+
+#### GeoIP & Region Detection
+
+- Added: `/api/geoip` GET endpoint in `main.py` with optional `ip` query param; falls back to `request.client.host`. Returns `country_code`, `country_name`, `region`, `city`, `source`.
+- Added: `geoip.py` module — MaxMind GeoLite2 database lookup with country-to-region mapping, graceful fallback on missing DB.
+- Added: Optional `maxminddb==2.7.0` dependency under `geoip` extras group.
+- Added: `getPublicIp()` API client — fetches public IP from ipify with 5s timeout.
+- Added: `lookupGeoIp()` API client — calls `/api/geoip` endpoint.
+- Added: `detectRegion()` utility — extracts region from `navigator.language` via `Intl.Locale`.
+- Added: `providersByRegion()` filter — shows providers matching detected or selected region plus global providers.
+- Added: `regionLabel()` formatter and `region_override` selector in dashboard controls.
+- Added: Hero meta bar showing detected region, provider count, and system DNS count.
+
+#### Provider Catalog Expansion
+
+- Added: `region`, `country`, and `goals` fields to all 9 existing providers.
+- Added: 7 new providers with full metadata, tags, features, and Spanish notes:
+  - **dns0.eu** — European GDPR-compliant DNS with malware blocking.
+  - **CZ.NIC** — Czech security-focused DNS.
+  - **Digitalcourage** — German privacy-focused DNS.
+  - **AliDNS** — Alibaba DNS for Asia.
+  - **DNSPod** — Tencent DNS for Asia.
+  - **Neustar** — Threat intelligence DNS.
+  - **Comodo** — Comodo Secure DNS.
+- Updated: `FALLBACK_PROVIDERS` in `App.tsx` with new schema (region/goals fields).
+
+#### Frontend UI/UX
+
+##### Hero & Header
+
+- Added: SVG decorative network graph illustration in hero section with animated dots and connection paths.
+- Added: Compact brand header with clock icon + "DNSPect" wordmark.
+- Added: Hero meta bar with region label (globe icon), provider count (grid icon), system DNS count (checkmark icon).
+- Restructured: Theme toggle and locale dropdown moved from below-hero to top header bar.
+- Added: `fade-in-section` CSS class for section entrance animation.
+
+##### Controls Panel
+
+- Changed: Mode selector from chip grid to `segmented-control` with `role=radiogroup`.
+- Added: Goal selector as second segmented control row.
+- Added: Region override dropdown in controls.
+- Changed: Provider grouping — dynamic group sorting by priority (Global=0, Privacidad=1, regional groups sorted alphabetically, ISP detectados=99).
+
+##### Ranking & Results
+
+- Added: Rank badges with distinct styling — `badge-rank-1`, `badge-rank-2`, `badge-rank-3` (gold/silver/bronze accents).
+- Added: `badge-rec-primary` and `badge-rec-secondary` for recommended/secondary resolver badges.
+- Added: Live ranking waiting animation — 5 pulsing bars with staggered delay.
+
+##### Empty States
+
+- Added: Empty state body text in ChartsPanel (`filters.empty`).
+- Refined: Empty state icon stroke width and layout gap.
+
+#### CSS Architecture
+
+- Changed: Shadow system — replaced single `shadow-sm`/`shadow` with layered shadows (`shadow-sm`: 2 layers, `shadow`: 2 layers, new `shadow-lg`: 2 layers).
+- Changed: Dark theme colors — reduced saturation (`--bg`: `#080C14→#070A12`, `--surface-2`: `#1A2330→#18202F`, `--text`: `#EDF0F5→#E8ECF2`, `--muted`: `#93A0B8→#8896B0`, `--border`: `#2A3650→#263048`).
+- Changed: `--accent-soft` opacity from 0.08 to 0.07, `--success-soft` from 0.1 to 0.08.
+- Changed: Border radii reduced by 2px (sm: 10→8, md: 14→12, lg: 18→16).
+- Changed: App shell max-width from 1180px to 1000px, padding from 32px to 48px sides.
+- Changed: Background gradient — added second radial gradient at bottom-right.
+- Added: `min-height: 100dvh` on body.
+- Added: `h3` font-size normalization (1rem).
+- Added: `card-compact-controls`, `controls-mode-col`, `controls-goal-col`, `segmented-control`, `live-ranking-waiting` styles.
 
 - Fixed: Linux packaged binary startup crash (missing `backports.tarfile` in PyInstaller bundle).
 - Build/CI: Added packaged artifact smoke tests in CI/release to prevent regression.

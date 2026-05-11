@@ -1,5 +1,9 @@
 export type BenchmarkMode = 'quick' | 'standard' | 'exhaustive'
 
+export type Goal = 'speed' | 'security' | 'privacy' | 'ad-blocking' | 'family'
+
+export const GOALS: Goal[] = ['speed', 'security', 'privacy', 'ad-blocking', 'family']
+
 export interface ProviderFeatures {
   filtering: string
   malware_protection: string
@@ -13,6 +17,9 @@ export interface Provider {
   name: string
   dns: string[]
   tags: string[]
+  region: string | null
+  country: string | null
+  goals: Goal[]
   features: ProviderFeatures
   notes_es: string
 }

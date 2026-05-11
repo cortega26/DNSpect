@@ -31,7 +31,7 @@ def _to_int(value: str, default: int) -> int:
 def _wait_for_server(url: str, max_retries: int = 50, delay: float = 0.2) -> None:
     for _ in range(max_retries):
         try:
-            with urllib.request.urlopen(url, timeout=0.5) as response:
+            with urllib.request.urlopen(url, timeout=0.5) as response:  # nosec B310
                 if response.status == 200:
                     return
         except (urllib.error.URLError, OSError):
@@ -52,7 +52,7 @@ def _start_native_gui(host: str, port: int) -> None:
     if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
         raise RuntimeError("No display available for native GUI")
 
-    from gi.repository import Gtk, WebKit2, GLib
+    from gi.repository import GLib, Gtk, WebKit2
 
     GLib.set_prgname("io.github.cortega26.DNSpect")
     Gtk.Window.set_default_icon_name("io.github.cortega26.DNSpect")

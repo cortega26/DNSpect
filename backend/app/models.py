@@ -16,6 +16,14 @@ class BenchmarkMode(str, Enum):
     exhaustive = "exhaustive"
 
 
+class BenchmarkGoal(str, Enum):
+    speed = "speed"
+    security = "security"
+    privacy = "privacy"
+    ad_blocking = "ad-blocking"
+    family = "family"
+
+
 MODE_DEFAULT_RUNS = {
     BenchmarkMode.quick: 12,
     BenchmarkMode.standard: 30,
@@ -59,6 +67,7 @@ class BenchmarkRequest(BaseModel):
     resolvers: Optional[list[str]] = None
     queries: Optional[list[str]] = None
     mode: BenchmarkMode = BenchmarkMode.standard
+    goal: BenchmarkGoal = BenchmarkGoal.speed
 
     @field_validator("resolvers")
     @classmethod

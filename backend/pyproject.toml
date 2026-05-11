@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dnspect-backend"
-version = "1.0.1"
+version = "1.1.0"
 description = "Backend API for DNSpect"
 requires-python = ">=3.11"
 license = "MIT"
@@ -30,6 +30,7 @@ dev = [
   "httpx==0.28.1",
   "types-PyYAML==6.0.12.20250822"
 ]
+geoip = ["maxminddb==2.7.0"]
 pack = [
   "pyinstaller==6.16.0"
 ]

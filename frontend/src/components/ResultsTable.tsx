@@ -70,12 +70,12 @@ export function ResultsTable({ results, primary, secondary, emptyMessage, onSele
                 return (
                   <tr key={row.resolver}>
                     <td>
-                      <span className="badge" style={{ minWidth: '2rem', textAlign: 'center' }}>#{index + 1}</span>
+                      <span className={`badge badge-rank-${index < 3 ? (index + 1) : 'n'}`} style={{ minWidth: '2rem', textAlign: 'center' }}>#{index + 1}</span>
                     </td>
                     <td>
                       <div className="dns-cell">
                         <span className="font-mono">{row.resolver}</span>
-                        {badge && <small className="badge">{badge}</small>}
+                        {badge && <small className={`badge badge-rec-${row.resolver === primary ? 'primary' : 'secondary'}`}>{badge}</small>}
                       </div>
                     </td>
                     <td>{row.provider_name}</td>

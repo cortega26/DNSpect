@@ -142,12 +142,14 @@ export function ChartsPanel({ results }: Props) {
       </div>
 
       {limitedResults.length === 0 ? (
-        <div className="empty-state">
-          <svg className="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+        <div className="empty-state" style={{ gap: 'var(--space-3)' }}>
+          <svg className="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
             <path d="M3 3v18h18" />
-            <path d="M7 16l4-8 4 4 4-6" />
+            <path d="M7 14l3-5 4 4 4-7" />
+            <circle cx="18" cy="8" r="2" fill="currentColor" stroke="none" opacity="0.3" />
           </svg>
           <span className="empty-state-title">{t('charts.empty')}</span>
+          <span className="empty-state-body">{t('filters.empty')}</span>
         </div>
       ) : (
         <div className="chart-grid">

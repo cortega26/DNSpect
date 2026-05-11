@@ -126,7 +126,7 @@ flowchart TD
 ```
 
 Detailed design notes: `docs/ARCHITECTURE.md`.
-Architecture deep dive: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). <!-- TODO: replace with GitHub Pages URL once enabled -->
+Architecture deep dive: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Installation
 ### Option A: Run from source (dev)

@@ -1,8 +1,9 @@
-import type { BenchmarkMode, BenchmarkStatus, ProbeResponse, Provider, SystemDnsPayload } from './types'
+import type { BenchmarkMode, BenchmarkStatus, Goal, ProbeResponse, Provider, SystemDnsPayload } from './types'
 import { API_BASE } from './utils'
 
 interface StartBenchmarkPayload {
   mode: BenchmarkMode
+  goal?: Goal
   runs?: number
   timeout_sec: number
   resolvers: string[]
@@ -28,9 +29,35 @@ export async function getSystemDns(): Promise<SystemDnsPayload> {
   return res.json()
 }
 
+export interface GeoIpResult {
+  country_code: string | null
+  country_name: string | null
+  region: string | null
+  city: string | null
+  source: string | null
+}
+
+export async function lookupGeoIp(ip: string): Promise<GeoIpResult> {
+  const res = await fetch(`${API_BASE}/api/geoip?ip=${encodeURIComponent(ip)}`)
+  if (!res.ok) return { country_code: null, country_name: null, region: null, city: null, source: null }
+  return res.json()
+}
+
+export async function getPublicIp(): Promise<string | null> {
+  try {
+    const res = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(5000) })
+    if (!res.ok) return null
+    const data = await res.json()
+    return typeof data.ip === 'string' ? data.ip : null
+  } catch {
+    return null
+  }
+}
+
 export async function startBenchmark(payload: StartBenchmarkPayload): Promise<{ benchmark_id: string }> {
   const body: Record<string, unknown> = {
     mode: payload.mode,
+    goal: payload.goal ?? 'speed',
     timeout_sec: payload.timeout_sec,
     resolvers: payload.resolvers,
   }

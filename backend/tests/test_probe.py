@@ -67,20 +67,6 @@ def test_probe_returns_median_and_failure_rate(monkeypatch) -> None:
     assert by_resolver["8.8.8.8"]["stats"]["failure_rate"] == 0.5
 
 
-def test_probe_alias_route_is_available(monkeypatch) -> None:
-    def fake_measure_query(*, resolver: str, domain: str, timeout_sec: float, engine: str):
-        del resolver, domain, timeout_sec, engine
-        return {
-            "ok": True,
-            "ms": 19.0,
-            "query": "example.com",
-            "error": None,
-            "failure_kind": None,
-            "resolver": "1.1.1.1",
-        }
-
-    monkeypatch.setattr("app.runner.measure_query", fake_measure_query)
-
-    response = client.post("/probe", json={"resolvers": ["1.1.1.1"]})
-    assert response.status_code == 200
-    assert response.json()["results"][0]["resolver"] == "1.1.1.1"
+def test_probe_missing_resolver_returns_422() -> None:
+    response = client.post("/api/probe", json={})
+    assert response.status_code == 422

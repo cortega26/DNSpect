@@ -2,8 +2,21 @@
   {
     "id": "cloudflare",
     "name": "Cloudflare",
-    "dns": ["1.1.1.1", "1.0.0.1"],
-    "tags": ["global", "anycast", "privacidad"],
+    "dns": [
+      "1.1.1.1",
+      "1.0.0.1"
+    ],
+    "tags": [
+      "global",
+      "anycast",
+      "privacidad"
+    ],
+    "region": "global",
+    "country": null,
+    "goals": [
+      "speed",
+      "privacy"
+    ],
     "features": {
       "filtering": "no",
       "malware_protection": "no",
@@ -16,8 +29,19 @@
   {
     "id": "google",
     "name": "Google Public DNS",
-    "dns": ["8.8.8.8", "8.8.4.4"],
-    "tags": ["global", "anycast"],
+    "dns": [
+      "8.8.8.8",
+      "8.8.4.4"
+    ],
+    "tags": [
+      "global",
+      "anycast"
+    ],
+    "region": "global",
+    "country": null,
+    "goals": [
+      "speed"
+    ],
     "features": {
       "filtering": "no",
       "malware_protection": "no",
@@ -29,9 +53,23 @@
   },
   {
     "id": "quad9",
-    "name": "Quad9",
-    "dns": ["9.9.9.9", "149.112.112.112"],
-    "tags": ["global", "privacidad", "seguridad"],
+    "name": "Quad9 (seguro)",
+    "dns": [
+      "9.9.9.9",
+      "149.112.112.112"
+    ],
+    "tags": [
+      "global",
+      "privacidad",
+      "seguridad"
+    ],
+    "region": "global",
+    "country": null,
+    "goals": [
+      "security",
+      "privacy",
+      "speed"
+    ],
     "features": {
       "filtering": "yes",
       "malware_protection": "yes",
@@ -39,13 +77,52 @@
       "doh": "yes",
       "dot": "yes"
     },
-    "notes_es": "Prioriza bloqueo de dominios maliciosos con buena presencia global."
+    "notes_es": "Bloqueo de malware y dominios maliciosos. Versión recomendada para navegación segura."
+  },
+  {
+    "id": "quad9-unsecured",
+    "name": "Quad9 (sin filtrado)",
+    "dns": [
+      "9.9.9.10",
+      "149.112.112.10"
+    ],
+    "tags": [
+      "global",
+      "privacidad",
+      "no-filtering"
+    ],
+    "region": "global",
+    "country": null,
+    "goals": [
+      "speed",
+      "privacy"
+    ],
+    "features": {
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
+      "doh": "yes",
+      "dot": "yes"
+    },
+    "notes_es": "Sin bloqueo de malware. Útil si necesitas resolución sin restricciones o para aislar variables en pruebas de latencia."
   },
   {
     "id": "opendns",
-    "name": "OpenDNS",
-    "dns": ["208.67.222.222", "208.67.220.220"],
-    "tags": ["global", "familiar"],
+    "name": "OpenDNS (estándar)",
+    "dns": [
+      "208.67.222.222",
+      "208.67.220.220"
+    ],
+    "tags": [
+      "global",
+      "familiar"
+    ],
+    "region": "global",
+    "country": null,
+    "goals": [
+      "security",
+      "family"
+    ],
     "features": {
       "filtering": "yes",
       "malware_protection": "yes",
@@ -53,13 +130,53 @@
       "doh": "no",
       "dot": "no"
     },
-    "notes_es": "Alternativa clásica con perfiles familiares y filtros de contenido."
+    "notes_es": "Protección contra malware con filtros de contenido configurables. Versión estándar."
+  },
+  {
+    "id": "opendns-familyshield",
+    "name": "OpenDNS FamilyShield",
+    "dns": [
+      "208.67.222.123",
+      "208.67.220.123"
+    ],
+    "tags": [
+      "global",
+      "familiar"
+    ],
+    "region": "global",
+    "country": null,
+    "goals": [
+      "family",
+      "security"
+    ],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "yes",
+      "doh": "no",
+      "dot": "no"
+    },
+    "notes_es": "Variante preconfigurada con bloqueo automático de contenido para adultos. Sin necesidad de configuración adicional."
   },
   {
     "id": "adguard",
-    "name": "AdGuard DNS",
-    "dns": ["94.140.14.14", "94.140.15.15"],
-    "tags": ["privacidad", "filtrado"],
+    "name": "AdGuard DNS (estándar)",
+    "dns": [
+      "94.140.14.14",
+      "94.140.15.15"
+    ],
+    "tags": [
+      "global",
+      "privacidad",
+      "filtrado"
+    ],
+    "region": "global",
+    "country": null,
+    "goals": [
+      "ad-blocking",
+      "privacy",
+      "security"
+    ],
     "features": {
       "filtering": "yes",
       "malware_protection": "yes",
@@ -67,13 +184,53 @@
       "doh": "yes",
       "dot": "yes"
     },
-    "notes_es": "Enfocado en bloqueo de publicidad y protección básica de malware."
+    "notes_es": "Bloqueo de publicidad, rastreadores y malware. La opción estándar de AdGuard."
+  },
+  {
+    "id": "adguard-family",
+    "name": "AdGuard DNS (familiar)",
+    "dns": [
+      "94.140.14.15"
+    ],
+    "tags": [
+      "global",
+      "familiar",
+      "filtrado"
+    ],
+    "region": "global",
+    "country": null,
+    "goals": [
+      "family",
+      "ad-blocking",
+      "security"
+    ],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "yes",
+      "doh": "yes",
+      "dot": "yes"
+    },
+    "notes_es": "Bloqueo de publicidad, malware y contenido para adultos. Pensado para redes familiares."
   },
   {
     "id": "cleanbrowsing",
     "name": "CleanBrowsing",
-    "dns": ["185.228.168.9", "185.228.169.9"],
-    "tags": ["privacidad", "familiar", "filtrado"],
+    "dns": [
+      "185.228.168.9",
+      "185.228.169.9"
+    ],
+    "tags": [
+      "privacidad",
+      "familiar",
+      "filtrado"
+    ],
+    "region": "global",
+    "country": null,
+    "goals": [
+      "family",
+      "security"
+    ],
     "features": {
       "filtering": "yes",
       "malware_protection": "yes",
@@ -85,23 +242,125 @@
   },
   {
     "id": "controld",
-    "name": "ControlD",
-    "dns": ["76.76.2.0", "76.76.10.0"],
-    "tags": ["privacidad", "filtrado"],
+    "name": "ControlD (sin filtrado)",
+    "dns": [
+      "76.76.2.0",
+      "76.76.10.0"
+    ],
+    "tags": [
+      "global",
+      "privacidad",
+      "no-filtering"
+    ],
+    "region": "global",
+    "country": null,
+    "goals": [
+      "speed",
+      "privacy"
+    ],
     "features": {
-      "filtering": "yes",
-      "malware_protection": "yes",
-      "family": "optional",
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
       "doh": "yes",
       "dot": "yes"
     },
-    "notes_es": "Servicio configurable para políticas DNS avanzadas y filtrado por categorías."
+    "notes_es": "Endpoint base sin filtrado. Latencia pura sin bloqueos."
+  },
+  {
+    "id": "controld-malware",
+    "name": "ControlD (antimalware)",
+    "dns": [
+      "76.76.2.1"
+    ],
+    "tags": [
+      "global",
+      "seguridad"
+    ],
+    "region": "global",
+    "country": null,
+    "goals": [
+      "security",
+      "speed"
+    ],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "no",
+      "doh": "yes",
+      "dot": "yes"
+    },
+    "notes_es": "Bloqueo de malware y dominios maliciosos. Pensado para navegación segura."
+  },
+  {
+    "id": "controld-ads",
+    "name": "ControlD (estándar)",
+    "dns": [
+      "76.76.2.2"
+    ],
+    "tags": [
+      "global",
+      "filtrado"
+    ],
+    "region": "global",
+    "country": null,
+    "goals": [
+      "ad-blocking",
+      "security",
+      "speed"
+    ],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "no",
+      "doh": "yes",
+      "dot": "yes"
+    },
+    "notes_es": "Bloqueo de malware, anuncios y rastreadores. El perfil más usado de ControlD."
+  },
+  {
+    "id": "controld-family",
+    "name": "ControlD (familiar)",
+    "dns": [
+      "76.76.2.4"
+    ],
+    "tags": [
+      "global",
+      "familiar"
+    ],
+    "region": "global",
+    "country": null,
+    "goals": [
+      "family",
+      "security"
+    ],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "yes",
+      "doh": "yes",
+      "dot": "yes"
+    },
+    "notes_es": "Bloqueo de malware, anuncios y contenido para adultos. Ideal para redes familiares."
   },
   {
     "id": "nextdns",
     "name": "NextDNS",
-    "dns": ["45.90.28.0", "45.90.30.0"],
-    "tags": ["privacidad", "filtrado"],
+    "dns": [
+      "45.90.28.0",
+      "45.90.30.0"
+    ],
+    "tags": [
+      "privacidad",
+      "filtrado"
+    ],
+    "region": "global",
+    "country": null,
+    "goals": [
+      "ad-blocking",
+      "privacy",
+      "security"
+    ],
     "features": {
       "filtering": "yes",
       "malware_protection": "yes",
@@ -114,8 +373,19 @@
   {
     "id": "dnswatch",
     "name": "DNS.Watch",
-    "dns": ["84.200.69.80", "84.200.70.40"],
-    "tags": ["global", "privacidad"],
+    "dns": [
+      "84.200.69.80",
+      "84.200.70.40"
+    ],
+    "tags": [
+      "global",
+      "privacidad"
+    ],
+    "region": "global",
+    "country": null,
+    "goals": [
+      "privacy"
+    ],
     "features": {
       "filtering": "no",
       "malware_protection": "no",
@@ -126,10 +396,201 @@
     "notes_es": "Proveedor público con enfoque en neutralidad y sin filtrado agresivo."
   },
   {
+    "id": "dns0",
+    "name": "dns0.eu",
+    "dns": [
+      "0.0.0.0",
+      "0.0.0.1"
+    ],
+    "tags": [
+      "europe",
+      "privacidad",
+      "seguridad"
+    ],
+    "region": "europe",
+    "country": null,
+    "goals": [
+      "privacy",
+      "security",
+      "speed"
+    ],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "optional",
+      "doh": "yes",
+      "dot": "yes"
+    },
+    "notes_es": "DNS europeo con protección de privacidad, compliant con GDPR; bloqueo de malware y tráfico sospechoso."
+  },
+  {
+    "id": "cznic",
+    "name": "CZ.NIC",
+    "dns": [
+      "193.17.47.1",
+      "185.43.135.1"
+    ],
+    "tags": [
+      "europe",
+      "seguridad"
+    ],
+    "region": "europe",
+    "country": "cz",
+    "goals": [
+      "security",
+      "speed"
+    ],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "no",
+      "doh": "yes",
+      "dot": "yes"
+    },
+    "notes_es": "Operado por el registro de dominios .cz; bloquea malware y dominios peligrosos. Buena referencia para Europa Central."
+  },
+  {
+    "id": "digitalcourage",
+    "name": "Digitalcourage",
+    "dns": [
+      "85.214.20.141",
+      "194.246.129.11"
+    ],
+    "tags": [
+      "europe",
+      "privacidad"
+    ],
+    "region": "europe",
+    "country": "de",
+    "goals": [
+      "privacy",
+      "speed"
+    ],
+    "features": {
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
+      "doh": "no",
+      "dot": "yes"
+    },
+    "notes_es": "Operado por Digitalcourage e.V. en Alemania; sin registro de consultas ni filtrado. Referencia de privacidad europea."
+  },
+  {
+    "id": "alidns",
+    "name": "AliDNS",
+    "dns": [
+      "223.5.5.5",
+      "223.6.6.6"
+    ],
+    "tags": [
+      "asia",
+      "china"
+    ],
+    "region": "asia",
+    "country": "cn",
+    "goals": [
+      "speed"
+    ],
+    "features": {
+      "filtering": "unknown",
+      "malware_protection": "unknown",
+      "family": "no",
+      "doh": "yes",
+      "dot": "no"
+    },
+    "notes_es": "DNS público de Alibaba Cloud; referencia para medir latencia hacia Asia/China."
+  },
+  {
+    "id": "dnspod",
+    "name": "DNSPod (Tencent)",
+    "dns": [
+      "119.29.29.29"
+    ],
+    "tags": [
+      "asia",
+      "china"
+    ],
+    "region": "asia",
+    "country": "cn",
+    "goals": [
+      "speed"
+    ],
+    "features": {
+      "filtering": "unknown",
+      "malware_protection": "unknown",
+      "family": "no",
+      "doh": "yes",
+      "dot": "no"
+    },
+    "notes_es": "DNS público de Tencent Cloud; alternativa para medir desempeño en rutas hacia China."
+  },
+  {
+    "id": "neustar",
+    "name": "Neustar (UltraDNS)",
+    "dns": [
+      "156.154.70.1",
+      "156.154.71.1"
+    ],
+    "tags": [
+      "global",
+      "seguridad"
+    ],
+    "region": "north-america",
+    "country": "us",
+    "goals": [
+      "security",
+      "speed"
+    ],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "no",
+      "doh": "no",
+      "dot": "no"
+    },
+    "notes_es": "DNS empresarial con protección contra amenazas; buena referencia para América del Norte."
+  },
+  {
+    "id": "comodo",
+    "name": "Comodo Secure DNS",
+    "dns": [
+      "8.26.56.26",
+      "8.20.247.20"
+    ],
+    "tags": [
+      "global",
+      "seguridad"
+    ],
+    "region": "north-america",
+    "country": "us",
+    "goals": [
+      "security",
+      "speed"
+    ],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "no",
+      "doh": "no",
+      "dot": "no"
+    },
+    "notes_es": "Servicio DNS con énfasis en seguridad y bloqueo de sitios maliciosos."
+  },
+  {
     "id": "mullvad",
     "name": "Mullvad DNS",
-    "dns": ["194.242.2.2", "194.242.2.3"],
-    "tags": ["privacidad"],
+    "dns": [
+      "194.242.2.2",
+      "194.242.2.3"
+    ],
+    "tags": [
+      "privacidad"
+    ],
+    "region": "europe",
+    "country": "se",
+    "goals": [
+      "privacy"
+    ],
     "features": {
       "filtering": "optional",
       "malware_protection": "optional",
@@ -142,8 +603,18 @@
   {
     "id": "uncensoreddns",
     "name": "UncensoredDNS",
-    "dns": ["91.239.100.100", "89.233.43.71"],
-    "tags": ["privacidad"],
+    "dns": [
+      "91.239.100.100",
+      "89.233.43.71"
+    ],
+    "tags": [
+      "privacidad"
+    ],
+    "region": "europe",
+    "country": "dk",
+    "goals": [
+      "privacy"
+    ],
     "features": {
       "filtering": "no",
       "malware_protection": "no",
@@ -156,8 +627,18 @@
   {
     "id": "lacnic",
     "name": "LACNIC",
-    "dns": ["200.3.13.14", "200.3.14.14"],
-    "tags": ["latam"],
+    "dns": [
+      "200.3.13.14",
+      "200.3.14.14"
+    ],
+    "tags": [
+      "latam"
+    ],
+    "region": "south-america",
+    "country": null,
+    "goals": [
+      "speed"
+    ],
     "features": {
       "filtering": "no",
       "malware_protection": "no",
@@ -170,8 +651,18 @@
   {
     "id": "nicbr",
     "name": "NIC.br",
-    "dns": ["200.160.0.8", "200.189.40.8"],
-    "tags": ["latam"],
+    "dns": [
+      "200.160.0.8",
+      "200.189.40.8"
+    ],
+    "tags": [
+      "latam"
+    ],
+    "region": "south-america",
+    "country": "br",
+    "goals": [
+      "speed"
+    ],
     "features": {
       "filtering": "no",
       "malware_protection": "no",
@@ -184,8 +675,23 @@
   {
     "id": "lumen",
     "name": "Lumen / Level3",
-    "dns": ["4.2.2.1", "4.2.2.2", "4.2.2.3", "4.2.2.4", "4.2.2.5", "4.2.2.6"],
-    "tags": ["global", "legacy"],
+    "dns": [
+      "4.2.2.1",
+      "4.2.2.2",
+      "4.2.2.3",
+      "4.2.2.4",
+      "4.2.2.5",
+      "4.2.2.6"
+    ],
+    "tags": [
+      "global",
+      "legacy"
+    ],
+    "region": "global",
+    "country": null,
+    "goals": [
+      "speed"
+    ],
     "features": {
       "filtering": "no",
       "malware_protection": "no",
@@ -196,31 +702,53 @@
     "notes_es": "Resolutores históricos; pueden rendir bien o fallar según la red actual."
   },
   {
-    "id": "chile-candidatos",
-    "name": "Chile (Candidatos)",
-    "dns": ["200.27.2.2", "200.91.44.2"],
-    "tags": ["chile", "candidato"],
+    "id": "kt-dns",
+    "name": "KT DNS (Korea Telecom)",
+    "dns": [
+      "168.126.63.1",
+      "168.126.63.2"
+    ],
+    "tags": [
+      "asia",
+      "korea"
+    ],
+    "region": "asia",
+    "country": "kr",
+    "goals": [
+      "speed"
+    ],
     "features": {
       "filtering": "unknown",
       "malware_protection": "unknown",
-      "family": "unknown",
-      "doh": "unknown",
-      "dot": "unknown"
+      "family": "no",
+      "doh": "no",
+      "dot": "no"
     },
-    "notes_es": "IPs candidatas para Chile; pueden estar obsoletas. Si fallan, se verán como timeout."
+    "notes_es": "DNS público de Korea Telecom; referencia para medir latencia en rutas hacia Corea del Sur."
   },
   {
-    "id": "isp-detectado",
-    "name": "ISP (Detectado)",
-    "dns": [],
-    "tags": ["isp_detectado"],
+    "id": "bharat-dns",
+    "name": "Bharat DNS (NIC India)",
+    "dns": [
+      "36.50.50.50",
+      "1.10.10.10"
+    ],
+    "tags": [
+      "asia",
+      "india"
+    ],
+    "region": "asia",
+    "country": "in",
+    "goals": [
+      "speed"
+    ],
     "features": {
-      "filtering": "unknown",
-      "malware_protection": "unknown",
-      "family": "unknown",
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
       "doh": "unknown",
       "dot": "unknown"
     },
-    "notes_es": "Representa los DNS detectados en tu sistema local en este momento."
+    "notes_es": "DNS público gubernamental de India (NIC); referencia para medir latencia en rutas hacia India."
   }
 ]

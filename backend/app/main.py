@@ -8,12 +8,13 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import __version__
+from .geoip import geoip_lookup
 from .models import BenchmarkRequest, ProbeRequest
 from .runner import BenchmarkManager
 
@@ -74,8 +75,17 @@ def system_dns() -> dict:
     return manager.system_dns_payload()
 
 
+@app.get("/api/geoip")
+def geoip(request: Request, ip: str = Query(default="")) -> dict:
+    client_ip = ip.strip() or request.client.host if request.client else ""
+    if not client_ip:
+        return {"country_code": None, "country_name": None, "region": None, "city": None}
+    result = geoip_lookup(client_ip)
+    result["source"] = "GeoIP database" if result.get("country_code") else None
+    return result
+
+
 @app.post("/api/probe")
-@app.post("/probe")
 def probe_resolvers(request: ProbeRequest) -> dict:
     try:
         return manager.probe(request)

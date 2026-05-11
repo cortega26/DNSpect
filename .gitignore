@@ -12,6 +12,8 @@ build/
 dist/
 release/
 *.spec
+build-flatpak/
+.flatpak-builder/
 
 # Node
 node_modules/

@@ -40,9 +40,6 @@ jobs:
       - name: Ruff format check
         run: ruff format --check .
 
-      - name: Black format check
-        run: black --check .
-
       - name: Mypy
         run: mypy
 

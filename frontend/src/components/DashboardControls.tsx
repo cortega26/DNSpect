@@ -1,4 +1,5 @@
-import type { BenchmarkMode, Provider } from '@/lib/types'
+import type { BenchmarkMode, Goal, Provider } from '@/lib/types'
+import { GOALS } from '@/lib/types'
 import { useI18n } from '@/lib/useI18n'
 import { resolverGroup } from '@/lib/utils'
 
@@ -11,10 +12,30 @@ interface ResolverOption {
 
 export type TimeoutPreset = 'low' | 'medium' | 'high'
 
+const GOAL_LABEL_KEY: Record<Goal, 'goal.speed' | 'goal.security' | 'goal.privacy' | 'goal.adBlocking' | 'goal.family'> = {
+  speed: 'goal.speed',
+  security: 'goal.security',
+  privacy: 'goal.privacy',
+  'ad-blocking': 'goal.adBlocking',
+  family: 'goal.family',
+}
+
+const GOAL_HELP_KEY: Record<Goal, 'goal.speedHelp' | 'goal.securityHelp' | 'goal.privacyHelp' | 'goal.adBlockingHelp' | 'goal.familyHelp'> = {
+  speed: 'goal.speedHelp',
+  security: 'goal.securityHelp',
+  privacy: 'goal.privacyHelp',
+  'ad-blocking': 'goal.adBlockingHelp',
+  family: 'goal.familyHelp',
+}
+
 interface Props {
   providers: Provider[]
   selected: Set<string>
   mode: BenchmarkMode
+  goal: Goal
+  detectedRegion: string | null
+  effectiveRegion: string | null
+  regionLabel: (r: string | null) => string
   runs: number
   timeoutSec: number
   timeoutPreset: TimeoutPreset
@@ -26,6 +47,8 @@ interface Props {
   startHelperText: string
   onToggleResolver: (ip: string) => void
   onModeChange: (mode: BenchmarkMode) => void
+  onGoalChange: (goal: Goal) => void
+  onRegionChange: (region: string | null) => void
   onRunsChange: (value: number) => void
   onTimeoutChange: (value: number) => void
   onTimeoutPresetChange: (value: TimeoutPreset) => void
@@ -80,30 +103,43 @@ export function DashboardControls(props: Props) {
     return acc
   }, {})
 
-  const groupOrder = ['Global', 'Privacidad', 'LATAM/Chile', 'ISP detectados']
-  const groupLabels: Record<string, string> = {
-    Global: t('group.global'),
-    Privacidad: t('group.privacy'),
-    'LATAM/Chile': t('group.latam'),
-    'ISP detectados': t('group.isp'),
+  const groupKeys = Array.from(new Set(Object.keys(grouped)))
+  const groupPriority: Record<string, number> = {
+    Global: 0,
+    Privacidad: 1,
+    'ISP detectados': 99,
+  }
+  const sortedGroups = groupKeys.sort((a, b) => {
+    const pa = groupPriority[a] ?? 50
+    const pb = groupPriority[b] ?? 50
+    return pa - pb || a.localeCompare(b)
+  })
+
+  function groupLabel(group: string): string {
+    if (group === 'Global') return t('group.global')
+    if (group === 'Privacidad') return t('group.privacy')
+    if (group === 'ISP detectados') return t('group.isp')
+    return group
   }
 
   return (
-    <section className="card controls-card">
+    <section className="card card-compact-controls">
       <div className="card-header">
         <h2>{t('controls.title')}</h2>
         <p>{t('controls.subtitle')}</p>
       </div>
 
       <div className="controls-grid">
-        <div>
+        <div className="controls-mode-col">
           <p className="label-caption">{t('controls.mode')}</p>
-          <div className="mode-grid">
+          <div className="segmented-control" role="radiogroup" aria-label={t('controls.mode')}>
             {(['quick', 'standard', 'exhaustive'] as BenchmarkMode[]).map((mode) => (
               <button
                 key={mode}
                 type="button"
-                className={`chip ${props.mode === mode ? 'chip-active' : ''}`}
+                role="radio"
+                aria-checked={props.mode === mode}
+                className={`segmented-option ${props.mode === mode ? 'is-active' : ''}`}
                 onClick={() => props.onModeChange(mode)}
                 disabled={props.isRunning}
               >
@@ -113,28 +149,67 @@ export function DashboardControls(props: Props) {
           </div>
           <p className="helper-text">{t('controls.modeHelp')}</p>
         </div>
-        <div>
-          <p className="label-caption">{t('controls.timeoutPreset')}</p>
-          <div className="mode-grid">
-            {(['low', 'medium', 'high'] as TimeoutPreset[]).map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                className={`chip ${props.timeoutPreset === preset ? 'chip-active' : ''}`}
-                onClick={() => props.onTimeoutPresetChange(preset)}
-                disabled={props.isRunning}
-              >
-                {t(PRESET_LABEL_KEY[preset])}
-              </button>
-            ))}
-          </div>
-          <p className="helper-text">{t('controls.timeoutHelp')}</p>
+      </div>
+
+      <div className="goal-selector">
+        <p className="label-caption">{t('goal.title')}</p>
+        <div className="mode-grid">
+          {GOALS.map((g) => (
+            <button
+              key={g}
+              type="button"
+              className={`chip-compact ${props.goal === g ? 'chip-active' : ''}`}
+              onClick={() => props.onGoalChange(g)}
+              disabled={props.isRunning}
+            >
+              {t(GOAL_LABEL_KEY[g])}
+            </button>
+          ))}
         </div>
+        <p className="helper-text">{t(GOAL_HELP_KEY[props.goal])}</p>
+      </div>
+
+      <div className="region-selector">
+        <p className="label-caption">{t('region.title')}</p>
+        <div className="mode-grid region-chips">
+          <button
+            type="button"
+            className={`chip-compact${props.effectiveRegion === props.detectedRegion && props.effectiveRegion !== 'all' && props.effectiveRegion !== 'global' ? ' chip-active' : ''}`}
+            onClick={() => props.onRegionChange(null)}
+            disabled={props.isRunning}
+          >
+            Auto{props.detectedRegion ? ` (${props.detectedRegion})` : ''}
+          </button>
+          {['global', 'europe', 'south-america', 'north-america', 'asia'].map((r) => (
+            <button
+              key={r}
+              type="button"
+              className={`chip-compact${props.effectiveRegion === r ? ' chip-active' : ''}`}
+              onClick={() => props.onRegionChange(r)}
+              disabled={props.isRunning}
+            >
+              {props.regionLabel(r)}
+            </button>
+          ))}
+          <button
+            type="button"
+            className={`chip-compact${props.effectiveRegion === 'all' ? ' chip-active' : ''}`}
+            onClick={() => props.onRegionChange('all')}
+            disabled={props.isRunning}
+          >
+            {t('region.all')}
+          </button>
+        </div>
+        <p className="helper-text">
+          {props.effectiveRegion && props.effectiveRegion !== 'all'
+            ? t('region.help', { region: props.regionLabel(props.effectiveRegion) })
+            : t('region.helpAll')}
+        </p>
       </div>
 
       <div className="actions-row controls-actions">
         <div className="start-cta">
-          <button className="btn-primary" onClick={props.onStart} disabled={props.isRunning || props.selected.size === 0}>
+          <button className="btn-start" onClick={props.onStart} disabled={props.isRunning || props.selected.size === 0}>
             {t('controls.start')}
           </button>
           <p className="helper-text start-subtext">{props.startHelperText}</p>
@@ -152,7 +227,6 @@ export function DashboardControls(props: Props) {
           {props.advancedOpen ? t('controls.closeAdvanced') : t('controls.openAdvanced')}
         </button>
       </div>
-      <p className="helper-text">{props.workloadSummary}</p>
 
       <div id="advanced-controls" className={`advanced-collapse ${props.advancedOpen ? 'is-open' : ''}`}>
         <div className="advanced-inner">
@@ -184,6 +258,19 @@ export function DashboardControls(props: Props) {
                 disabled={props.isRunning}
                 onChange={(e) => props.onTimeoutChange(Number(e.target.value))}
               />
+              <span className="advanced-timeout-chips">
+                {(['low', 'medium', 'high'] as TimeoutPreset[]).map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    className={`chip-compact${props.timeoutPreset === preset ? ' chip-active' : ''}`}
+                    onClick={() => props.onTimeoutPresetChange(preset)}
+                    disabled={props.isRunning}
+                  >
+                    {t(PRESET_LABEL_KEY[preset])}
+                  </button>
+                ))}
+              </span>
             </label>
             <label className="queries-field">
               {t('controls.queries')}
@@ -197,11 +284,11 @@ export function DashboardControls(props: Props) {
           </div>
 
           <div className="resolver-groups">
-            {groupOrder
+            {sortedGroups
               .filter((group) => grouped[group]?.length)
               .map((group) => (
                 <div key={group} className="resolver-group">
-                  <h3>{groupLabels[group] ?? group}</h3>
+                  <h3>{groupLabel(group)}</h3>
                   <div className="resolver-list">
                     {grouped[group]
                       .sort((a, b) => a.providerName.localeCompare(b.providerName) || a.ip.localeCompare(b.ip))
