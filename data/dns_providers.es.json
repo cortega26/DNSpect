@@ -22,7 +22,11 @@
       "malware_protection": "no",
       "family": "no",
       "doh": "yes",
-      "dot": "yes"
+      "dot": "yes",
+      "doq": "yes",
+      "doh_url": "https://cloudflare-dns.com/dns-query",
+      "dot_hostname": "one.one.one.one",
+      "doq_hostname": "one.one.one.one"
     },
     "notes_es": "DNS global rápido y muy usado; buena latencia en la mayoría de regiones."
   },
@@ -47,7 +51,11 @@
       "malware_protection": "no",
       "family": "no",
       "doh": "yes",
-      "dot": "yes"
+      "dot": "yes",
+      "doq": "yes",
+      "doh_url": "https://dns.google/dns-query",
+      "dot_hostname": "dns.google",
+      "doq_hostname": "dns.google"
     },
     "notes_es": "Servicio DNS global con amplia infraestructura y alta disponibilidad."
   },
@@ -75,7 +83,11 @@
       "malware_protection": "yes",
       "family": "no",
       "doh": "yes",
-      "dot": "yes"
+      "dot": "yes",
+      "doq": "yes",
+      "doh_url": "https://dns.quad9.net/dns-query",
+      "dot_hostname": "dns.quad9.net",
+      "doq_hostname": "dns.quad9.net"
     },
     "notes_es": "Bloqueo de malware y dominios maliciosos. Versión recomendada para navegación segura."
   },
@@ -102,7 +114,11 @@
       "malware_protection": "no",
       "family": "no",
       "doh": "yes",
-      "dot": "yes"
+      "dot": "yes",
+      "doq": "yes",
+      "doh_url": "https://dns10.quad9.net/dns-query",
+      "dot_hostname": "dns10.quad9.net",
+      "doq_hostname": "dns10.quad9.net"
     },
     "notes_es": "Sin bloqueo de malware. Útil si necesitas resolución sin restricciones o para aislar variables en pruebas de latencia."
   },
@@ -128,7 +144,11 @@
       "malware_protection": "yes",
       "family": "yes",
       "doh": "no",
-      "dot": "no"
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "https://doh.opendns.com/dns-query",
+      "dot_hostname": "dns.opendns.com",
+      "doq_hostname": ""
     },
     "notes_es": "Protección contra malware con filtros de contenido configurables. Versión estándar."
   },
@@ -154,7 +174,11 @@
       "malware_protection": "yes",
       "family": "yes",
       "doh": "no",
-      "dot": "no"
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "https://doh.familyshield.opendns.com/dns-query",
+      "dot_hostname": "familyshield.opendns.com",
+      "doq_hostname": ""
     },
     "notes_es": "Variante preconfigurada con bloqueo automático de contenido para adultos. Sin necesidad de configuración adicional."
   },
@@ -182,7 +206,11 @@
       "malware_protection": "yes",
       "family": "optional",
       "doh": "yes",
-      "dot": "yes"
+      "dot": "yes",
+      "doq": "yes",
+      "doh_url": "https://dns.adguard.com/dns-query",
+      "dot_hostname": "dns.adguard.com",
+      "doq_hostname": "dns.adguard.com"
     },
     "notes_es": "Bloqueo de publicidad, rastreadores y malware. La opción estándar de AdGuard."
   },
@@ -209,7 +237,11 @@
       "malware_protection": "yes",
       "family": "yes",
       "doh": "yes",
-      "dot": "yes"
+      "dot": "yes",
+      "doq": "no",
+      "doh_url": "https://dns-family.adguard.com/dns-query",
+      "dot_hostname": "dns-family.adguard.com",
+      "doq_hostname": ""
     },
     "notes_es": "Bloqueo de publicidad, malware y contenido para adultos. Pensado para redes familiares."
   },
@@ -236,7 +268,11 @@
       "malware_protection": "yes",
       "family": "yes",
       "doh": "yes",
-      "dot": "yes"
+      "dot": "yes",
+      "doq": "no",
+      "doh_url": "https://doh.cleanbrowsing.org/doh/security-filter/",
+      "dot_hostname": "security-filter-dns.cleanbrowsing.org",
+      "doq_hostname": ""
     },
     "notes_es": "Tiene perfiles de seguridad y familia útiles para redes domésticas."
   },
@@ -263,7 +299,11 @@
       "malware_protection": "no",
       "family": "no",
       "doh": "yes",
-      "dot": "yes"
+      "dot": "yes",
+      "doq": "no",
+      "doh_url": "https://p0.freedns.controld.com/p0",
+      "dot_hostname": "p0.freedns.controld.com",
+      "doq_hostname": ""
     },
     "notes_es": "Endpoint base sin filtrado. Latencia pura sin bloqueos."
   },
@@ -288,7 +328,11 @@
       "malware_protection": "yes",
       "family": "no",
       "doh": "yes",
-      "dot": "yes"
+      "dot": "yes",
+      "doq": "no",
+      "doh_url": "https://p1.freedns.controld.com/p1",
+      "dot_hostname": "p1.freedns.controld.com",
+      "doq_hostname": ""
     },
     "notes_es": "Bloqueo de malware y dominios maliciosos. Pensado para navegación segura."
   },
@@ -314,7 +358,11 @@
       "malware_protection": "yes",
       "family": "no",
       "doh": "yes",
-      "dot": "yes"
+      "dot": "yes",
+      "doq": "no",
+      "doh_url": "https://p2.freedns.controld.com/p2",
+      "dot_hostname": "p2.freedns.controld.com",
+      "doq_hostname": ""
     },
     "notes_es": "Bloqueo de malware, anuncios y rastreadores. El perfil más usado de ControlD."
   },
@@ -339,7 +387,11 @@
       "malware_protection": "yes",
       "family": "yes",
       "doh": "yes",
-      "dot": "yes"
+      "dot": "yes",
+      "doq": "no",
+      "doh_url": "https://p3.freedns.controld.com/p3",
+      "dot_hostname": "p3.freedns.controld.com",
+      "doq_hostname": ""
     },
     "notes_es": "Bloqueo de malware, anuncios y contenido para adultos. Ideal para redes familiares."
   },
@@ -366,7 +418,11 @@
       "malware_protection": "yes",
       "family": "optional",
       "doh": "yes",
-      "dot": "yes"
+      "dot": "yes",
+      "doq": "no",
+      "doh_url": "https://dns.nextdns.io",
+      "dot_hostname": "dns.nextdns.io",
+      "doq_hostname": ""
     },
     "notes_es": "DNS con enfoque en privacidad y políticas personalizadas por perfil."
   },
@@ -391,7 +447,11 @@
       "malware_protection": "no",
       "family": "no",
       "doh": "no",
-      "dot": "no"
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "https://dnsresolver.dns.watch/dns-query",
+      "dot_hostname": "dnsresolver.dns.watch",
+      "doq_hostname": ""
     },
     "notes_es": "Proveedor público con enfoque en neutralidad y sin filtrado agresivo."
   },
@@ -419,7 +479,11 @@
       "malware_protection": "yes",
       "family": "optional",
       "doh": "yes",
-      "dot": "yes"
+      "dot": "yes",
+      "doq": "no",
+      "doh_url": "https://dns0.eu/dns-query",
+      "dot_hostname": "dns0.eu",
+      "doq_hostname": ""
     },
     "notes_es": "DNS europeo con protección de privacidad, compliant con GDPR; bloqueo de malware y tráfico sospechoso."
   },
@@ -445,7 +509,11 @@
       "malware_protection": "yes",
       "family": "no",
       "doh": "yes",
-      "dot": "yes"
+      "dot": "yes",
+      "doq": "no",
+      "doh_url": "https://odvr.nic.cz/doh",
+      "dot_hostname": "odvr.nic.cz",
+      "doq_hostname": ""
     },
     "notes_es": "Operado por el registro de dominios .cz; bloquea malware y dominios peligrosos. Buena referencia para Europa Central."
   },
@@ -471,7 +539,11 @@
       "malware_protection": "no",
       "family": "no",
       "doh": "no",
-      "dot": "yes"
+      "dot": "yes",
+      "doq": "no",
+      "doh_url": "https://dns.digitalcourage.de/dns-query",
+      "dot_hostname": "dns.digitalcourage.de",
+      "doq_hostname": ""
     },
     "notes_es": "Operado por Digitalcourage e.V. en Alemania; sin registro de consultas ni filtrado. Referencia de privacidad europea."
   },
@@ -496,7 +568,11 @@
       "malware_protection": "unknown",
       "family": "no",
       "doh": "yes",
-      "dot": "no"
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
     },
     "notes_es": "DNS público de Alibaba Cloud; referencia para medir latencia hacia Asia/China."
   },
@@ -520,7 +596,11 @@
       "malware_protection": "unknown",
       "family": "no",
       "doh": "yes",
-      "dot": "no"
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
     },
     "notes_es": "DNS público de Tencent Cloud; alternativa para medir desempeño en rutas hacia China."
   },
@@ -546,7 +626,11 @@
       "malware_protection": "yes",
       "family": "no",
       "doh": "no",
-      "dot": "no"
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
     },
     "notes_es": "DNS empresarial con protección contra amenazas; buena referencia para América del Norte."
   },
@@ -572,7 +656,11 @@
       "malware_protection": "yes",
       "family": "no",
       "doh": "no",
-      "dot": "no"
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
     },
     "notes_es": "Servicio DNS con énfasis en seguridad y bloqueo de sitios maliciosos."
   },
@@ -596,7 +684,11 @@
       "malware_protection": "optional",
       "family": "optional",
       "doh": "yes",
-      "dot": "yes"
+      "dot": "yes",
+      "doq": "no",
+      "doh_url": "https://dns.mullvad.net/dns-query",
+      "dot_hostname": "dns.mullvad.net",
+      "doq_hostname": ""
     },
     "notes_es": "Proveedor orientado a privacidad; útil para comparar latencia frente a grandes anycast."
   },
@@ -620,7 +712,11 @@
       "malware_protection": "no",
       "family": "no",
       "doh": "yes",
-      "dot": "yes"
+      "dot": "yes",
+      "doq": "no",
+      "doh_url": "https://unicast.censurfridns.dk/dns-query",
+      "dot_hostname": "unicast.censurfridns.dk",
+      "doq_hostname": ""
     },
     "notes_es": "Alternativa de privacidad y baja intervención en consultas DNS."
   },
@@ -644,7 +740,11 @@
       "malware_protection": "no",
       "family": "no",
       "doh": "unknown",
-      "dot": "unknown"
+      "dot": "unknown",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
     },
     "notes_es": "Referencia regional LATAM para comparar rutas en Sudamérica."
   },
@@ -668,7 +768,11 @@
       "malware_protection": "no",
       "family": "no",
       "doh": "unknown",
-      "dot": "unknown"
+      "dot": "unknown",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
     },
     "notes_es": "Opción regional de Brasil para medir desempeño interregional en LATAM."
   },
@@ -697,7 +801,11 @@
       "malware_protection": "no",
       "family": "no",
       "doh": "no",
-      "dot": "no"
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
     },
     "notes_es": "Resolutores históricos; pueden rendir bien o fallar según la red actual."
   },
@@ -722,7 +830,11 @@
       "malware_protection": "unknown",
       "family": "no",
       "doh": "no",
-      "dot": "no"
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
     },
     "notes_es": "DNS público de Korea Telecom; referencia para medir latencia en rutas hacia Corea del Sur."
   },
@@ -747,8 +859,632 @@
       "malware_protection": "no",
       "family": "no",
       "doh": "unknown",
-      "dot": "unknown"
+      "dot": "unknown",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
     },
     "notes_es": "DNS público gubernamental de India (NIC); referencia para medir latencia en rutas hacia India."
+  },
+  {
+    "id": "yandex-basic",
+    "name": "Yandex DNS (básico)",
+    "dns": [
+      "77.88.8.8",
+      "77.88.8.1"
+    ],
+    "tags": [
+      "global",
+      "anycast"
+    ],
+    "region": "global",
+    "country": "RU",
+    "goals": [
+      "speed"
+    ],
+    "features": {
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
+      "doh": "yes",
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
+    },
+    "notes_es": "DNS público de Yandex. Rápido y confiable en Europa del Este y Asia."
+  },
+  {
+    "id": "yandex-safe",
+    "name": "Yandex DNS (seguro)",
+    "dns": [
+      "77.88.8.88",
+      "77.88.8.2"
+    ],
+    "tags": [
+      "global",
+      "seguridad"
+    ],
+    "region": "global",
+    "country": "RU",
+    "goals": [
+      "security"
+    ],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "no",
+      "doh": "yes",
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
+    },
+    "notes_es": "Yandex con bloqueo de sitios maliciosos y fraudulentos."
+  },
+  {
+    "id": "yandex-family",
+    "name": "Yandex DNS (familiar)",
+    "dns": [
+      "77.88.8.7",
+      "77.88.8.3"
+    ],
+    "tags": [
+      "global",
+      "seguridad",
+      "familiar"
+    ],
+    "region": "global",
+    "country": "RU",
+    "goals": [
+      "family"
+    ],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "yes",
+      "doh": "yes",
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
+    },
+    "notes_es": "Yandex con filtro familiar: bloquea contenido adulto y malicioso."
+  },
+  {
+    "id": "safedns",
+    "name": "SafeDNS",
+    "dns": [
+      "195.46.39.39",
+      "195.46.39.40"
+    ],
+    "tags": [
+      "global",
+      "seguridad",
+      "filtrado"
+    ],
+    "region": "global",
+    "country": "GB",
+    "goals": [
+      "security",
+      "family"
+    ],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "yes",
+      "doh": "no",
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
+    },
+    "notes_es": "DNS con filtrado web y protección contra amenazas. Ideal para control parental."
+  },
+  {
+    "id": "alternate-dns",
+    "name": "Alternate DNS",
+    "dns": [
+      "76.76.19.19",
+      "76.223.122.150"
+    ],
+    "tags": [
+      "global",
+      "privacidad"
+    ],
+    "region": "global",
+    "country": "US",
+    "goals": [
+      "privacy",
+      "speed"
+    ],
+    "features": {
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
+      "doh": "yes",
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
+    },
+    "notes_es": "DNS sin filtrado con enfoque en privacidad. No registra consultas."
+  },
+  {
+    "id": "dns-family",
+    "name": "DNS for Family",
+    "dns": [
+      "94.130.180.225",
+      "78.47.64.161"
+    ],
+    "tags": [
+      "global",
+      "familiar",
+      "filtrado"
+    ],
+    "region": "global",
+    "country": "DE",
+    "goals": [
+      "family"
+    ],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "yes",
+      "doh": "yes",
+      "dot": "yes",
+      "doq": "no",
+      "doh_url": "https://doh.dnsforfamily.com/dns-query",
+      "dot_hostname": "dnsforfamily.com",
+      "doq_hostname": ""
+    },
+    "notes_es": "DNS con bloqueo de contenido adulto, malware y servicios de seguimiento."
+  },
+  {
+    "id": "freenom",
+    "name": "Freenom World",
+    "dns": [
+      "80.80.80.80",
+      "80.80.81.81"
+    ],
+    "tags": [
+      "global",
+      "anycast"
+    ],
+    "region": "global",
+    "country": "NL",
+    "goals": [
+      "speed"
+    ],
+    "features": {
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
+      "doh": "no",
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
+    },
+    "notes_es": "DNS público y rápido anycast operado por Freenom."
+  },
+  {
+    "id": "verisign",
+    "name": "Verisign Public DNS",
+    "dns": [
+      "64.6.64.6",
+      "64.6.65.6"
+    ],
+    "tags": [
+      "global",
+      "seguridad"
+    ],
+    "region": "global",
+    "country": "US",
+    "goals": [
+      "security",
+      "privacy"
+    ],
+    "features": {
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
+      "doh": "yes",
+      "dot": "yes",
+      "doq": "no",
+      "doh_url": "https://dns64.dns.verisign.com/dns-query",
+      "dot_hostname": "dns.verisign.com",
+      "doq_hostname": ""
+    },
+    "notes_es": "DNS público de Verisign con soporte de DNSSEC y compromiso de privacidad."
+  },
+  {
+    "id": "dns-sb",
+    "name": "DNS.SB",
+    "dns": [
+      "185.222.222.222",
+      "45.11.45.11"
+    ],
+    "tags": [
+      "global",
+      "privacidad"
+    ],
+    "region": "global",
+    "country": "BG",
+    "goals": [
+      "privacy",
+      "speed"
+    ],
+    "features": {
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
+      "doh": "yes",
+      "dot": "yes",
+      "doq": "no",
+      "doh_url": "https://doh.dns.sb/dns-query",
+      "dot_hostname": "dot.dns.sb",
+      "doq_hostname": ""
+    },
+    "notes_es": "DNS público con enfoque en privacidad, sin registro de consultas."
+  },
+  {
+    "id": "he-dns",
+    "name": "Hurricane Electric DNS",
+    "dns": [
+      "74.82.42.42"
+    ],
+    "tags": [
+      "global",
+      "anycast"
+    ],
+    "region": "global",
+    "country": "US",
+    "goals": [
+      "speed"
+    ],
+    "features": {
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
+      "doh": "no",
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
+    },
+    "notes_es": "DNS público de Hurricane Electric, operado por uno de los backbones IPv6 más grandes."
+  },
+  {
+    "id": "applied-privacy",
+    "name": "Applied Privacy DNS",
+    "dns": [
+      "146.255.56.98"
+    ],
+    "tags": [
+      "europa",
+      "privacidad"
+    ],
+    "region": "europe",
+    "country": "AT",
+    "goals": [
+      "privacy"
+    ],
+    "features": {
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
+      "doh": "yes",
+      "dot": "yes",
+      "doq": "no",
+      "doh_url": "https://doh.applied-privacy.net/query",
+      "dot_hostname": "dot.applied-privacy.net",
+      "doq_hostname": ""
+    },
+    "notes_es": "DNS austriaco con fuerte compromiso de privacidad. Soporta DoH y DoT."
+  },
+  {
+    "id": "libredns",
+    "name": "LibreDNS",
+    "dns": [
+      "80.67.169.12"
+    ],
+    "tags": [
+      "europa",
+      "privacidad"
+    ],
+    "region": "europe",
+    "country": "DE",
+    "goals": [
+      "privacy",
+      "ad-blocking"
+    ],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "no",
+      "doh": "yes",
+      "dot": "yes",
+      "doq": "no",
+      "doh_url": "https://doh.libredns.gr/dns-query",
+      "dot_hostname": "dot.libredns.gr",
+      "doq_hostname": ""
+    },
+    "notes_es": "DNS de código abierto operado por LibreCode. Bloquea anuncios y rastreadores."
+  },
+  {
+    "id": "nordvpn-dns",
+    "name": "NordVPN DNS",
+    "dns": [
+      "103.86.96.100",
+      "103.86.99.100"
+    ],
+    "tags": [
+      "global",
+      "privacidad"
+    ],
+    "region": "global",
+    "country": "PA",
+    "goals": [
+      "privacy",
+      "speed"
+    ],
+    "features": {
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
+      "doh": "no",
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
+    },
+    "notes_es": "DNS de NordVPN sin registro de actividad. Rápido y centrado en privacidad."
+  },
+  {
+    "id": "surfshark-dns",
+    "name": "Surfshark DNS",
+    "dns": [
+      "162.252.172.57",
+      "149.154.159.152"
+    ],
+    "tags": [
+      "global",
+      "privacidad"
+    ],
+    "region": "global",
+    "country": "NL",
+    "goals": [
+      "privacy",
+      "speed"
+    ],
+    "features": {
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
+      "doh": "no",
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
+    },
+    "notes_es": "DNS rápido de Surfshark con protección contra fugas y sin logs."
+  },
+  {
+    "id": "cleanbrowsing-adult",
+    "name": "CleanBrowsing (adulto)",
+    "dns": [
+      "185.228.168.10",
+      "185.228.169.11"
+    ],
+    "tags": [
+      "global",
+      "familiar",
+      "filtrado"
+    ],
+    "region": "global",
+    "country": "US",
+    "goals": [
+      "family"
+    ],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "yes",
+      "doh": "yes",
+      "dot": "yes",
+      "doq": "no",
+      "doh_url": "https://doh.cleanbrowsing.org/doh/adult-filter/",
+      "dot_hostname": "adult-filter-dns.cleanbrowsing.org",
+      "doq_hostname": ""
+    },
+    "notes_es": "CleanBrowsing con filtro de contenido adulto. Bloquea pornografía y sitios para adultos."
+  },
+  {
+    "id": "centurylink",
+    "name": "CenturyLink DNS",
+    "dns": [
+      "205.171.3.65",
+      "205.171.2.65"
+    ],
+    "tags": [
+      "norteamerica"
+    ],
+    "region": "north-america",
+    "country": "US",
+    "goals": [
+      "speed"
+    ],
+    "features": {
+      "filtering": "no",
+      "malware_protection": "no",
+      "family": "no",
+      "doh": "no",
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
+    },
+    "notes_es": "DNS público de CenturyLink. Infraestructura de telecomunicaciones de EE.UU."
+  },
+  {
+    "id": "cleanbrowsing-security",
+    "name": "CleanBrowsing (seguridad)",
+    "dns": [
+      "185.228.168.168",
+      "185.228.169.168"
+    ],
+    "tags": [
+      "global",
+      "seguridad",
+      "filtrado"
+    ],
+    "region": "global",
+    "country": "US",
+    "goals": [
+      "security",
+      "family"
+    ],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "yes",
+      "doh": "yes",
+      "dot": "yes",
+      "doq": "no",
+      "doh_url": "https://doh.cleanbrowsing.org/doh/security-filter/",
+      "dot_hostname": "security-filter-dns.cleanbrowsing.org",
+      "doq_hostname": ""
+    },
+    "notes_es": "CleanBrowsing con filtro de seguridad. Bloquea malware, phishing y contenido adulto."
+  },
+  {
+    "id": "green-team-dns",
+    "name": "GreenTeamDNS",
+    "dns": [
+      "81.218.119.11",
+      "209.88.198.133"
+    ],
+    "tags": [
+      "global",
+      "seguridad"
+    ],
+    "region": "global",
+    "country": "US",
+    "goals": [
+      "security",
+      "ad-blocking"
+    ],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "no",
+      "doh": "no",
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
+    },
+    "notes_es": "DNS con bloqueo de malware, botnets y sitios de phishing."
+  },
+  {
+    "id": "neustar-family",
+    "name": "Neustar (UltraDNS) Familiar",
+    "dns": [
+      "156.154.70.3",
+      "156.154.71.3"
+    ],
+    "tags": [
+      "global",
+      "familiar"
+    ],
+    "region": "global",
+    "country": "US",
+    "goals": [
+      "family"
+    ],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "yes",
+      "doh": "no",
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
+    },
+    "notes_es": "Neustar con protección familiar: bloquea malware y contenido adulto."
+  },
+  {
+    "id": "neustar-secure",
+    "name": "Neustar (UltraDNS) Seguridad",
+    "dns": [
+      "156.154.70.2",
+      "156.154.71.2"
+    ],
+    "tags": [
+      "global",
+      "seguridad"
+    ],
+    "region": "global",
+    "country": "US",
+    "goals": [
+      "security"
+    ],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "no",
+      "doh": "no",
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
+    },
+    "notes_es": "Neustar con protección contra malware y amenazas cibernéticas."
+  },
+  {
+    "id": "comodo-family",
+    "name": "Comodo Secure DNS (familiar)",
+    "dns": [
+      "8.26.56.27",
+      "8.20.247.20"
+    ],
+    "tags": [
+      "global",
+      "seguridad"
+    ],
+    "region": "global",
+    "country": "US",
+    "goals": [
+      "security",
+      "family"
+    ],
+    "features": {
+      "filtering": "yes",
+      "malware_protection": "yes",
+      "family": "yes",
+      "doh": "no",
+      "dot": "no",
+      "doq": "no",
+      "doh_url": "",
+      "dot_hostname": "",
+      "doq_hostname": ""
+    },
+    "notes_es": "Comodo con filtro de seguridad avanzada. Bloquea malware y sitios peligrosos."
   }
 ]

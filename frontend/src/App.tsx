@@ -2,10 +2,12 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type
 
 import { useFocusTrap } from '@/lib/useFocusTrap'
 import { DashboardControls, type TimeoutPreset } from '@/components/DashboardControls'
+import { DashboardPanel } from '@/components/DashboardPanel'
 import { GuidedApplyModal } from '@/components/GuidedApplyModal'
 import { LiveRankingPanel } from '@/components/LiveRankingPanel'
 import { RecommendedResolverPanel } from '@/components/RecommendedResolverPanel'
 import { ResolverRankingPanel } from '@/components/ResolverRankingPanel'
+import { RunHistoryPanel } from '@/components/RunHistoryPanel'
 
 const ChartsPanel = lazy(() => import('@/components/ChartsPanel').then((m) => ({ default: m.ChartsPanel })))
 const ResolverDetailModal = lazy(() => import('@/components/ResolverDetailModal').then((m) => ({ default: m.ResolverDetailModal })))
@@ -13,7 +15,7 @@ import { buildDnsClipboardText, buildGuidedDnsSet, detectPlatformGroup } from '@
 import { useI18n } from '@/lib/useI18n'
 import type { Language } from '@/lib/i18n-translations'
 import { computeRunningEtaText, formatEtaRange } from '@/lib/eta'
-import { getBenchmark, getProviders, getPublicIp, getSystemDns, lookupGeoIp, probeResolvers, startBenchmark } from '@/lib/api'
+import { getBenchmark, getBenchmarkHistory, getProviders, getPublicIp, getSystemDns, lookupGeoIp, probeResolvers, startBenchmark, type RunHistoryEntry } from '@/lib/api'
 import { compareProbeSummaries, parseProbeResponse, type ProbeOutcome, type ProbeSummary } from '@/lib/probe'
 import {
   buildBenchmarkCsv,
@@ -221,6 +223,8 @@ function App() {
   const [localeMenuOpen, setLocaleMenuOpen] = useState<boolean>(false)
   const [nowMs, setNowMs] = useState<number>(() => Date.now())
   const [isInitializing, setIsInitializing] = useState<boolean>(true)
+  const [history, setHistory] = useState<RunHistoryEntry[]>([])
+  const [historyLoading, setHistoryLoading] = useState(true)
   const rankingPanelRef = useRef<HTMLElement | null>(null)
   const localeMenuRef = useRef<HTMLDivElement>(null)
   const resolverListRef = useRef<HTMLDivElement>(null)
@@ -399,6 +403,31 @@ function App() {
       stopPolling()
     }
   }, [stopPolling])
+
+  useEffect(() => {
+    let cancelled = false
+    setHistoryLoading(true)
+    getBenchmarkHistory()
+      .then((res) => { if (!cancelled) { setHistory(res.runs); setHistoryLoading(false) } })
+      .catch(() => { if (!cancelled) setHistoryLoading(false) })
+    return () => { cancelled = true }
+  }, [status?.id])
+
+  const handleSelectRun = useCallback(async (runId: string) => {
+    stopPolling()
+    try {
+      const pastRun = await getBenchmark(runId)
+      setStatus(pastRun)
+      setBenchmarkId(runId)
+      setViewingSavedRun(true)
+      setError(null)
+      setSelectedResult(null)
+      setCopyStatus('idle')
+      setSummaryCopyStatus('idle')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('error.benchmarkLoad'))
+    }
+  }, [stopPolling, t])
 
   useEffect(() => {
     setTimeoutPreset(nearestTimeoutPreset(timeoutSec))
@@ -1351,6 +1380,27 @@ function App() {
       )}
 
       {isCompleted && recommendationAvailable && primaryResult && (
+        <DashboardPanel
+          primaryResult={primaryResult}
+          results={decisiveRanking}
+          reliabilityPct={reliabilityPct}
+          improvementVsCurrentMs={improvementVsCurrentMs}
+          currentResolverLabel={currentResolverForSummary}
+          currentResolverRank={currentDnsEvaluation?.rank ?? null}
+          recommendationWarning={status?.recommendation_warning ?? null}
+          isSmallImprovement={isSmallImprovementLabel}
+          copyStatus={copyStatus}
+          summaryCopyStatus={summaryCopyStatus}
+          onApplyRecommended={applyRecommendation}
+          onCopyAddress={() => void handleCopyRecommendedDns()}
+          onCopySummary={() => void handleCopySummary()}
+          onExportJson={exportJsonReport}
+          onExportCsv={() => void exportCsvReport()}
+          onViewFullRanking={handleViewFullRanking}
+        />
+      )}
+
+      {isCompleted && recommendationAvailable && primaryResult && (
         <RecommendedResolverPanel
           result={primaryResult}
           rank={primaryRank ?? 1}
@@ -1561,6 +1611,8 @@ function App() {
           </div>
         </div>
       )}
+
+      <RunHistoryPanel runs={history} loading={historyLoading} onSelectRun={(runId) => void handleSelectRun(runId)} />
 
       {selectedResult && (
         <Suspense fallback={null}>

@@ -1,7 +1,9 @@
 from app.stats import (
+    GOAL_WEIGHTS,
     RECOMMENDATION_WARNING_ALL_UNRELIABLE,
     RELIABILITY_REFERENCE_PENALTY,
     apply_normalized_scoring,
+    compute_blocking_efficacy,
     compute_stats,
     percentile,
     select_recommended_resolver,
@@ -155,3 +157,60 @@ def test_all_unreliable_resolvers_emit_warning_and_deterministic_fallback() -> N
 
 def test_percentile_empty():
     assert percentile([], 95) is None
+
+
+def test_compute_blocking_efficacy_all_blocked():
+    samples = [
+        {"failure_kind": "nxdomain"},
+        {"failure_kind": "refused"},
+        {"failure_kind": "nxdomain", "ok": False},
+    ]
+    result = compute_blocking_efficacy(samples)
+    assert result["blocking_efficacy"] == 1.0
+    assert result["blocked_count"] == 3
+    assert result["blocking_test_count"] == 3
+
+
+def test_compute_blocking_efficacy_none_blocked():
+    samples = [
+        {"failure_kind": None, "ok": True, "ms": 15.0},
+        {"failure_kind": "timeout"},
+        {"failure_kind": "servfail"},
+    ]
+    result = compute_blocking_efficacy(samples)
+    assert result["blocking_efficacy"] == 0.0
+    assert result["blocked_count"] == 0
+
+
+def test_compute_blocking_efficacy_partial():
+    samples = [
+        {"failure_kind": "nxdomain"},
+        {"failure_kind": None, "ok": True, "answer_ips": ["1.2.3.4"]},
+        {"failure_kind": "refused"},
+        {"failure_kind": "noanswer"},
+    ]
+    result = compute_blocking_efficacy(samples)
+    assert result["blocking_efficacy"] == 0.5
+    assert result["blocked_count"] == 2
+
+
+def test_compute_blocking_efficacy_sinkhole_detected():
+    samples = [
+        {"failure_kind": None, "ok": True, "answer_ips": ["0.0.0.0"]},
+        {"failure_kind": None, "ok": True, "answer_ips": ["0.0.0.0"]},
+        {"failure_kind": None, "ok": True, "answer_ips": ["64.233.186.102"]},
+    ]
+    result = compute_blocking_efficacy(samples)
+    assert result["blocking_efficacy"] == round(2.0 / 3.0, 4)
+    assert result["blocked_count"] == 2
+
+
+def test_compute_blocking_efficacy_empty_list():
+    result = compute_blocking_efficacy([])
+    assert result["blocking_efficacy"] is None
+
+
+def test_goal_weights_include_blocking():
+    for goal, weights in GOAL_WEIGHTS.items():
+        assert len(weights) == 4, f"{goal} should have 4 weights"
+        assert abs(sum(weights) - 1.0) < 0.001, f"{goal} weights must sum to 1.0"

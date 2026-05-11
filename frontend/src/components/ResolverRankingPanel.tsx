@@ -1,6 +1,6 @@
 import { useI18n } from '@/lib/useI18n'
 import type { ResolverResult } from '@/lib/types'
-import { fmtMs, resolverReliabilityScore } from '@/lib/utils'
+import { fmtMs, resolverBlockingScore, resolverReliabilityScore } from '@/lib/utils'
 
 interface Props {
   id?: string
@@ -35,11 +35,22 @@ export function ResolverRankingPanel({ id, results, emptyMessage, onSelect }: Pr
               return (
                 <li key={row.resolver} className={`ranking-row${index < 3 ? ` ranking-row-rank-${index + 1}` : ''}`}>
                   <div className="ranking-main">
-                    <p className="ranking-line">
+                  <p className="ranking-line">
                       <span className="ranking-rank">{rankLabel}{index + 1}</span> {row.provider_name} - {row.resolver}
+                      {row.stats.nxdomain_hijack_detected === true ? (
+                        <span className="badge badge-danger" title={t('results.nxdomainHijacked')}>{t('results.nxdomainBadge')}</span>
+                      ) : row.stats.nxdomain_hijack_detected === false ? (
+                        <span className="badge badge-success" title={t('results.nxdomainClean')}>{t('results.nxdomainCleanBadge')}</span>
+                      ) : null}
+                      {row.stats.dnssec_validating === true ? (
+                        <span className="badge badge-success" title={t('results.dnssecValidating')}>{t('results.dnssecBadge')}</span>
+                      ) : row.stats.dnssec_validating === false ? (
+                        <span className="badge badge-danger" title={t('results.dnssecNotValidating')}>{t('results.dnssecNotBadge')}</span>
+                      ) : null}
                     </p>
                     <p className="muted ranking-meta">
                       Score {scoreTotal} - {fmtMs(row.stats.score_latency)} - {reliabilityPct}%
+                      {row.stats.blocking_test_count > 0 ? ` - Bloqueo ${(resolverBlockingScore(row) * 100).toFixed(0)}%` : ''}
                     </p>
                   </div>
                   {onSelect ? (

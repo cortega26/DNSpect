@@ -1,4 +1,5 @@
 # Lista curada para reducir sesgo de caché y reflejar tráfico común
+# Global / CDN-backed
 cloudflare.com
 google.com
 youtube.com
@@ -12,6 +13,14 @@ openai.com
 akamai.com
 fastly.com
 reddit.com
+whatsapp.net
+instagram.com
+tiktok.com
+x.com
+linkedin.com
+bing.com
+duckduckgo.com
+# LATAM / Hispanic
 bbc.com
 elpais.com
 mercadolibre.com
@@ -19,3 +28,33 @@ latamairlines.com
 cooperativa.cl
 biobiochile.cl
 nic.cl
+globo.com
+infobae.com
+eluniversal.com.mx
+eltiempo.com
+# Europe / Rest of world
+bbc.co.uk
+lemonde.fr
+spiegel.de
+baidu.com
+naver.com
+rakuten.co.jp
+# Add'l global
+dropbox.com
+spotify.com
+twitch.tv
+stackoverflow.com
+npmjs.com
+pypi.org
+docker.com
+oracle.com
+adobe.com
+salesforce.com
+# More Europe / Asia
+rfi.fr
+corriere.it
+delfi.ee
+ynetnews.com
+indiatimes.com
+sina.com.cn
+sogou.com

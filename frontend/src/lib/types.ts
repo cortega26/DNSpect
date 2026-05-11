@@ -10,6 +10,10 @@ export interface ProviderFeatures {
   family: string
   doh: string
   dot: string
+  doq?: string | undefined
+  doh_url?: string
+  dot_hostname?: string
+  doq_hostname?: string
 }
 
 export interface Provider {
@@ -66,6 +70,13 @@ export interface ResolverStats {
   normalized_stability?: number | null
   reliability_penalty?: number | null
   max_rel_penalty?: number | null
+  blocking_efficacy: number | null
+  blocked_count: number
+  blocking_test_count: number
+  score_blocking: number | null
+  normalized_blocking: number | null
+  nxdomain_hijack_detected?: boolean | null
+  dnssec_validating?: boolean | null
 }
 
 export interface ResolverResult {

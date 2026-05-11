@@ -35,13 +35,26 @@ def test_benchmark_ranking_is_independent_from_resolver_input_order(monkeypatch)
 
     def fake_measure_query(*, resolver: str, domain: str, timeout_sec: float, engine: str) -> dict:
         del timeout_sec, engine
+        key = (resolver, domain)
+        if key in latency_map:
+            return {
+                "ok": True,
+                "ms": latency_map[key],
+                "query": domain,
+                "error": None,
+                "failure_kind": None,
+                "resolver": resolver,
+                "answer_ips": [],
+            }
+        # Unknown domains (e.g. blocking test domains): simulate NXDOMAIN
         return {
-            "ok": True,
-            "ms": latency_map[(resolver, domain)],
+            "ok": False,
+            "ms": None,
             "query": domain,
-            "error": None,
-            "failure_kind": None,
+            "error": "blocked",
+            "failure_kind": "nxdomain",
             "resolver": resolver,
+            "answer_ips": [],
         }
 
     monkeypatch.setattr("app.runner.measure_query", fake_measure_query)

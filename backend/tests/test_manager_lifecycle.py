@@ -40,6 +40,7 @@ def test_start_succeeds_when_run_storage_is_not_writable(monkeypatch, tmp_path) 
     monkeypatch.setattr(manager, "_write_json_file", fake_write_json_file)
     monkeypatch.setattr("app.runner.measure_query", fake_measure_query)
     monkeypatch.setattr("app.runner.select_engine", lambda: "dnspython")
+    manager.blocking_test_queries = []
 
     benchmark_id = manager.start(
         BenchmarkRequest(runs=1, timeout_sec=1.0, resolvers=["1.1.1.1"], queries=["example.com"])
@@ -67,6 +68,7 @@ def test_queue_limit_is_enforced_and_queued_state_is_visible(monkeypatch, tmp_pa
 
     monkeypatch.setattr("app.runner.measure_query", fake_measure_query)
     monkeypatch.setattr("app.runner.select_engine", lambda: "dnspython")
+    manager.blocking_test_queries = []
 
     req = BenchmarkRequest(runs=1, timeout_sec=1.0, resolvers=["1.1.1.1"], queries=["example.com"])
     first = manager.start(req)

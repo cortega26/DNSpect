@@ -1,6 +1,6 @@
 import { useI18n } from '@/lib/useI18n'
 import type { ResolverResult } from '@/lib/types'
-import { fmtMs } from '@/lib/utils'
+import { fmtMs, resolverBlockingScore } from '@/lib/utils'
 
 interface Props {
   result: ResolverResult
@@ -74,6 +74,12 @@ export function RecommendedResolverPanel({
           <h4>{t('recommendation.rank')}</h4>
           <p>#{rank}</p>
         </article>
+        {result.stats.blocking_test_count > 0 ? (
+          <article className="metric-card">
+            <h4>{t('recommendation.blocking')}</h4>
+            <p>{(resolverBlockingScore(result) * 100).toFixed(0)}%</p>
+          </article>
+        ) : null}
       </div>
 
       <p className="recommendation-improvement">

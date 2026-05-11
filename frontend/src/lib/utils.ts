@@ -65,3 +65,11 @@ export function resolverReliabilityScore(result: ResolverResult): number {
   }
   return 0
 }
+
+export function resolverBlockingScore(result: ResolverResult): number {
+  const val = result.stats.blocking_efficacy
+  if (val !== null && Number.isFinite(val)) {
+    return Math.max(0, Math.min(1, val))
+  }
+  return 0
+}

@@ -28,6 +28,11 @@ function stats(overrides: Partial<ResolverStats> = {}): ResolverStats {
     normalized_stability: 0.2,
     reliability_penalty: 0,
     max_rel_penalty: 0.3,
+    blocking_efficacy: null,
+    blocked_count: 0,
+    blocking_test_count: 0,
+    score_blocking: null,
+    normalized_blocking: null,
     ...overrides,
   }
 }

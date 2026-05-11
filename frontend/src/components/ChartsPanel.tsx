@@ -5,22 +5,24 @@ import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis
 import { useI18n } from '@/lib/useI18n'
 import type { ResolverResult } from '@/lib/types'
 
-type ChartView = 'median' | 'p95' | 'reliability'
+type ChartView = 'median' | 'p95' | 'reliability' | 'blocking'
 
 interface Props {
   results: ResolverResult[]
 }
 
-const CHART_LABEL_KEY: Record<ChartView, 'charts.medianView' | 'charts.p95View' | 'charts.reliabilityView'> = {
+const CHART_LABEL_KEY: Record<ChartView, 'charts.medianView' | 'charts.p95View' | 'charts.reliabilityView' | 'charts.blockingView'> = {
   median: 'charts.medianView',
   p95: 'charts.p95View',
   reliability: 'charts.reliabilityView',
+  blocking: 'charts.blockingView',
 }
 
 const CHART_VIEWS: Array<{ key: ChartView }> = [
   { key: 'median' },
   { key: 'p95' },
   { key: 'reliability' },
+  { key: 'blocking' },
 ]
 
 interface BarEntry {
@@ -29,6 +31,7 @@ interface BarEntry {
   value: number | null
   rawValue: number | null
   failureRate: number
+  unit: string
 }
 
 function performanceColor(value: number | null, sortedValues: number[]): string {
@@ -62,8 +65,7 @@ function CustomTooltip({ active, payload, label }: TooltipProps<number, string>)
       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', color: 'var(--muted)' }}>{label}</span>
       <span>
         <strong>{payload[0]?.value?.toFixed(1) ?? 'N/A'}</strong>
-        {payload[0]?.name === 'value' ? ' ms' : ''}
-        {payload[0]?.name === 'reliability' ? '%' : ''}
+        {entry.unit}
       </span>
       {entry.failureRate > 0 && (
         <span style={{ color: 'var(--danger)', fontSize: '0.82rem' }}>
@@ -91,6 +93,8 @@ export function ChartsPanel({ results }: Props) {
       else if (chartView === 'p95') value = result.stats.p95_ms
       else if (chartView === 'reliability')
         value = result.stats.success_rate !== null ? result.stats.success_rate * 100 : null
+      else if (chartView === 'blocking')
+        value = result.stats.blocking_efficacy !== null ? result.stats.blocking_efficacy * 100 : null
 
       return {
         dns: result.resolver,
@@ -98,10 +102,15 @@ export function ChartsPanel({ results }: Props) {
         value,
         rawValue: value,
         failureRate: result.stats.failure_rate,
+        unit: chartView === 'median' || chartView === 'p95' ? ' ms' : '%',
       } as BarEntry
     })
       .filter((b) => b.value !== null)
-      .sort((a, b) => (a.value ?? Infinity) - (b.value ?? Infinity))
+      .sort((a, b) =>
+        chartView === 'blocking'
+          ? (b.value ?? -Infinity) - (a.value ?? -Infinity)
+          : (a.value ?? Infinity) - (b.value ?? Infinity),
+      )
   }, [limitedResults, chartView])
 
   const sortedValues = useMemo(() => bars.map((b) => b.value as number).filter((v) => v !== null), [bars])
@@ -110,7 +119,9 @@ export function ChartsPanel({ results }: Props) {
     ? t('charts.medianByResolver')
     : chartView === 'p95'
       ? t('charts.p95ByResolver')
-      : t('charts.reliabilityByResolver')
+      : chartView === 'reliability'
+        ? t('charts.reliabilityByResolver')
+        : t('charts.blockingView')
 
   return (
     <section className="card">
@@ -160,9 +171,9 @@ export function ChartsPanel({ results }: Props) {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="dns" angle={-35} textAnchor="end" height={70} interval={0} stroke="var(--muted)" />
                 <YAxis
-                  unit={chartView !== 'reliability' ? ' ms' : '%'}
+                  unit={chartView === 'reliability' || chartView === 'blocking' ? '%' : ' ms'}
                   stroke="var(--muted)"
-                  domain={chartView === 'reliability' ? [95, 100] : ['auto', 'auto']}
+                  domain={chartView === 'reliability' ? [95, 100] : chartView === 'blocking' ? [0, 100] : ['auto', 'auto']}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={48}>

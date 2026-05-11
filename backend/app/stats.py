@@ -13,16 +13,18 @@ RECOMMENDATION_WARNING_ALL_UNRELIABLE = (
     "All resolvers exceed reliability threshold; recommendation may be unstable."
 )
 
-# Goal-aware scoring weights: latency, reliability, stability
-GOAL_WEIGHTS: dict[str, tuple[float, float, float]] = {
-    "speed": (0.6, 0.3, 0.1),
-    "security": (0.35, 0.50, 0.15),
-    "privacy": (0.40, 0.40, 0.20),
-    "ad-blocking": (0.35, 0.50, 0.15),
-    "family": (0.30, 0.55, 0.15),
+# Goal-aware scoring weights: latency, reliability, stability, blocking
+GOAL_WEIGHTS: dict[str, tuple[float, float, float, float]] = {
+    "speed": (0.55, 0.25, 0.10, 0.10),
+    "security": (0.30, 0.40, 0.10, 0.20),
+    "privacy": (0.35, 0.35, 0.15, 0.15),
+    "ad-blocking": (0.25, 0.40, 0.10, 0.25),
+    "family": (0.25, 0.40, 0.10, 0.25),
 }
 
 DEFAULT_GOAL = "speed"
+
+SINKHOLE_IPS = {"0.0.0.0"}
 
 
 def parse_drill_query_time(output: str) -> float | None:
@@ -57,6 +59,28 @@ def _safe_float(value: Any) -> float | None:
         return None
 
 
+def compute_blocking_efficacy(blocking_samples: list[dict[str, Any]]) -> dict[str, Any]:
+    total = len(blocking_samples)
+    if total == 0:
+        return {"blocking_efficacy": None, "blocked_count": 0, "blocking_test_count": 0}
+
+    blocked = 0
+    for sample in blocking_samples:
+        fk = sample.get("failure_kind")
+        if fk in ("nxdomain", "refused"):
+            blocked += 1
+        elif fk is None and sample.get("ok"):
+            ips = sample.get("answer_ips", [])
+            if any(ip in SINKHOLE_IPS for ip in ips):
+                blocked += 1
+
+    return {
+        "blocking_efficacy": round(blocked / total, 4),
+        "blocked_count": blocked,
+        "blocking_test_count": total,
+    }
+
+
 def _reliability_penalty(success_rate: float, total_samples: int) -> float:
     eps = 1.0 / (max(total_samples, 0) + 1)
     rel_penalty_input = min(1.0, max(0.0, success_rate) + eps)
@@ -64,7 +88,8 @@ def _reliability_penalty(success_rate: float, total_samples: int) -> float:
 
 
 def apply_normalized_scoring(results: list[dict[str, Any]], goal: str | None = None) -> None:
-    lat_weight, rel_weight, stab_weight = GOAL_WEIGHTS.get(goal or DEFAULT_GOAL, GOAL_WEIGHTS[DEFAULT_GOAL])
+    weights = GOAL_WEIGHTS.get(goal or DEFAULT_GOAL, GOAL_WEIGHTS[DEFAULT_GOAL])
+    lat_weight, rel_weight, stab_weight, blk_weight = weights
     latency_values = [
         latency
         for item in results
@@ -145,7 +170,24 @@ def apply_normalized_scoring(results: list[dict[str, Any]], goal: str | None = N
             round(normalized_stability, 6) if normalized_stability is not None else None
         )
 
-        if normalized_latency is None or normalized_reliability is None or normalized_stability is None:
+        # Blocking efficacy: invert so 0.0 = perfect blocking, 1.0 = no blocking
+        blocking_efficacy = _safe_float(stats.get("blocking_efficacy"))
+        normalized_blocking: float | None = None
+        if blocking_efficacy is not None:
+            normalized_blocking = max(0.0, min(1.0, 1.0 - blocking_efficacy))
+        else:
+            normalized_blocking = 1.0
+        stats["score_blocking"] = blocking_efficacy
+        stats["normalized_blocking"] = (
+            round(normalized_blocking, 6) if normalized_blocking is not None else None
+        )
+
+        if (
+            normalized_latency is None
+            or normalized_reliability is None
+            or normalized_stability is None
+            or normalized_blocking is None
+        ):
             stats["score_total"] = None
             continue
 
@@ -153,6 +195,7 @@ def apply_normalized_scoring(results: list[dict[str, Any]], goal: str | None = N
             normalized_latency * lat_weight
             + normalized_reliability * rel_weight
             + normalized_stability * stab_weight
+            + normalized_blocking * blk_weight
         )
         stats["score_total"] = round(score_total, 6)
 
@@ -210,6 +253,13 @@ def compute_stats(
             "normalized_stability": None,
             "reliability_penalty": None,
             "max_rel_penalty": None,
+            "blocking_efficacy": None,
+            "blocked_count": 0,
+            "blocking_test_count": 0,
+            "score_blocking": None,
+            "normalized_blocking": None,
+            "nxdomain_hijack_detected": None,
+            "dnssec_validating": None,
         }
 
     avg_ms = round(sum(success_samples_ms) / success_count, 3)
@@ -245,4 +295,11 @@ def compute_stats(
         "normalized_stability": None,
         "reliability_penalty": None,
         "max_rel_penalty": None,
+        "blocking_efficacy": None,
+        "blocked_count": 0,
+        "blocking_test_count": 0,
+        "score_blocking": None,
+        "normalized_blocking": None,
+        "nxdomain_hijack_detected": None,
+        "dnssec_validating": None,
     }

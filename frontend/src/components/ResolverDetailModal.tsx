@@ -60,6 +60,18 @@ export function ResolverDetailModal({ result, provider, canLoadSamples, isLoadin
         </p>
         <p className="muted">{provider?.notes_es ?? t('modal.noDescription')}</p>
 
+        {provider?.features ? (
+          <div className="protocol-badges">
+            <h4 className="muted" style={{ fontSize: '0.8rem', marginBottom: 'var(--space-1)' }}>{t('modal.supportedProtocols')}</h4>
+            <div className="badges-row">
+              <span className="badge" title="UDP">UDP</span>
+              {provider.features.doh === 'yes' ? <span className="badge badge-success" title={provider.features.doh_url || 'DNS-over-HTTPS'}>{t('protocol.doh')}</span> : null}
+              {provider.features.dot === 'yes' ? <span className="badge badge-success" title={provider.features.dot_hostname || 'DNS-over-TLS'}>{t('protocol.dot')}</span> : null}
+              {provider.features.doq === 'yes' ? <span className="badge badge-success" title={provider.features.doq_hostname || 'DNS-over-QUIC'}>{t('protocol.doq')}</span> : null}
+            </div>
+          </div>
+        ) : null}
+
         <div className="stats-grid">
           <div>
             <strong>{t('modal.median')}:</strong> {fmtMs(result.stats.median_ms)}
@@ -78,6 +90,18 @@ export function ResolverDetailModal({ result, provider, canLoadSamples, isLoadin
           </div>
           <div>
             <strong>{t('modal.timeouts')}:</strong> {result.stats.timeout_count}
+          </div>
+          <div>
+            <strong>{t('modal.blocking')}:</strong>{' '}
+            {result.stats.blocking_efficacy !== null && result.stats.blocking_test_count > 0
+              ? `${(result.stats.blocking_efficacy * 100).toFixed(0)}%`
+              : 'NA'}
+          </div>
+          <div>
+            <strong>{t('modal.blockedCount')}:</strong>{' '}
+            {result.stats.blocking_test_count > 0
+              ? `${result.stats.blocked_count} / ${result.stats.blocking_test_count}`
+              : 'NA'}
           </div>
         </div>
 

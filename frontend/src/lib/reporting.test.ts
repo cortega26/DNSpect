@@ -39,6 +39,11 @@ const csvBaseColumns = [
   'normalized_stability',
   'reliability_penalty',
   'max_rel_penalty',
+  'blocking_efficacy',
+  'blocked_count',
+  'blocking_test_count',
+  'score_blocking',
+  'normalized_blocking',
   'is_unreliable',
 ]
 
@@ -73,6 +78,11 @@ function sampleResult(overrides: Partial<ResolverResult> = {}): ResolverResult {
       normalized_stability: 0.02,
       reliability_penalty: 0,
       max_rel_penalty: 0.3,
+      blocking_efficacy: null,
+      blocked_count: 0,
+      blocking_test_count: 0,
+      score_blocking: null,
+      normalized_blocking: null,
     },
     ...overrides,
   }

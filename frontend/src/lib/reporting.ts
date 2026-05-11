@@ -67,6 +67,11 @@ const BASE_CSV_COLUMNS = [
   'normalized_stability',
   'reliability_penalty',
   'max_rel_penalty',
+  'blocking_efficacy',
+  'blocked_count',
+  'blocking_test_count',
+  'score_blocking',
+  'normalized_blocking',
   'is_unreliable',
 ] as const
 

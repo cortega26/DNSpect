@@ -1,0 +1,44 @@
+# Dominios de prueba para medir eficacia de bloqueo DNS.
+# Resuelven en resolvers sin filtro (Cloudflare 1.1.1.1) y deben ser
+# bloqueados (NXDOMAIN, REFUSED o sinkhole 0.0.0.0) por resolvers con filtro.
+#
+# Verificados manualmente contra:
+#   Cloudflare 1.1.1.1 → resuelven (baseline)
+#   AdGuard     94.140.14.14 → 0.0.0.0 (ads)
+#   ControlD    76.76.2.2    → 0.0.0.0 (ads + threat intel)
+
+# Ads / Tracking (bloqueados por AdGuard y ControlD)
+doubleclick.net
+adsrvr.org
+criteo.com
+outbrain.com
+pubmatic.com
+pixel.quantserve.com
+adzerk.net
+scorecardresearch.com
+taboola.com
+
+# Malware / Threat intel (bloqueados por ControlD y listas HaGeZi)
+0.gp
+0-0.fr
+0-105.com
+malware-test.bad
+
+# Adult content (bloqueados por filtros familiares)
+pornhub.com
+xvideos.com
+xnxx.com
+
+# Phishing / Fraud test domains
+phishing-test.example
+banks-fraud-test.example
+
+# Social media (bloqueados por algunos filtros parentales)
+facebook.com
+tiktok.com
+instagram.com
+# Telemetry / Analytics (bloqueados por listas de privacidad)
+google-analytics.com
+googletagmanager.com
+pixel.facebook.com
+ads.linkedin.com

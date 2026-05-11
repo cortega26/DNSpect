@@ -102,6 +102,11 @@ def start_benchmark(request: BenchmarkRequest) -> dict:
     return {"benchmark_id": benchmark_id}
 
 
+@app.get("/api/benchmarks/history")
+def benchmark_history() -> dict:
+    return manager.list_history()
+
+
 @app.get("/api/benchmarks/{benchmark_id}")
 def benchmark_status(
     benchmark_id: str,

@@ -55,6 +55,7 @@ export function ResultsTable({ results, primary, secondary, emptyMessage, onSele
                 <th>{t('results.colAverage')}</th>
                 <th>{t('results.colTimeouts')}</th>
                 <th>{t('results.colOk')}</th>
+                <th>{t('results.colBlocking')}</th>
                 <th>{t('results.colDetail')}</th>
               </tr>
             </thead>
@@ -86,6 +87,11 @@ export function ResultsTable({ results, primary, secondary, emptyMessage, onSele
                     <td style={{ fontVariantNumeric: 'tabular-nums' }}>{fmtMs(row.stats.avg_ms)}</td>
                     <td>{row.stats.timeout_count}</td>
                     <td>{row.stats.ok_count}</td>
+                    <td style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {row.stats.blocking_efficacy !== null && row.stats.blocking_test_count > 0
+                        ? `${(row.stats.blocking_efficacy * 100).toFixed(0)}%`
+                        : 'NA'}
+                    </td>
                     <td>
                       <button type="button" className="table-link-btn" onClick={() => onSelect(row)}>
                         {t('results.viewDetail')}

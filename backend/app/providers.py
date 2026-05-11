@@ -20,6 +20,8 @@ DATA_ROOT = _resolve_data_root()
 PROVIDERS_PATH = DATA_ROOT / "dns_providers.es.json"
 QUERIES_PATH = DATA_ROOT / "queries.txt"
 
+BLOCKING_DOMAINS_PATH = DATA_ROOT / "blocking_domains.txt"
+
 EXTRA_DEFAULT_RESOLVERS = [
     "4.2.2.1",
     "4.2.2.2",
@@ -47,6 +49,17 @@ def load_default_queries() -> list[str]:
                 continue
             queries.append(candidate)
     return queries
+
+
+def load_blocking_domains() -> list[str]:
+    domains: list[str] = []
+    with BLOCKING_DOMAINS_PATH.open("r", encoding="utf-8") as f:
+        for line in f:
+            candidate = line.strip().lower()
+            if not candidate or candidate.startswith("#"):
+                continue
+            domains.append(candidate)
+    return domains
 
 
 def build_default_resolvers(providers: list[dict[str, Any]]) -> list[str]:

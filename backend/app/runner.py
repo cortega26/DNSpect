@@ -3,8 +3,10 @@ from __future__ import annotations
 import json
 import os
 import platform
+import random
 import re
 import shutil
+import string
 import subprocess
 import threading
 import uuid
@@ -22,9 +24,16 @@ from platformdirs import user_data_path
 
 from .detect_dns import detect_system_dns
 from .models import BenchmarkRequest, ProbeRequest
-from .providers import build_default_resolvers, load_default_queries, load_providers, resolver_provider_index
+from .providers import (
+    build_default_resolvers,
+    load_blocking_domains,
+    load_default_queries,
+    load_providers,
+    resolver_provider_index,
+)
 from .stats import (
     apply_normalized_scoring,
+    compute_blocking_efficacy,
     compute_stats,
     parse_drill_query_time,
     select_recommended_resolver,
@@ -55,6 +64,7 @@ with suppress(OSError):
     DATA_RUNS.mkdir(parents=True, exist_ok=True)
 
 DRILL_RCODE_RE = re.compile(r"rcode:\s*([A-Z]+)", re.IGNORECASE)
+DRILL_ANSWER_RE = re.compile(r"^[a-zA-Z0-9._-]+\s+\d+\s+IN\s+A\s+([\d.]+)", re.MULTILINE)
 RELIABILITY_FAILURE_KINDS = {"timeout", "servfail", "refused", "noanswer", "other"}
 
 
@@ -220,6 +230,7 @@ class BenchmarkManager:
         self.provider_index = resolver_provider_index(self.providers)
         self.default_queries = load_default_queries()
         self.default_resolvers = build_default_resolvers(self.providers)
+        self.blocking_test_queries = load_blocking_domains()
         self.persist_samples = os.getenv("DNS_SPEED_LAB_PERSIST_SAMPLES", "0").strip().lower() in {
             "1",
             "true",
@@ -262,12 +273,13 @@ class BenchmarkManager:
     def start(self, req: BenchmarkRequest) -> str:
         config = self._build_config(req)
         benchmark_id = uuid.uuid4().hex
+        blocking_total = len(config.resolvers) * len(self.blocking_test_queries)
         state = BenchmarkState(
             id=benchmark_id,
             status="queued",
             started_at=datetime.now(UTC).isoformat(),
             last_sample_at=int(datetime.now(UTC).timestamp() * 1000),
-            progress_total=len(config.resolvers) * config.runs,
+            progress_total=len(config.resolvers) * config.runs + blocking_total,
             mode=config.mode,
             goal=config.goal,
             timeout_sec=config.timeout_sec,
@@ -356,14 +368,52 @@ class BenchmarkManager:
         with self._lock:
             self._cleanup_terminal_states_locked()
             state = self._states.get(benchmark_id)
-            if not state:
-                return None
-            return state.as_response(include_samples=include_samples)
+            if state:
+                return state.as_response(include_samples=include_samples)
+
+        # Fallback: load from disk
+        result_path = self._data_runs_dir / f"{benchmark_id}.json"
+        if not result_path.exists():
+            return None
+        try:
+            data = json.loads(result_path.read_text(encoding="utf-8"))
+            return data
+        except (json.JSONDecodeError, OSError):
+            return None
 
     def get_state(self, benchmark_id: str) -> BenchmarkState | None:
         with self._lock:
             self._cleanup_terminal_states_locked()
             return self._states.get(benchmark_id)
+
+    def list_history(self) -> dict[str, list[dict[str, Any]]]:
+        runs: list[dict[str, Any]] = []
+        if not self._data_runs_dir.exists():
+            return {"runs": runs}
+        run_files = sorted(self._data_runs_dir.glob("[!.]*.json"), reverse=True)
+        for path in run_files:
+            if path.name.endswith(".samples.json"):
+                continue
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                results = data.get("results") or []
+                runs.append({
+                    "id": path.stem,
+                    "mode": data.get("mode"),
+                    "goal": data.get("goal"),
+                    "started_at": data.get("started_at"),
+                    "finished_at": data.get("finished_at"),
+                    "status": data.get("status"),
+                    "results_summary": [
+                        {"provider_name": r.get("provider_name"), "resolver": r.get("resolver")}
+                        for r in results[:3]
+                    ],
+                })
+            except (json.JSONDecodeError, OSError):
+                continue
+            if len(runs) >= 50:
+                break
+        return {"runs": runs}
 
     def _cleanup_terminal_states(self) -> None:
         with self._lock:
@@ -577,6 +627,63 @@ class BenchmarkManager:
                 results.append(resolver_result)
                 self._append_partial_result(benchmark_id, resolver_result)
 
+                # Blocking efficacy test
+                blocking_samples: list[dict[str, Any]] = []
+                for domain in self.blocking_test_queries:
+                    b_sample = measure_query(
+                        resolver=resolver,
+                        domain=domain,
+                        timeout_sec=config.timeout_sec,
+                        engine=engine,
+                    )
+                    b_sample["run_index"] = 0
+                    b_sample["blocking_test"] = True
+                    blocking_samples.append(b_sample)
+                    self._update_progress(
+                        benchmark_id,
+                        increment=1,
+                        resolver=resolver,
+                    )
+
+                blocking_raw = compute_blocking_efficacy(blocking_samples)
+                stats["blocking_efficacy"] = blocking_raw["blocking_efficacy"]
+                stats["blocked_count"] = blocking_raw["blocked_count"]
+                stats["blocking_test_count"] = blocking_raw["blocking_test_count"]
+
+                # NXDOMAIN hijacking detection
+                hijack_suffix = "".join(random.choices(string.ascii_lowercase, k=8))
+                hijack_domain = f"nxdomain-check-{hijack_suffix}.invalid"
+                hijack_sample = measure_query(
+                    resolver=resolver,
+                    domain=hijack_domain,
+                    timeout_sec=config.timeout_sec,
+                    engine=engine,
+                )
+                hijack_detected: bool | None = None
+                if hijack_sample.get("ok") and hijack_sample.get("answer_ips"):
+                    # Got a valid A record for a guaranteed-nonexistent domain
+                    hijack_detected = True
+                elif hijack_sample.get("failure_kind") == "nxdomain":
+                    hijack_detected = False
+                stats["nxdomain_hijack_detected"] = hijack_detected
+
+                # DNSSEC validation check
+                dnssec_domain = "badsig.go.dnscheck.tools"
+                dnssec_sample = measure_query(
+                    resolver=resolver,
+                    domain=dnssec_domain,
+                    timeout_sec=config.timeout_sec,
+                    engine=engine,
+                )
+                dnssec_validating: bool | None = None
+                if dnssec_sample.get("failure_kind") == "servfail":
+                    # SERVFAIL for a known-bad DNSSEC signature → resolver validates
+                    dnssec_validating = True
+                elif dnssec_sample.get("ok"):
+                    # Got an answer when should have failed → not validating
+                    dnssec_validating = False
+                stats["dnssec_validating"] = dnssec_validating
+
             self._set_done(benchmark_id, engine=engine, results=results)
         except Exception as exc:  # noqa: BLE001
             self._set_failed(benchmark_id, str(exc))
@@ -629,12 +736,14 @@ def run_drill_query(resolver: str, domain: str, timeout_sec: float) -> dict[str,
             "failure_kind": failure_kind,
         }
 
+    answer_ips = DRILL_ANSWER_RE.findall(proc.stdout)
     return {
         "ok": True,
         "ms": round(float(query_time_ms), 3),
         "query": domain,
         "error": None,
         "failure_kind": None,
+        "answer_ips": answer_ips,
     }
 
 
@@ -645,14 +754,16 @@ def run_dnspython_query(resolver: str, domain: str, timeout_sec: float) -> dict[
     dnsr.timeout = timeout_sec
     start = perf_counter()
     try:
-        dnsr.resolve(domain, "A")
+        answers = dnsr.resolve(domain, "A")
         elapsed_ms = (perf_counter() - start) * 1000.0
+        answer_ips = [str(rr.address) for rr in answers]
         return {
             "ok": True,
             "ms": round(elapsed_ms, 3),
             "query": domain,
             "error": None,
             "failure_kind": None,
+            "answer_ips": answer_ips,
         }
     except Exception as exc:  # noqa: BLE001
         return {
