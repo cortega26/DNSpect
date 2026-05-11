@@ -44,6 +44,7 @@ const BASE_CSV_COLUMNS = [
   'provider_id',
   'provider_name',
   'engine',
+  'protocol',
   'avg_ms',
   'median_ms',
   'p95_ms',

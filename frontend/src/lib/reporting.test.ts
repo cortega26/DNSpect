@@ -16,6 +16,7 @@ const csvBaseColumns = [
   'provider_id',
   'provider_name',
   'engine',
+  'protocol',
   'avg_ms',
   'median_ms',
   'p95_ms',
@@ -53,6 +54,7 @@ function sampleResult(overrides: Partial<ResolverResult> = {}): ResolverResult {
     provider_id: 'cloudflare',
     provider_name: 'Cloudflare',
     engine: 'drill',
+    protocol: 'udp',
     samples: [],
     stats: {
       avg_ms: 24.5,
@@ -100,6 +102,7 @@ function sampleStatus(results: ResolverResult[]): BenchmarkStatus {
     started_at: '2026-02-21T10:00:00Z',
     finished_at: '2026-02-21T10:01:00Z',
     mode: 'quick',
+    protocol: 'udp',
     timeout_sec: 2,
     runs: 30,
     engine: 'drill',

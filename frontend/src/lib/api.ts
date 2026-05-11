@@ -1,9 +1,10 @@
-import type { BenchmarkMode, BenchmarkStatus, Goal, ProbeResponse, Provider, SystemDnsPayload } from './types'
+import type { BenchmarkMode, BenchmarkProtocol, BenchmarkStatus, Goal, ProbeResponse, Provider, SystemDnsPayload } from './types'
 import { API_BASE } from './utils'
 
 interface StartBenchmarkPayload {
   mode: BenchmarkMode
   goal?: Goal
+  protocol?: BenchmarkProtocol
   runs?: number
   timeout_sec: number
   resolvers: string[]
@@ -58,6 +59,7 @@ export async function startBenchmark(payload: StartBenchmarkPayload): Promise<{ 
   const body: Record<string, unknown> = {
     mode: payload.mode,
     goal: payload.goal ?? 'speed',
+    protocol: payload.protocol ?? 'udp',
     timeout_sec: payload.timeout_sec,
     resolvers: payload.resolvers,
   }
@@ -80,6 +82,7 @@ export interface RunHistoryEntry {
   id: string
   mode: string
   goal: string
+  protocol: string | null
   started_at: string
   finished_at: string | null
   status: string

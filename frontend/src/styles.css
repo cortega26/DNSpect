@@ -1994,6 +1994,14 @@ tbody tr:last-child td {
   color: var(--success);
 }
 
+.badge-protocol {
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface-2));
+  color: var(--accent);
+  font-size: 0.65rem;
+  padding: 1px 6px;
+  margin-left: 4px;
+}
+
 .badges-row {
   display: flex;
   flex-wrap: wrap;

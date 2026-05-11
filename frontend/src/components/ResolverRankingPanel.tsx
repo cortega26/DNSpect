@@ -37,6 +37,7 @@ export function ResolverRankingPanel({ id, results, emptyMessage, onSelect }: Pr
                   <div className="ranking-main">
                   <p className="ranking-line">
                       <span className="ranking-rank">{rankLabel}{index + 1}</span> {row.provider_name} - {row.resolver}
+                      <span className="badge badge-protocol">{row.protocol === 'dot' ? t('protocol.dot') : row.protocol === 'doh' ? t('protocol.doh') : t('protocol.udp')}</span>
                       {row.stats.nxdomain_hijack_detected === true ? (
                         <span className="badge badge-danger" title={t('results.nxdomainHijacked')}>{t('results.nxdomainBadge')}</span>
                       ) : row.stats.nxdomain_hijack_detected === false ? (

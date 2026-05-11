@@ -1,5 +1,5 @@
-import type { BenchmarkMode, Goal, Provider } from '@/lib/types'
-import { GOALS } from '@/lib/types'
+import type { BenchmarkMode, BenchmarkProtocol, Goal, Provider } from '@/lib/types'
+import { GOALS, PROTOCOLS } from '@/lib/types'
 import { useI18n } from '@/lib/useI18n'
 import { resolverGroup } from '@/lib/utils'
 
@@ -32,6 +32,7 @@ interface Props {
   providers: Provider[]
   selected: Set<string>
   mode: BenchmarkMode
+  protocol: BenchmarkProtocol
   goal: Goal
   detectedRegion: string | null
   effectiveRegion: string | null
@@ -47,6 +48,7 @@ interface Props {
   startHelperText: string
   onToggleResolver: (ip: string) => void
   onModeChange: (mode: BenchmarkMode) => void
+  onProtocolChange: (protocol: BenchmarkProtocol) => void
   onGoalChange: (goal: Goal) => void
   onRegionChange: (region: string | null) => void
   onRunsChange: (value: number) => void
@@ -148,6 +150,26 @@ export function DashboardControls(props: Props) {
             ))}
           </div>
           <p className="helper-text">{t('controls.modeHelp')}</p>
+        </div>
+
+        <div className="controls-protocol-col">
+          <p className="label-caption">{t('controls.protocol')}</p>
+          <div className="segmented-control" role="radiogroup" aria-label={t('controls.protocol')}>
+            {PROTOCOLS.map((p) => (
+              <button
+                key={p}
+                type="button"
+                role="radio"
+                aria-checked={props.protocol === p}
+                className={`segmented-option ${props.protocol === p ? 'is-active' : ''}`}
+                onClick={() => props.onProtocolChange(p)}
+                disabled={props.isRunning}
+              >
+                {p === 'udp' ? t('protocol.udp') : p === 'dot' ? t('protocol.dot') : t('protocol.doh')}
+              </button>
+            ))}
+          </div>
+          <p className="helper-text">{t('protocol.help')}</p>
         </div>
       </div>
 

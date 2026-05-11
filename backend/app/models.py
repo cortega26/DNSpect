@@ -24,6 +24,12 @@ class BenchmarkGoal(str, Enum):
     family = "family"
 
 
+class BenchmarkProtocol(str, Enum):
+    udp = "udp"
+    dot = "dot"
+    doh = "doh"
+
+
 MODE_DEFAULT_RUNS = {
     BenchmarkMode.quick: 12,
     BenchmarkMode.standard: 30,
@@ -68,6 +74,7 @@ class BenchmarkRequest(BaseModel):
     queries: Optional[list[str]] = None
     mode: BenchmarkMode = BenchmarkMode.standard
     goal: BenchmarkGoal = BenchmarkGoal.speed
+    protocol: BenchmarkProtocol = BenchmarkProtocol.udp
 
     @field_validator("resolvers")
     @classmethod

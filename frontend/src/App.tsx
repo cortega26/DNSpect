@@ -35,7 +35,7 @@ import {
   shouldPollBenchmark,
 } from '@/lib/runtime'
 import { useTheme } from '@/lib/useTheme'
-import type { BenchmarkMode, BenchmarkStatus, Goal, Provider, ResolverResult, SystemDnsPayload } from '@/lib/types'
+import type { BenchmarkMode, BenchmarkProtocol, BenchmarkStatus, Goal, Provider, ResolverResult, SystemDnsPayload } from '@/lib/types'
 import { API_BASE, detectRegion, fmtMs, providersByGoal, providersByRegion, regionLabel, resolverReliabilityScore } from '@/lib/utils'
 
 const MODE_RUNS: Record<BenchmarkMode, number> = {
@@ -193,6 +193,7 @@ function App() {
   const [systemDns, setSystemDns] = useState<SystemDnsPayload | null>(null)
   const [selectedResolvers, setSelectedResolvers] = useState<Set<string>>(new Set())
   const [mode, setMode] = useState<BenchmarkMode>('standard')
+  const [protocol, setProtocol] = useState<BenchmarkProtocol>('udp')
   const [runs, setRuns] = useState<number>(MODE_RUNS.standard)
   const [timeoutSec, setTimeoutSec] = useState<number>(2)
   const [timeoutPreset, setTimeoutPreset] = useState<TimeoutPreset>('medium')
@@ -757,6 +758,7 @@ function App() {
       const payload = {
         mode,
         goal,
+        protocol,
         runs,
         timeout_sec: timeoutSec,
         resolvers: Array.from(selectedResolvers),
@@ -1209,6 +1211,7 @@ function App() {
           providers={regionFilteredProviders}
           selected={selectedResolvers}
           mode={mode}
+          protocol={protocol}
           goal={goal}
           runs={runs}
           timeoutSec={timeoutSec}
@@ -1225,6 +1228,7 @@ function App() {
           onRegionChange={setRegionOverride}
           onToggleResolver={toggleResolver}
           onModeChange={onModeChange}
+          onProtocolChange={setProtocol}
           onGoalChange={onGoalChange}
           onRunsChange={(v) => setRuns(Math.max(1, Math.min(300, Number.isFinite(v) ? v : runs)))}
           onTimeoutChange={(v) => setTimeoutSec(Math.max(0.2, Math.min(10, Number.isFinite(v) ? v : timeoutSec)))}

@@ -19,6 +19,8 @@ from time import perf_counter
 from typing import Any
 
 import dns.exception
+import dns.message
+import dns.query
 import dns.resolver
 from platformdirs import user_data_path
 
@@ -95,6 +97,7 @@ class BenchmarkState:
     observed_latency_count: int = 0
     mode: str = "standard"
     goal: str = "speed"
+    protocol: str = "udp"
     timeout_sec: float = 2.0
     runs: int = 30
     engine: str | None = None
@@ -122,6 +125,7 @@ class BenchmarkState:
             "started_at": self.started_at,
             "finished_at": self.finished_at,
             "mode": self.mode,
+            "protocol": self.protocol,
             "timeout_sec": self.timeout_sec,
             "runs": self.runs,
             "engine": self.engine,
@@ -141,6 +145,7 @@ class BenchmarkConfig:
     timeout_sec: float
     mode: str
     goal: str
+    protocol: str
 
 
 def _sanitize_results(
@@ -252,14 +257,18 @@ class BenchmarkManager:
         if not queries:
             raise ValueError("No hay dominios para consultar")
 
+        protocol = req.protocol.value
+
         if req.resolvers:
             resolvers = req.resolvers
         else:
             system_dns = self.system_dns_payload().get("resolvers", [])
             resolvers = list(dict.fromkeys(self.default_resolvers + system_dns))
 
+        resolvers = [r for r in resolvers if self._resolver_supports_protocol(r, protocol)]
+
         if not resolvers:
-            raise ValueError("No hay resolvers disponibles")
+            raise ValueError("No hay resolvers disponibles para el protocolo seleccionado")
 
         return BenchmarkConfig(
             resolvers=resolvers,
@@ -268,6 +277,7 @@ class BenchmarkManager:
             timeout_sec=timeout_sec,
             mode=req.mode.value,
             goal=req.goal.value,
+            protocol=req.protocol.value,
         )
 
     def start(self, req: BenchmarkRequest) -> str:
@@ -282,6 +292,7 @@ class BenchmarkManager:
             progress_total=len(config.resolvers) * config.runs + blocking_total,
             mode=config.mode,
             goal=config.goal,
+            protocol=config.protocol,
             timeout_sec=config.timeout_sec,
             runs=config.runs,
         )
@@ -397,18 +408,21 @@ class BenchmarkManager:
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
                 results = data.get("results") or []
-                runs.append({
-                    "id": path.stem,
-                    "mode": data.get("mode"),
-                    "goal": data.get("goal"),
-                    "started_at": data.get("started_at"),
-                    "finished_at": data.get("finished_at"),
-                    "status": data.get("status"),
-                    "results_summary": [
-                        {"provider_name": r.get("provider_name"), "resolver": r.get("resolver")}
-                        for r in results[:3]
-                    ],
-                })
+                runs.append(
+                    {
+                        "id": path.stem,
+                        "mode": data.get("mode"),
+                        "goal": data.get("goal"),
+                        "protocol": data.get("protocol"),
+                        "started_at": data.get("started_at"),
+                        "finished_at": data.get("finished_at"),
+                        "status": data.get("status"),
+                        "results_summary": [
+                            {"provider_name": r.get("provider_name"), "resolver": r.get("resolver")}
+                            for r in results[:3]
+                        ],
+                    }
+                )
             except (json.JSONDecodeError, OSError):
                 continue
             if len(runs) >= 50:
@@ -566,6 +580,38 @@ class BenchmarkManager:
 
         self._clear_storage_warning(benchmark_id)
 
+    def _resolver_supports_protocol(self, resolver_ip: str, protocol: str) -> bool:
+        if protocol == "udp":
+            return True
+        provider = self.provider_index.get(resolver_ip)
+        if not provider:
+            return False
+        features = provider.get("features") or {}
+        if protocol == "dot":
+            return bool(features.get("dot_hostname") or features.get("dot") == "yes")
+        if protocol == "doh":
+            return bool(features.get("doh_url") or features.get("doh") == "yes")
+        return False
+
+    def _measure_with_protocol(
+        self,
+        resolver: str,
+        domain: str,
+        config: BenchmarkConfig,
+        engine: str,
+    ) -> dict[str, Any]:
+        if config.protocol == "dot":
+            provider_data = self.provider_index.get(resolver, {})
+            features = provider_data.get("features") or {}
+            dot_hostname = features.get("dot_hostname")
+            return run_dot_query(resolver, domain, config.timeout_sec, dot_hostname)
+        if config.protocol == "doh":
+            provider_data = self.provider_index.get(resolver, {})
+            features = provider_data.get("features") or {}
+            doh_url = features.get("doh_url")
+            return run_doh_query(resolver, domain, config.timeout_sec, doh_url)
+        return measure_query(resolver=resolver, domain=domain, timeout_sec=config.timeout_sec, engine=engine)
+
     def _run(self, benchmark_id: str, config: BenchmarkConfig) -> None:
         try:
             self._set_running(benchmark_id)
@@ -578,10 +624,10 @@ class BenchmarkManager:
                 samples: list[dict[str, Any]] = []
 
                 for run_idx, domain in enumerate(query_schedule):
-                    sample = measure_query(
+                    sample = self._measure_with_protocol(
                         resolver=resolver,
                         domain=domain,
-                        timeout_sec=config.timeout_sec,
+                        config=config,
                         engine=engine,
                     )
                     sample["run_index"] = run_idx + 1
@@ -621,6 +667,7 @@ class BenchmarkManager:
                     "provider_id": provider.get("id", "desconocido"),
                     "provider_name": provider.get("name", "Desconocido"),
                     "engine": engine,
+                    "protocol": config.protocol,
                     "stats": stats,
                     "samples": samples,
                 }
@@ -630,10 +677,10 @@ class BenchmarkManager:
                 # Blocking efficacy test
                 blocking_samples: list[dict[str, Any]] = []
                 for domain in self.blocking_test_queries:
-                    b_sample = measure_query(
+                    b_sample = self._measure_with_protocol(
                         resolver=resolver,
                         domain=domain,
-                        timeout_sec=config.timeout_sec,
+                        config=config,
                         engine=engine,
                     )
                     b_sample["run_index"] = 0
@@ -653,10 +700,10 @@ class BenchmarkManager:
                 # NXDOMAIN hijacking detection
                 hijack_suffix = "".join(random.choices(string.ascii_lowercase, k=8))
                 hijack_domain = f"nxdomain-check-{hijack_suffix}.invalid"
-                hijack_sample = measure_query(
+                hijack_sample = self._measure_with_protocol(
                     resolver=resolver,
                     domain=hijack_domain,
-                    timeout_sec=config.timeout_sec,
+                    config=config,
                     engine=engine,
                 )
                 hijack_detected: bool | None = None
@@ -669,10 +716,10 @@ class BenchmarkManager:
 
                 # DNSSEC validation check
                 dnssec_domain = "badsig.go.dnscheck.tools"
-                dnssec_sample = measure_query(
+                dnssec_sample = self._measure_with_protocol(
                     resolver=resolver,
                     domain=dnssec_domain,
-                    timeout_sec=config.timeout_sec,
+                    config=config,
                     engine=engine,
                 )
                 dnssec_validating: bool | None = None
@@ -772,6 +819,71 @@ def run_dnspython_query(resolver: str, domain: str, timeout_sec: float) -> dict[
             "query": domain,
             "error": str(exc),
             "failure_kind": classify_dnspython_exception(exc),
+        }
+
+
+def run_dot_query(resolver: str, domain: str, timeout_sec: float, dot_hostname: str | None) -> dict[str, Any]:
+    hostname = dot_hostname or resolver
+    q = dns.message.make_query(domain, "A")
+    start = perf_counter()
+    try:
+        response = dns.query.tls(q, resolver, timeout=timeout_sec, server_hostname=hostname)
+        elapsed_ms = (perf_counter() - start) * 1000.0
+        answer_ips = [
+            str(rr.address) for ans in response.answer for rr in ans if rr.rdtype == dns.rdatatype.A
+        ]
+        return {
+            "ok": True,
+            "ms": round(elapsed_ms, 3),
+            "query": domain,
+            "error": None,
+            "failure_kind": None,
+            "answer_ips": answer_ips,
+        }
+    except Exception as exc:  # noqa: BLE001
+        fkind = classify_dnspython_exception(exc) if isinstance(exc, dns.exception.DNSException) else "other"
+        return {
+            "ok": False,
+            "ms": None,
+            "query": domain,
+            "error": str(exc),
+            "failure_kind": fkind,
+        }
+
+
+def run_doh_query(resolver: str, domain: str, timeout_sec: float, doh_url: str | None) -> dict[str, Any]:
+    if not doh_url:
+        return {
+            "ok": False,
+            "ms": None,
+            "query": domain,
+            "error": "No DoH URL configured for this resolver",
+            "failure_kind": "other",
+        }
+    q = dns.message.make_query(domain, "A")
+    start = perf_counter()
+    try:
+        response = dns.query.https(q, doh_url, timeout=timeout_sec)
+        elapsed_ms = (perf_counter() - start) * 1000.0
+        answer_ips = [
+            str(rr.address) for ans in response.answer for rr in ans if rr.rdtype == dns.rdatatype.A
+        ]
+        return {
+            "ok": True,
+            "ms": round(elapsed_ms, 3),
+            "query": domain,
+            "error": None,
+            "failure_kind": None,
+            "answer_ips": answer_ips,
+        }
+    except Exception as exc:  # noqa: BLE001
+        fkind = classify_dnspython_exception(exc) if isinstance(exc, dns.exception.DNSException) else "other"
+        return {
+            "ok": False,
+            "ms": None,
+            "query": domain,
+            "error": str(exc),
+            "failure_kind": fkind,
         }
 
 

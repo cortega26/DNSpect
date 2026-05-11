@@ -2,7 +2,11 @@ export type BenchmarkMode = 'quick' | 'standard' | 'exhaustive'
 
 export type Goal = 'speed' | 'security' | 'privacy' | 'ad-blocking' | 'family'
 
+export type BenchmarkProtocol = 'udp' | 'dot' | 'doh'
+
 export const GOALS: Goal[] = ['speed', 'security', 'privacy', 'ad-blocking', 'family']
+
+export const PROTOCOLS: BenchmarkProtocol[] = ['udp', 'dot', 'doh']
 
 export interface ProviderFeatures {
   filtering: string
@@ -84,6 +88,7 @@ export interface ResolverResult {
   provider_id: string
   provider_name: string
   engine: string
+  protocol: BenchmarkProtocol
   stats: ResolverStats
   samples: Sample[]
   sample_count?: number
@@ -103,6 +108,7 @@ export interface BenchmarkStatus {
   started_at: string
   finished_at: string | null
   mode: BenchmarkMode
+  protocol: BenchmarkProtocol
   timeout_sec: number
   runs: number
   engine: string | null

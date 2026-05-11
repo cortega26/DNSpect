@@ -75,6 +75,7 @@ def test_export_csv_keeps_stable_order_and_raw_numeric_values() -> None:
             "provider_id",
             "provider_name",
             "engine",
+            "protocol",
             "avg_ms",
             "median_ms",
             "p95_ms",
@@ -100,8 +101,8 @@ def test_export_csv_keeps_stable_order_and_raw_numeric_values() -> None:
             "max_rel_penalty",
             "is_unreliable",
         ]
-        assert rows[1][4] == "24.5"
-        assert rows[1][6] == "35.125"
+        assert rows[1][5] == "24.5"
+        assert rows[1][7] == "35.125"
         assert "24,5" not in rows[1]
     finally:
         with manager._lock:
