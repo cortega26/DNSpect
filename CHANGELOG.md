@@ -15,6 +15,7 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 - Backend: CI now tests Python 3.12 and 3.13 (dropped 3.11).
 - Frontend: Added `engines.node = "^24.0.0"` in package.json.
+- Fixed: Removed `ignoreDeprecations` from tsconfig.json — unsupported by TypeScript 5.8+ on Node 24.
 
 ## [1.1.0] - 2026-05-11
 
