@@ -15,9 +15,9 @@ anyio==4.12.1
     #   httpx
     #   starlette
     #   watchfiles
-bandit==1.9.3
-    # via dnspect-backend (pyproject.toml)
 backports-tarfile==1.2.0
+    # via dnspect-backend (pyproject.toml)
+bandit==1.9.3
     # via dnspect-backend (pyproject.toml)
 black==26.1.0
     # via dnspect-backend (pyproject.toml)
@@ -93,7 +93,7 @@ pytest==8.4.1
     # via dnspect-backend (pyproject.toml)
 python-dotenv==1.2.1
     # via uvicorn
-python-multipart==0.0.22
+python-multipart==0.0.28
     # via dnspect-backend (pyproject.toml)
 pytokens==0.4.1
     # via black
@@ -124,7 +124,7 @@ typing-inspection==0.4.2
     # via
     #   fastapi
     #   pydantic
-uvicorn==0.35.0
+uvicorn[standard]==0.35.0
     # via dnspect-backend (pyproject.toml)
 uvloop==0.22.1
     # via uvicorn
