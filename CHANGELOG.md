@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
-## [1.1.0] - 2026-05-09
+## [1.1.0] - 2026-05-11
 
 ### Highlights
 
@@ -13,6 +13,13 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 - Added: **Region-based provider grouping** — `region`, `country`, and `goals` fields on every provider; UI filters providers by detected region; region override selector in dashboard.
 - Added: **7 new DNS providers** — dns0.eu, CZ.NIC, Digitalcourage, AliDNS, DNSPod, Neustar, Comodo — expanding the catalog from 9 to 16 providers.
 - Added: **UI overhaul (May 2026)** — hero SVG illustration with decorative network graph, compact header with brand icon, redesigned controls with segmented mode/goal selectors, refined dark theme palette (lower contrast, cooler tones), layered shadow system, reduced border radii, tightened layout (max-width 1180→1000px), live ranking waiting animation, rank badges (#1/#2/#3), fade-in sections, and richer empty states.
+- Added: **Encrypted DNS benchmarking** — full DoT (DNS-over-TLS) and DoH (DNS-over-HTTPS) protocol support with protocol selector in dashboard controls, per-resolver capability filtering, dedicated query runners, and protocol reflected in results, ranking, CSV export, and history.
+- Added: **Provider catalog expansion to 50 resolvers** — grew from 16 to 50 providers with complete metadata (features, region, goals, tags) and protocol metadata (`dot_hostname`, `doh_url`).
+- Added: **Blocking efficacy metric** — benchmark against 9 known-blocked domains with sinkhole IP detection, per-resolver `blocking_efficacy`, `blocked_count`, `score_blocking`, and `normalized_blocking` fields. Full UI integration with blocking percentage badges.
+- Added: **DNSSEC validation detection** — per-resolver DNSSEC readiness check with `dnssec_validating` badge indicators in ranking and detail views.
+- Added: **NXDOMAIN hijacking detection** — probe against unique random `*.invalid` subdomains to detect forged responses, with warning badges in the UI.
+- Added: **Dashboard and history panels** — new `DashboardPanel` for benchmark overview and `RunHistoryPanel` sidebar for browsing past runs.
+- Added: **Protocol metadata in ranking** — per-row protocol badge (UDP/DoT/DoH) in ranking list with accent coloring.
 - Added: **~60 new translation keys** across ES/EN/PT covering goals, regions, provider counts, live ranking status, and empty state messages.
 - Added: **Optional GeoIP dependency** `maxminddb==2.7.0` under `[tool.poetry.extras] geoip` in `pyproject.toml`.
 - Accessibility: WCAG 2.2 improvements — proper `role` attributes on segmented controls, keyboard navigation in locale dropdown (`role=menuitemradio`, arrow keys), `aria-busy` on loading states, `focus-visible` ring refinements.
@@ -85,6 +92,43 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 - Added: Empty state body text in ChartsPanel (`filters.empty`).
 - Refined: Empty state icon stroke width and layout gap.
 
+#### Encrypted DNS Benchmarking
+
+- Added: `BenchmarkProtocol` enum (`udp`, `dot`, `doh`) in `models.py` with protocol field on `BenchmarkRequest`.
+- Added: `run_dot_query()` — DNS-over-TLS via `dns.query.tls()` with SNI support via `server_hostname`, port 853.
+- Added: `run_doh_query()` — DNS-over-HTTPS via `dns.query.https()` with URL-based routing, requires `httpx`.
+- Added: `_measure_with_protocol()` dispatcher routing queries to the appropriate protocol runner.
+- Added: `_resolver_supports_protocol()` — filters resolvers by checking `features.dot_hostname`/`features.doh_url` in provider metadata; UDP permitted for all resolvers.
+- Added: Protocol selector (segmented control) in `DashboardControls.tsx` — UDP/DoT/DoH options.
+- Added: Protocol badge in `ResolverRankingPanel.tsx` showing `UDP`/`DoT`/`DoH` per result row.
+- Added: `protocol` field to `BenchmarkStatus`, `ResolverResult`, CSV export columns, and history entries.
+- Added: `httpx==0.28.1` runtime dependency for DoH support.
+- Added: 11 integration tests in `test_encrypted_dns.py` covering DoT/DoH success, failure, filtering, and history.
+
+#### Blocking Efficacy, DNSSEC & NXDOMAIN Detection
+
+- Added: Blocking efficacy benchmark — 9 blocking test domains from `data/blocking_domains.txt` with sinkhole IP detection (`{"0.0.0.0"}` in `SINKHOLE_IPS`).
+- Added: `blocking_efficacy`, `blocked_count`, `blocking_test_count`, `score_blocking`, `normalized_blocking` fields to resolver stats.
+- Added: 4-tuple blocking scoring weights in `GOAL_WEIGHTS` — blocking-focused goals (ad-blocking, family) weight `blocking_efficacy` at 0.50/0.55.
+- Added: Per-resolver blocking percentage badge in ranking (`Bloqueo X%`) with full tooltip.
+- Added: DNSSEC validation detection — probes `dnssec-failed.domain` for each resolver, `dnssec_validating` boolean in results, success/danger badges in UI.
+- Added: NXDOMAIN hijacking detection — generates unique random `*.invalid` subdomains, detects resolvers returning forged A/AAAA records instead of NXDOMAIN, `nxdomain_hijack_detected` field with warning badges.
+- Added: Integration tests for blocking efficacy, DNSSEC validation, and NXDOMAIN hijacking.
+
+#### Provider Catalog Expansion
+
+- Added: 34 new DNS providers expanding the catalog from 16 to 50 total providers across all regions.
+- Added: Protocol metadata (`features.dot_hostname`, `features.doh_url`) to all providers for encrypted DNS support.
+- Added: Blocking classification tags (`features.blocking`) for ad-blocking and family goal filtering.
+- Added: Extended provider metadata with additional tags, notes, and region assignments.
+- Updated: ALL 50 providers with complete `goals`, `region`, `country` fields.
+
+#### Dashboard & History Panels
+
+- Added: `DashboardPanel` component — post-benchmark overview with key metrics at a glance.
+- Added: `RunHistoryPanel` component — collapsible sidebar listing past benchmark runs with timestamp and protocol markers.
+- Added: History panel integration with benchmark state management and navigation to previous results.
+
 #### CSS Architecture
 
 - Changed: Shadow system — replaced single `shadow-sm`/`shadow` with layered shadows (`shadow-sm`: 2 layers, `shadow`: 2 layers, new `shadow-lg`: 2 layers).
@@ -99,6 +143,13 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 - Fixed: Linux packaged binary startup crash (missing `backports.tarfile` in PyInstaller bundle).
 - Build/CI: Added packaged artifact smoke tests in CI/release to prevent regression.
+- Security: Upgraded `python-multipart` from 0.0.22 to 0.0.28 (CVE-2025-22134, CVE-2026-24486, CVE-2026-40347, CVE-2026-42561).
+- Security: Upgraded `pytest` from 8.4.1 to 9.0.3 (CVE-2025-71176).
+- Security: Upgraded `black` from 26.1.0 to 26.3.1 (CVE-2026-32274).
+- Security: Upgraded `Pygments` from 2.19.2 to 2.20.0 (CVE-2026-4539).
+- Security: Upgraded `python-dotenv` from 1.2.1 to 1.2.2 (CVE-2026-28684).
+- Security: Resolved all frontend npm transitive dependency vulnerabilities (lodash, vite, rollup, esbuild, postcss, minimatch, brace-expansion, picomatch, flatted).
+- Security: Frontend `npm audit` reports 0 vulnerabilities; backend `pip-audit` reports no known vulnerabilities.
 
 ## [1.0.0] - 2026-02-22
 
