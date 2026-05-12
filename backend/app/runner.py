@@ -387,7 +387,7 @@ class BenchmarkManager:
         if not result_path.exists():
             return None
         try:
-            data = json.loads(result_path.read_text(encoding="utf-8"))
+            data: dict[str, Any] = json.loads(result_path.read_text(encoding="utf-8"))
             return data
         except (json.JSONDecodeError, OSError):
             return None
@@ -803,7 +803,7 @@ def run_dnspython_query(resolver: str, domain: str, timeout_sec: float) -> dict[
     try:
         answers = dnsr.resolve(domain, "A")
         elapsed_ms = (perf_counter() - start) * 1000.0
-        answer_ips = [str(rr.address) for rr in answers]
+        answer_ips = [rr.to_text() for rr in answers]
         return {
             "ok": True,
             "ms": round(elapsed_ms, 3),
