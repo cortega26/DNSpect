@@ -5,12 +5,12 @@ Deterministic, local-first DNS resolver benchmarking with FastAPI + React.
 [![Release](https://github.com/cortega26/DNSpect/actions/workflows/release.yml/badge.svg)](https://github.com/cortega26/DNSpect/actions/workflows/release.yml)
 [![Version](https://img.shields.io/github/v/release/cortega26/DNSpect?display_name=tag)](https://github.com/cortega26/DNSpect/releases)
 [![License](https://img.shields.io/github/license/cortega26/DNSpect)](LICENSE)
-[![Python >=3.11](https://img.shields.io/badge/python-%3E%3D3.11-3776AB?logo=python&logoColor=white)](backend/pyproject.toml)
-[![Node 22.14.0](https://img.shields.io/badge/node-22.14.0-339933?logo=node.js&logoColor=white)](.github/workflows/ci.yml)
+[![Python >=3.13](https://img.shields.io/badge/python-%3E%3D3.13-3776AB?logo=python&logoColor=white)](backend/pyproject.toml)
+[![Node 24.x](https://img.shields.io/badge/node-24.x-339933?logo=node.js&logoColor=white)](.github/workflows/ci.yml)
 [![Security: Bandit](https://img.shields.io/badge/security-bandit%20(CI)-f59e0b)](.github/workflows/ci.yml)
 [![Security: Semgrep](https://img.shields.io/badge/security-semgrep%20(CI)-14b8a6)](.github/workflows/ci.yml)
 [![Code Quality: Ruff + mypy + ESLint + tsc](https://img.shields.io/badge/code%20quality-ruff%20%2B%20mypy%20%2B%20eslint%20%2B%20tsc-6366f1)](.github/workflows/ci.yml)
-[![Formatting: Ruff format + Black](https://img.shields.io/badge/formatting-ruff%20format%20%2B%20black-111827)](.github/workflows/ci.yml)
+[![Formatting: Ruff format](https://img.shields.io/badge/formatting-ruff%20format-111827)](.github/workflows/ci.yml)
 [![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20macOS%20%7C%20windows-0ea5e9)](.github/workflows/release.yml)
 [![Last Commit](https://img.shields.io/github/last-commit/cortega26/DNSpect)](https://github.com/cortega26/DNSpect/commits/main/)
 
@@ -146,8 +146,8 @@ Architecture deep dive: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 ## Installation
 ### Option A: Run from source (dev)
 Prerequisites:
-- Python `>=3.11`
-- Node.js `22.14.0` (CI pin)
+- Python `>=3.13`
+- Node.js `24.x`
 
 Linux/macOS:
 ```bash
