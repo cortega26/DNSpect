@@ -22,12 +22,19 @@ Most "DNS speed test" pages run from a remote browser context or cloud vantage p
 ## Features
 ### Core features
 - Local DNS benchmark API (`FastAPI`) and web UI (`React + Vite + TypeScript`).
+- **50 DNS providers** across all regions with complete metadata (goals, tags, features).
+- **Goal system** — five benchmark goals (`speed`, `security`, `privacy`, `ad-blocking`, `family`) with goal-aware scoring weights and provider filtering.
+- **Encrypted DNS benchmarking** — full DoT (DNS-over-TLS) and DoH (DNS-over-HTTPS) support with protocol selector in UI and capability filtering.
+- **Region-based provider grouping** — automatic continent detection via GeoIP (optional MaxMind database) or browser locale, with region override selector.
 - Resolver benchmarking with per-run query samples and progress reporting.
 - Engine selection:
   - `drill` on Linux when available.
   - `dnspython` fallback (including Windows).
 - Ranking metrics per resolver:
   - `avg`, `median`, `p95`, `min`, `max`, timeout/failure rates, consistency ratio.
+- **Blocking efficacy metric** — benchmark against 9 known-blocked domains with sinkhole IP detection, per-resolver blocking percentage.
+- **DNSSEC validation detection** — per-resolver readiness check with badge indicators.
+- **NXDOMAIN hijacking detection** — random-probe detection of resolvers forging responses for non-existent domains.
 - Deterministic ranking output and recommended resolver selection.
 - CSV and JSON export endpoints.
 - System DNS detection on Linux/macOS/Windows.
@@ -35,6 +42,9 @@ Most "DNS speed test" pages run from a remote browser context or cloud vantage p
 ### Advanced features
 - Guided "apply DNS" modal with platform-aware instructions and verification probe.
 - Live ranking panel during benchmark execution with motion budget controls.
+- **Dashboard panel** with post-benchmark overview metrics.
+- **Run history sidebar** for browsing and comparing past runs.
+- **Protocol badges** (UDP/DoT/DoH) in ranking and history views.
 - Optional sample inclusion (`include_samples=1`) for deep diagnostics.
 - Last-run persistence in browser storage with schema/version invalidation.
 - Runtime queue controls for concurrency and queued jobs via environment variables.
@@ -114,15 +124,20 @@ flowchart TD
   A[User Input from React UI] --> B[FastAPI Endpoint]
   B --> C[Pydantic Validation and Normalization]
   C --> D[BenchmarkManager Queue and State]
-  D --> E{Engine Selection}
-  E -->|Linux + drill available| F[drill Query Runner]
-  E -->|Windows or drill unavailable on macOS or Linux| G[dnspython Query Runner]
-  F --> H[Stats and Failure Classification]
-  G --> H
-  H --> I[Normalized Scoring and Ranking]
-  I --> J[Recommended Resolver Selection]
-  J --> K[API Response, JSON Export, CSV Export]
-  I --> L[(Optional Run Persistence)]
+  D --> E{Protocol Selection}
+  E -->|UDP| F{Engine Selection}
+  E -->|DoT| G[DoT Query Runner\nvia dns.query.tls]
+  E -->|DoH| H[DoH Query Runner\nvia dns.query.https]
+  F -->|Linux + drill available| I[drill Query Runner]
+  F -->|Windows or drill unavailable| J[dnspython Query Runner]
+  G --> K{Goal-Aware Scoring}
+  H --> K
+  I --> K
+  J --> K
+  K --> L[Normalized Scoring and Ranking]
+  L --> M[Recommended Resolver Selection]
+  M --> N[API Response, JSON Export, CSV Export]
+  L --> O[(Optional Run Persistence)]
 ```
 
 Detailed design notes: `docs/ARCHITECTURE.md`.
@@ -154,8 +169,9 @@ Release verification guide: `docs/RELEASE_VERIFY.md`.
 ## Usage Examples
 ### Start benchmark via UI
 - Open app.
-- Choose resolvers and mode (`quick`, `standard`, `exhaustive`).
-- Start benchmark and watch live ranking.
+- Choose resolvers, goal (`speed`, `security`, `privacy`, `ad-blocking`, `family`), and protocol (`UDP`, `DoT`, `DoH`).
+- Select mode (`quick`, `standard`, `exhaustive`).
+- Start benchmark and watch live ranking with protocol badges and blocking/DNSSEC indicators.
 - Export CSV/JSON when done.
 
 ### Start benchmark via API
@@ -166,6 +182,8 @@ curl -sS -X POST http://127.0.0.1:8000/api/benchmarks \
     "mode": "standard",
     "runs": 30,
     "timeout_sec": 2,
+    "goal": "speed",
+    "protocol": "dot",
     "resolvers": ["1.1.1.1", "8.8.8.8"],
     "queries": ["cloudflare.com", "google.com"]
   }'
@@ -193,15 +211,22 @@ cd frontend && npm run lint && npm run typecheck && npm test && npm run build
 | Dimension | Typical online checker | DNSpect |
 |---|---|---|
 | Measurement vantage point | Remote browser/cloud path | Your machine and network path |
-| DNS execution model | Often indirect/proxy-based checks | Real DNS lookups via `drill`/`dnspython` |
+| DNS execution model | Often indirect/proxy-based checks | Real DNS lookups via `drill`/`dnspython`/`dns.query.tls`/`dns.query.https` |
+| Protocol support | UDP only | UDP + DNS-over-TLS (DoT) + DNS-over-HTTPS (DoH) |
+| Scoring dimensions | Usually simple latency-only ranking | Latency + failure rate + stability + blocking efficacy + reliability guardrail |
+| Goal-aware scoring | None | 5 benchmark goals with weighted scoring (speed, security, privacy, ad-blocking, family) |
+| Security detection | None | DNSSEC validation, NXDOMAIN hijacking, blocking efficacy per resolver |
 | Determinism | May vary with server-side cohort/load | Deterministic ranking/scoring path with stable tie-breaks |
-| Input controls | Limited resolver/query control | Explicit resolvers, query list, run count, timeout, mode |
+| Input controls | Limited resolver/query control | Explicit resolvers, query list, run count, timeout, mode, protocol, goal |
 | Privacy | Traffic and metadata often leave local environment | Local-first operation; no telemetry codepath |
-| Reliability signaling | Usually simple latency-only ranking | Latency + failure + stability + reliability guardrail |
+| Provider catalog | Usually a handful of hardcoded resolvers | 50 providers across all regions with metadata |
 | Validation guarantees | Usually undocumented | Enforced request validation and hard workload bounds |
 
 ## Roadmap
 
+- [ ] Historical run comparison — side-by-side benchmark diffing
+- [ ] DNS leak detection — detect VPN/tunnel DNS leaks during benchmarking
+- [ ] Continuous monitoring mode — background daemon re-checking resolvers at intervals
 - [ ] Scheduled/recurring benchmarks with persistent history
 - [ ] Configurable alerting when a resolver degrades beyond threshold
 - [ ] CLI-only mode (headless, no UI dependency)
