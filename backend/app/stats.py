@@ -24,7 +24,7 @@ GOAL_WEIGHTS: dict[str, tuple[float, float, float, float]] = {
 
 DEFAULT_GOAL = "speed"
 
-SINKHOLE_IPS = {"0.0.0.0"}
+SINKHOLE_IPS = {"0.0.0.0"}  # nosec B104
 
 
 def parse_drill_query_time(output: str) -> float | None:

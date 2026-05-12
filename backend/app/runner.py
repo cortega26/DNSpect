@@ -698,7 +698,7 @@ class BenchmarkManager:
                 stats["blocking_test_count"] = blocking_raw["blocking_test_count"]
 
                 # NXDOMAIN hijacking detection
-                hijack_suffix = "".join(random.choices(string.ascii_lowercase, k=8))
+                hijack_suffix = "".join(random.choices(string.ascii_lowercase, k=8))  # nosec B311
                 hijack_domain = f"nxdomain-check-{hijack_suffix}.invalid"
                 hijack_sample = self._measure_with_protocol(
                     resolver=resolver,
