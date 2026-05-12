@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [1.2.0] - 2026-05-12
+
+### Changed
+
+- **Python 3.11 → 3.13**: Updated `requires-python`, ruff/black/mypy target versions, CI matrix (3.12/3.13), release workflow, and CLAUDE.md. No source changes required — all dependencies have cp313 wheels.
+- **Node 22 → 24**: Updated CI and release workflows to `24.x`, Flatpak SDK extension to `node24`, added `engines` field to `package.json`, updated CLAUDE.md.
+
+### Build/CI
+
+- Backend: CI now tests Python 3.12 and 3.13 (dropped 3.11).
+- Frontend: Added `engines.node = "^24.0.0"` in package.json.
+
 ## [1.1.0] - 2026-05-11
 
 ### Highlights

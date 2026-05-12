@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Backend
 ```bash
-# Install (requires Python >=3.11)
+# Install (requires Python >=3.13)
 cd backend && python3 -m venv .venv && source .venv/bin/activate && pip install -c constraints.txt -e .[dev]
 
 # Run dev server
@@ -33,7 +33,7 @@ cd backend && source .venv/bin/activate && pytest tests/test_stats.py::test_some
 
 ### Frontend
 ```bash
-# Install (requires Node 22)
+# Install (requires Node 24)
 cd frontend && npm ci
 
 # Dev server (default :5173)
@@ -62,7 +62,7 @@ bash scripts/dev.sh
 ## Project architecture
 
 ### Stack
-- **Backend**: FastAPI (Python 3.11+) with uvicorn, Pydantic v2, dnspython
+- **Backend**: FastAPI (Python 3.13+) with uvicorn, Pydantic v2, dnspython
 - **Frontend**: React 18 + Vite + TypeScript, Recharts (lazy-loaded, ~382 kB)
 
 ### Backend layout (`backend/app/`)

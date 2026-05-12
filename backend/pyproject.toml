@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dnspect-backend"
-version = "1.1.0"
+version = "1.2.0"
 description = "Backend API for DNSpect"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 license = "MIT"
 authors = [{ name = "DNSpect contributors" }]
 dependencies = [
@@ -49,7 +49,7 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 110
-target-version = "py311"
+target-version = "py313"
 extend-exclude = ["build"]
 
 [tool.ruff.lint]
@@ -58,7 +58,7 @@ ignore = ["N805", "UP045"]
 
 [tool.black]
 line-length = 110
-target-version = ["py311"]
+target-version = ["py313"]
 extend-exclude = '''
 (
   ^/build
@@ -66,7 +66,7 @@ extend-exclude = '''
 '''
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.13"
 files = ["app"]
 warn_return_any = true
 warn_unused_configs = true

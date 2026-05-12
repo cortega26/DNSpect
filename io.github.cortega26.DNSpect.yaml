@@ -3,7 +3,7 @@ runtime: org.freedesktop.Platform
 runtime-version: "24.08"
 sdk: org.freedesktop.Sdk
 sdk-extensions:
-  - org.freedesktop.Sdk.Extension.node22
+  - org.freedesktop.Sdk.Extension.node24
 command: dnspect-launcher
 finish-args:
   - --share=network
@@ -16,7 +16,7 @@ modules:
   - name: dnspect
     buildsystem: simple
     build-options:
-      append-path: /usr/lib/sdk/node22/bin
+      append-path: /usr/lib/sdk/node24/bin
       env:
         XDG_CACHE_HOME: /run/build/dnspect/flatpak-node/cache
         npm_config_cache: /run/build/dnspect/flatpak-node/npm-cache

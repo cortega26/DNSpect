@@ -48,7 +48,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 22.14.0
+          node-version: 24.x
           architecture: ${{ matrix.node_arch }}
           cache: npm
           cache-dependency-path: frontend/package-lock.json
@@ -63,7 +63,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.13"
           architecture: ${{ matrix.python_arch }}
           cache: pip
           cache-dependency-path: |
