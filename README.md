@@ -238,3 +238,7 @@ cd frontend && npm run lint && npm run typecheck && npm test && npm run build
 
 ## License
 MIT. See `LICENSE`.
+
+---
+
+Built and maintained by **Carlos Ortega** — automation, data systems, and web technical hygiene consulting. Portfolio and services: **[tooltician.com](https://tooltician.com/)**.
