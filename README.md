@@ -3,7 +3,7 @@ Deterministic, local-first DNS resolver benchmarking with FastAPI + React.
 
 *Part of the [Tooltician ecosystem](https://tooltician.com) — local-first DNS resolver benchmarking.*
 
-[![Tooltician](https://tooltician.com/badge.svg)](https://tooltician.com)
+[![Part of Tooltician](https://tooltician.com/badge.en.svg)](https://tooltician.com)
 [![CI](https://github.com/cortega26/DNSpect/actions/workflows/ci.yml/badge.svg)](https://github.com/cortega26/DNSpect/actions/workflows/ci.yml)
 [![Release](https://github.com/cortega26/DNSpect/actions/workflows/release.yml/badge.svg)](https://github.com/cortega26/DNSpect/actions/workflows/release.yml)
 [![Version](https://img.shields.io/github/v/release/cortega26/DNSpect?display_name=tag)](https://github.com/cortega26/DNSpect/releases)
