@@ -28,6 +28,7 @@ Most "DNS speed test" pages run from a remote browser context or cloud vantage p
 - **49 DNS providers** in the catalog with metadata (goals, tags, features) used for test selection.
 - **Scoring profiles** — five profiles (`speed`, `security`, `privacy`, `ad-blocking`, `family`) with goal-aware ranking weights. A scoring profile controls ranking policy; the immutable target snapshot records exactly which resolvers were measured. See `docs/PROFILE_MODEL.md`.
 - **Encrypted DNS benchmarking** — full DoT (DNS-over-TLS) and DoH (DNS-over-HTTPS) support with protocol selector in UI and capability filtering.
+- **Matched protocol comparison** — a single parent session measures one fixed common resolver set across UDP/DoT/DoH with the same query plan, then reports matched deltas. Resolvers missing a DoT hostname or DoH URL are excluded with a reason rather than guessed; results carry endpoint and transport caveats (local methodology, not a general privacy or performance claim). See `docs/PROTOCOL_COMPARISON_METHODOLOGY.md`.
 - **Region target scoping** — a region choice selects the measured resolver set (auto-detected through the approved egress GeoIP flow, or chosen manually). See `docs/REGION_TARGETING.md`.
 - Resolver benchmarking with per-run query samples and progress reporting.
 - Engine selection:
