@@ -239,6 +239,7 @@ function App() {
   const pollSessionIdRef = useRef<number>(0)
   const activePollBenchmarkIdRef = useRef<string | null>(null)
   const startRequestSeqRef = useRef<number>(0)
+  const startInFlightRef = useRef<boolean>(false)
   const mountedRef = useRef<boolean>(false)
 
   useEffect(() => {
@@ -738,6 +739,9 @@ function App() {
   }
 
   async function handleStart() {
+    if (startInFlightRef.current) return
+    startInFlightRef.current = true
+
     const requestSeq = startRequestSeqRef.current + 1
     startRequestSeqRef.current = requestSeq
 
@@ -788,6 +792,8 @@ function App() {
     } catch (e) {
       if (!shouldAcceptAsyncResult(requestSeq, startRequestSeqRef.current, mountedRef.current)) return
       setError(e instanceof Error ? e.message : t('error.benchmarkStart'))
+    } finally {
+      startInFlightRef.current = false
     }
   }
 
