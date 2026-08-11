@@ -102,6 +102,11 @@ jobs:
       - name: Frontend tests (vitest)
         run: npm test
 
+      - name: Browser regression tests (Playwright Chromium)
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e -- --project=chromium
+
   dependency-audit:
     name: dependency-audit
     runs-on: ubuntu-latest

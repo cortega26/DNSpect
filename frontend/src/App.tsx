@@ -240,6 +240,8 @@ function App() {
   const activePollBenchmarkIdRef = useRef<string | null>(null)
   const startRequestSeqRef = useRef<number>(0)
   const startInFlightRef = useRef<boolean>(false)
+  const selectRequestSeqRef = useRef<number>(0)
+  const verifyRequestSeqRef = useRef<number>(0)
   const mountedRef = useRef<boolean>(false)
 
   useEffect(() => {
@@ -418,8 +420,11 @@ function App() {
 
   const handleSelectRun = useCallback(async (runId: string) => {
     stopPolling()
+    const requestSeq = selectRequestSeqRef.current + 1
+    selectRequestSeqRef.current = requestSeq
     try {
       const pastRun = await getBenchmark(runId)
+      if (!shouldAcceptAsyncResult(requestSeq, selectRequestSeqRef.current, mountedRef.current)) return
       setStatus(pastRun)
       setBenchmarkId(runId)
       setViewingSavedRun(true)
@@ -428,6 +433,7 @@ function App() {
       setCopyStatus('idle')
       setSummaryCopyStatus('idle')
     } catch (e) {
+      if (!shouldAcceptAsyncResult(requestSeq, selectRequestSeqRef.current, mountedRef.current)) return
       setError(e instanceof Error ? e.message : t('error.benchmarkLoad'))
     }
   }, [stopPolling, t])
@@ -744,6 +750,8 @@ function App() {
 
     const requestSeq = startRequestSeqRef.current + 1
     startRequestSeqRef.current = requestSeq
+    selectRequestSeqRef.current += 1
+    verifyRequestSeqRef.current += 1
 
     setError(null)
     setSelectedResult(null)
@@ -817,6 +825,7 @@ function App() {
 
   function applyRecommendation() {
     if (!primaryResult) return
+    verifyRequestSeqRef.current += 1
     setGuidedApplyOpen(true)
     setGuidedCopyStatus('idle')
     setGuidedVerifyError(null)
@@ -850,6 +859,8 @@ function App() {
 
   async function handleGuidedVerify() {
     if (!primaryResult) return
+    const requestSeq = verifyRequestSeqRef.current + 1
+    verifyRequestSeqRef.current = requestSeq
     setGuidedVerifyError(null)
     setGuidedVerification(null)
     setIsVerifyingGuided(true)
@@ -881,6 +892,7 @@ function App() {
         runs_per_resolver: 4,
         timeout_sec: 1.5,
       })
+      if (!shouldAcceptAsyncResult(requestSeq, verifyRequestSeqRef.current, mountedRef.current)) return
       const parsed = parseProbeResponse(probePayload)
       const recommendedProbe = parsed.get(primaryResult.resolver) ?? null
       const currentProbe = currentResolver ? parsed.get(currentResolver) ?? null : null
@@ -899,9 +911,12 @@ function App() {
         sampleSize,
       })
     } catch (e) {
+      if (!shouldAcceptAsyncResult(requestSeq, verifyRequestSeqRef.current, mountedRef.current)) return
       setGuidedVerifyError(e instanceof Error ? e.message : t('applyGuide.verifyUnknownError'))
     } finally {
-      setIsVerifyingGuided(false)
+      if (requestSeq === verifyRequestSeqRef.current) {
+        setIsVerifyingGuided(false)
+      }
     }
   }
 
@@ -968,22 +983,30 @@ function App() {
   }
 
   function handleSelectResult(result: ResolverResult) {
+    selectRequestSeqRef.current += 1
     setSelectedResult(result)
   }
 
   async function handleLoadSamples() {
     if (!benchmarkId || !selectedResult || selectedResult.samples.length > 0 || loadingSamples) return
+    const requestSeq = selectRequestSeqRef.current + 1
+    selectRequestSeqRef.current = requestSeq
+    const targetResolver = selectedResult.resolver
     setLoadingSamples(true)
     try {
       const full = await getBenchmark(benchmarkId, true)
-      const resolved = full.results?.find((row) => row.resolver === selectedResult.resolver)
+      if (!shouldAcceptAsyncResult(requestSeq, selectRequestSeqRef.current, mountedRef.current)) return
+      const resolved = full.results?.find((row) => row.resolver === targetResolver)
       if (resolved) {
         setSelectedResult(resolved)
       }
     } catch (e) {
+      if (!shouldAcceptAsyncResult(requestSeq, selectRequestSeqRef.current, mountedRef.current)) return
       setError(e instanceof Error ? e.message : t('error.samples'))
     } finally {
-      setLoadingSamples(false)
+      if (requestSeq === selectRequestSeqRef.current) {
+        setLoadingSamples(false)
+      }
     }
   }
 
