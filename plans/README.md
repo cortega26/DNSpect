@@ -21,6 +21,14 @@ status once a plan has passed its own done criteria.
 **All 18 plans complete.** The improvement backlog from the deep review is
 fully implemented and merged to main.
 
+**Roadmap wave (plans 019-022)** — written against commit `087e5ff` by the
+improve-skill direction audit on 2026-08-11. 019 and 020 are build plans; 021
+and 022 are design spikes (design doc + disposable prototype module under
+`backend/tests/`, no production code). The wave targets the README roadmap
+items and the stated-but-undelivered DoQ claim. Status rows for 019-022 are
+maintained by the coordinating reviewer; completed plans are archived with
+`make plans-archive`.
+
 ## Recommended execution order
 
 The waves show dependency-safe parallelism, not a requirement to batch every
@@ -59,6 +67,41 @@ priority describes expected impact, effort is an implementation estimate.
 | [016 — documentation contract](archive/016-documentation-contract.md) | P2 / M | 001, 003, 004, 006, 011, 013 | **Complete** — `8a54401` |
 | [017 — profile-aware history comparison](archive/017-profile-aware-history-comparison.md) | P3 / L | 009, 010, 014, 015, 016 | **Complete** — `80248ce` |
 | [018 — controlled protocol comparison](archive/018-controlled-protocol-comparison.md) | P3 / L | 009, 010, 012, 014, 015, 016, 017 | **Complete** — `ba24025` |
+| [019 — backend CSV diagnostics parity](019-backend-csv-diagnostics-parity.md) | P2 / S | — | **DONE** — implemented in worktree `/tmp/opencode/dnspect-019` (branch `plan/019-backend-csv-diagnostics-parity`, commits `66f65e2`, `814a912`); criteria re-verified by reviewer; **merge pending user decision** |
+| [020 — headless CLI benchmark](020-headless-cli-benchmark.md) | P2 / M | 019 | TODO |
+| [021 — monitoring mode design spike](021-monitoring-mode-design-spike.md) | P1 / L | — | TODO |
+| [022 — DNS-over-QUIC design spike](022-dns-over-quic-design-spike.md) | P2 / L | — | TODO |
+
+## Roadmap wave dependency notes (019-022)
+
+- **020 requires 019**: the CLI's `--format csv` output consumes
+  `app/export.py` (`EXPORT_CSV_COLUMNS` / `build_csv`) created by 019; 020's
+  done criteria assume the file exists.
+- **021 is independent** but its "watch protocols" decision should be
+  revisited after 022 lands; **022 is independent** and carries a maintainer
+  decision gate (DoQ in the frozen comparison methodology vs. standalone).
+- **Decision gates in the wave**: 022 requires maintainer approval of the
+  comparison-contract option and the `aioquic` dependency strategy before any
+  build plan proceeds; 021's alert-channel choice must not add off-device
+  egress without the plan-004 policy process.
+- Execution order: 019 → 020 first (cheap, self-contained), then 021/022
+  spikes in either order.
+
+## Reaudit checkpoint (2026-08-11)
+
+The deep audit ran against `e09fd2d`; all 18 plans since merged. A full
+reaudit is intentionally **not** run before this wave — the spikes are the
+investigation, and the build plans are small or test-gated. Instead:
+
+1. **Before the build plans that follow the 021/022 spikes** (scheduler in
+   production code, DoQ implementation): run a targeted `standard` audit of
+   the post-`e09fd2d` churn — the protocol-comparison state machine,
+   history/compare endpoints, and the new frontend hooks (`useRunComparison`,
+   `useRunHistory`, `useProtocolComparison`, `useBenchmarkSession`) — plus a
+   dependency pass (`pip-audit`) once `aioquic` enters `pyproject.toml`.
+2. **A full `deep` reaudit** is recommended right before the next release
+   (v1.4.0): monitoring + DoQ would be the largest change since 1.3.0, and
+   the audit then has design docs plus working code to judge.
 
 ## Required decision gates
 
@@ -90,6 +133,16 @@ with the project contract or would create unsupported claims:
 - Telemetry, external analytics, or a change to network-egress behavior without
   the explicit policy decision required by plan 004.
 - Replacing lazy-loaded Recharts with a heavier eager visualization dependency.
+
+## Roadmap wave — considered and rejected (2026-08-11)
+
+- Shareable/HTML result reports: conflicts with the local-first ethos; JSON/CSV
+  export already covers the data-out need.
+- Electron shell rebuild: the shipped GTK/WebKit2 shell + Flatpak packaging
+  already resolves the desktop-app goal from `.local-plans/`.
+- Catalog growth for Oceania/Africa scopes: data entry with a closed target
+  scope union (explicit product decision in `docs/REGION_TARGETING.md`);
+  revisit only if monitoring/catalog churn justifies it.
 
 ## Completion protocol
 
