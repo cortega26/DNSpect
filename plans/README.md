@@ -68,7 +68,7 @@ priority describes expected impact, effort is an implementation estimate.
 | [017 — profile-aware history comparison](archive/017-profile-aware-history-comparison.md) | P3 / L | 009, 010, 014, 015, 016 | **Complete** — `80248ce` |
 | [018 — controlled protocol comparison](archive/018-controlled-protocol-comparison.md) | P3 / L | 009, 010, 012, 014, 015, 016, 017 | **Complete** — `ba24025` |
 | [019 — backend CSV diagnostics parity](019-backend-csv-diagnostics-parity.md) | P2 / S | — | **DONE** — implemented in worktree `/tmp/opencode/dnspect-019` (branch `plan/019-backend-csv-diagnostics-parity`, commits `66f65e2`, `814a912`); criteria re-verified by reviewer; **merge pending user decision** |
-| [020 — headless CLI benchmark](020-headless-cli-benchmark.md) | P2 / M | 019 | TODO |
+| [020 — headless CLI benchmark](020-headless-cli-benchmark.md) | P2 / M | 019 | **DONE** — implemented in worktree `/tmp/opencode/dnspect-020` (branch `plan/020-headless-cli-benchmark`, commits `4a3f732`, `f3caa56`, `4315f21`, `93faf7d`); criteria re-verified by reviewer; **merge pending user decision** |
 | [021 — monitoring mode design spike](021-monitoring-mode-design-spike.md) | P1 / L | — | TODO |
 | [022 — DNS-over-QUIC design spike](022-dns-over-quic-design-spike.md) | P2 / L | — | TODO |
 
