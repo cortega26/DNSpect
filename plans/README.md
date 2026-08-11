@@ -18,8 +18,8 @@ status once a plan has passed its own done criteria.
 
 ## Status snapshot (2026-08-11)
 
-**9 of 18 plans complete.** Remaining: 004, 009, 010, 012, 014, 015, 016, 017,
-018.
+**16 of 18 plans complete.** Remaining: 017, 018 (deliberately deferred
+roadmap capabilities per the decision gates below).
 
 ## Recommended execution order
 
@@ -44,21 +44,21 @@ priority describes expected impact, effort is an implementation estimate.
 | [001 — DNS response semantics](001-dns-response-semantics.md) | P1 / M | — | **Complete** — `f97fe72` |
 | [002 — benchmark work budget](002-benchmark-work-budget.md) | P1 / M | 001 | **Complete** — `6a2dba5` |
 | [003 — profile and target model](003-profile-target-model.md) | P1 / L | — | **Complete** — `3e3c390` |
-| [004 — region targeting and egress](004-region-targeting-and-egress.md) | P1 / L | 003 | Planned — decision gate (partially resolved) |
+| [004 — region targeting and egress](004-region-targeting-and-egress.md) | P1 / L | 003 | **Complete** — `871bc46` |
 | [005 — run-history integrity](005-run-history-integrity.md) | P2 / M | 003 | **Complete** — `ed35ef1` |
 | [006 — provider-data invariants](006-provider-data-invariants.md) | P1 / M | 001 | **Complete** — `64143ad` |
 | [007 — frontend workflow ownership](007-frontend-workflow-ownership.md) | P1 / M | 003 | **Complete** — `37bfbfa` |
 | [008 — results presentation correctness](008-results-presentation-correctness.md) | P1 / M | — | **Complete** — `f58b8b8` |
-| [009 — accessibility and i18n contract](009-accessibility-i18n-contract.md) | P1 / M | 004, 010 | Planned |
-| [010 — browser regression coverage](010-browser-regression-coverage.md) | P1 / M | 007 | Planned — unblocked |
+| [009 — accessibility and i18n contract](009-accessibility-i18n-contract.md) | P1 / M | 004, 010 | **Complete** — `380a4b2` |
+| [010 — browser regression coverage](010-browser-regression-coverage.md) | P1 / M | 007 | **Complete** — `d992666` |
 | [011 — dependency security remediation](011-dependency-security-remediation.md) | P1 / L | — | **Complete** — `3980105` |
-| [012 — Flatpak release parity](012-flatpak-release-parity.md) | P1 / L | 011 | Planned — release decision gate |
+| [012 — Flatpak release parity](012-flatpak-release-parity.md) | P1 / L | 011 | **Complete** — `ff026c2` |
 | [013 — Windows release verification](013-windows-release-verification.md) | P1 / M | 011 | **Complete** — `45ba4fb` |
-| [014 — backend boundary hardening](014-backend-boundary-hardening.md) | P1 / M | 005 | Planned — unblocked |
-| [015 — frontend orchestration refactor](015-frontend-orchestration-refactor.md) | P2 / L | 005, 007, 010 | Planned — waits on 010 |
-| [016 — documentation contract](016-documentation-contract.md) | P2 / M | 001, 003, 004, 006, 011, 013 | Planned — waits on 004 decision record |
-| [017 — profile-aware history comparison](017-profile-aware-history-comparison.md) | P3 / L | 009, 010, 014, 015, 016 | Planned |
-| [018 — controlled protocol comparison](018-controlled-protocol-comparison.md) | P3 / L | 009, 010, 012, 014, 015, 016, 017 | Planned |
+| [014 — backend boundary hardening](014-backend-boundary-hardening.md) | P1 / M | 005 | **Complete** — `3782ab0` |
+| [015 — frontend orchestration refactor](015-frontend-orchestration-refactor.md) | P2 / L | 005, 007, 010 | **Complete** — `6b2896d` |
+| [016 — documentation contract](016-documentation-contract.md) | P2 / M | 001, 003, 004, 006, 011, 013 | **Complete** — `8a54401` |
+| [017 — profile-aware history comparison](017-profile-aware-history-comparison.md) | P3 / L | 009, 010, 014, 015, 016 | Planned — deferred roadmap |
+| [018 — controlled protocol comparison](018-controlled-protocol-comparison.md) | P3 / L | 009, 010, 012, 014, 015, 016, 017 | Planned — deferred roadmap |
 
 ## Required decision gates
 
