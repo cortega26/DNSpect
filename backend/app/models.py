@@ -3,9 +3,9 @@ from __future__ import annotations
 import ipaddress
 import re
 from enum import Enum
-from typing import Optional
+from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
 HOSTNAME_RE = re.compile(r"^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*\.?$")
 
@@ -234,3 +234,166 @@ class RunComparisonResponse(BaseModel):
     rows: list[RunComparisonRow]
     missing_baseline_results: list[str]
     missing_candidate_results: list[str]
+
+
+CANONICAL_PROTOCOL_ORDER = (BenchmarkProtocol.udp, BenchmarkProtocol.dot, BenchmarkProtocol.doh)
+
+
+class ProtocolComparisonRequest(BaseModel):
+    """One parent session measuring one common target set across transports."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    protocols: list[BenchmarkProtocol] = Field(min_length=2, max_length=3)
+    target_snapshot: TargetSnapshot
+    scoring_profile: BenchmarkGoal
+    mode: BenchmarkMode = BenchmarkMode.standard
+    queries: Optional[list[str]] = None
+    runs: Optional[int] = Field(default=None, ge=1, le=300)
+    timeout_sec: float = Field(default=2.0, gt=0.1, le=10.0)
+
+    @field_validator("protocols")
+    @classmethod
+    def validate_protocols(cls, values: list[BenchmarkProtocol]) -> list[BenchmarkProtocol]:
+        seen: set[str] = set()
+        for protocol in values:
+            if protocol.value in seen:
+                raise ValueError("Protocolos duplicados en comparación")
+            seen.add(protocol.value)
+        return [protocol for protocol in CANONICAL_PROTOCOL_ORDER if protocol in values]
+
+    @field_validator("target_snapshot")
+    @classmethod
+    def validate_target_snapshot(cls, value: TargetSnapshot) -> TargetSnapshot:
+        normalized = _normalize_resolvers(value.resolver_ips, max_items=256)
+        if not normalized:
+            raise ValueError("Sin resolvers en el snapshot de destino")
+        provider_ids: dict[str, str] | None = None
+        if value.provider_ids is not None:
+            provider_ids = {ip: pid for ip, pid in value.provider_ids.items() if ip in normalized}
+        return TargetSnapshot(
+            resolver_ips=normalized,
+            selection_source=value.selection_source,
+            provider_ids=provider_ids,
+        )
+
+    @field_validator("queries")
+    @classmethod
+    def validate_queries(cls, values: Optional[list[str]]) -> Optional[list[str]]:
+        return _normalize_queries(values, max_items=256)
+
+    def effective_runs(self) -> int:
+        if self.runs is not None:
+            return min(max(self.runs, 1), 300)
+        return MODE_DEFAULT_RUNS[self.mode]
+
+
+class ProtocolExclusion(BaseModel):
+    resolver: str
+    protocol: BenchmarkProtocol
+    code: str
+
+
+class ProtocolEndpointIdentity(BaseModel):
+    resolver: str
+    udp_resolver_ip: str
+    dot_hostname: str | None
+    doh_url: str | None
+
+
+class ProtocolComparisonPreflightResponse(BaseModel):
+    canonical_protocols: list[BenchmarkProtocol]
+    requested_target_snapshot: TargetSnapshot
+    common_eligible_target_snapshot: TargetSnapshot | None
+    exclusions: list[ProtocolExclusion]
+    endpoint_identities: list[ProtocolEndpointIdentity]
+    normal_query_plan_sha256: str
+    normal_query_count: int
+    blocking_query_plan_sha256: str
+    blocking_query_count: int
+    effective_runs: int
+    timeout_sec: float
+    total_attempts: int
+    estimated_duration_sec: float
+    admissible: bool
+    admission_reason_codes: list[
+        Literal["no_common_targets", "attempt_budget_exceeded", "duration_budget_exceeded"]
+    ]
+
+
+class ProtocolComparisonProgress(BaseModel):
+    current: int
+    total: int
+    current_protocol: BenchmarkProtocol | None
+    current_resolver: str | None
+    last_sample_at: int | None
+    avg_latency_ms: float | None
+
+
+class ProtocolComparisonManifest(BaseModel):
+    manifest_version: int
+    scoring_profile: str
+    requested_target_snapshot: TargetSnapshot
+    common_eligible_target_snapshot: TargetSnapshot
+    canonical_protocols: list[BenchmarkProtocol]
+    normal_query_plan_sha256: str
+    normal_query_count: int
+    blocking_query_plan_sha256: str
+    blocking_query_count: int
+    diagnostic_policy_version: str
+    diagnostic_plan_sha256: str
+    effective_runs: int
+    timeout_sec: float
+    endpoint_identities: list[ProtocolEndpointIdentity]
+
+
+class ProtocolSubrunError(BaseModel):
+    code: str
+    message: str
+
+
+class ProtocolSubrunResult(BaseModel):
+    protocol: BenchmarkProtocol
+    status: Literal["done", "failed"]
+    complete: bool
+    error: ProtocolSubrunError | None
+    results: list[dict[str, Any]]
+
+
+class ProtocolMetrics(BaseModel):
+    median_ms: float | None
+    p95_ms: float | None
+    success_rate: float | None
+    failure_rate: float | None
+    blocking_efficacy: float | None
+    score_total: float | None
+
+
+class ProtocolMetricDeltas(ProtocolMetrics):
+    pass
+
+
+class ProtocolDeltaRow(BaseModel):
+    resolver: str
+    baseline: ProtocolMetrics | None
+    candidate: ProtocolMetrics | None
+    deltas: ProtocolMetricDeltas
+
+
+class ProtocolDeltaPair(BaseModel):
+    baseline_protocol: BenchmarkProtocol
+    candidate_protocol: BenchmarkProtocol
+    rows: list[ProtocolDeltaRow]
+
+
+class ProtocolComparisonStatusResponse(BaseModel):
+    comparison_id: str
+    status: Literal["queued", "running", "done", "failed"]
+    complete: bool
+    error: str | None
+    run_storage_warning: str | None
+    progress: ProtocolComparisonProgress
+    manifest: ProtocolComparisonManifest
+    exclusions: list[ProtocolExclusion]
+    subruns: list[ProtocolSubrunResult]
+    delta_pairs: list[ProtocolDeltaPair]

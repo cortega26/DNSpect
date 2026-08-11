@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from app.providers import load_providers, resolver_provider_index
+from app.providers import is_valid_dns_hostname, is_valid_doh_url, load_providers, resolver_provider_index
 
 
 def _write_fixture(tmp_path: Path, content: list[dict]) -> Path:
@@ -178,3 +178,27 @@ def test_packaged_catalog_loads() -> None:
     assert len(index) > 0
     assert "8.20.247.20" in index
     assert index["8.20.247.20"]["id"] == "comodo"
+
+
+def test_dns_hostname_validation() -> None:
+    for valid in (
+        "dns.google",
+        "one.one.one.one",
+        "dns.quad9.net",
+        "unfiltered.adguard-dns.com",
+        "dot.example.co.uk",
+    ):
+        assert is_valid_dns_hostname(valid), valid
+    for invalid in ("", "   ", "not a hostname", "-leading.example", "trailing-.example", "bad host.com"):
+        assert not is_valid_dns_hostname(invalid), invalid
+
+
+def test_doh_url_validation() -> None:
+    for valid in (
+        "https://dns.google/dns-query",
+        "https://cloudflare-dns.com/dns-query",
+        "https://doh.quad9.net/dns-query?x=1",
+    ):
+        assert is_valid_doh_url(valid), valid
+    for invalid in ("", "   ", "http://dns.example.com/dns-query", "not-a-url", "https://", "ftp://x.com"):
+        assert not is_valid_doh_url(invalid), invalid

@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from .models import HOSTNAME_RE
+
 
 def _resolve_data_root() -> Path:
     override = os.getenv("DNS_SPEED_LAB_DATA_DIR")
@@ -124,3 +126,17 @@ def resolver_provider_index(providers: list[dict[str, Any]]) -> dict[str, dict[s
                 )
             index[ip] = provider
     return index
+
+
+def is_valid_dns_hostname(hostname: str) -> bool:
+    """Syntactic DNS hostname check for comparison-time DoT endpoints."""
+    return bool(HOSTNAME_RE.match(hostname))
+
+
+def is_valid_doh_url(url: str) -> bool:
+    """Absolute HTTPS check for comparison-time DoH endpoints (plan-006 shape)."""
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return False
+    return parsed.scheme == "https" and bool(parsed.hostname)
