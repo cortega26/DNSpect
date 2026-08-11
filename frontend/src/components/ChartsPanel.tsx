@@ -4,8 +4,9 @@ import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis
 
 import { useI18n } from '@/lib/useI18n'
 import type { ResolverResult } from '@/lib/types'
+import { colorForValue, getMetricSpec, type ChartMetricKind } from '@/lib/chartPresentation'
 
-type ChartView = 'median' | 'p95' | 'reliability' | 'blocking'
+type ChartView = ChartMetricKind
 
 interface Props {
   results: ResolverResult[]
@@ -32,15 +33,6 @@ interface BarEntry {
   rawValue: number | null
   failureRate: number
   unit: string
-}
-
-function performanceColor(value: number | null, sortedValues: number[]): string {
-  if (value === null || sortedValues.length < 3) return 'var(--accent)'
-  const thresholdLow = sortedValues[Math.floor(sortedValues.length / 3)]
-  const thresholdHigh = sortedValues[Math.floor((sortedValues.length * 2) / 3)]
-  if (value <= thresholdLow) return 'var(--success)'
-  if (value <= thresholdHigh) return 'var(--warning)'
-  return 'var(--danger)'
 }
 
 function CustomTooltip({ active, payload, label }: TooltipProps<number, string>) {
@@ -86,15 +78,14 @@ export function ChartsPanel({ results }: Props) {
     return results.slice(0, topN)
   }, [results, topN])
 
+  const metricSpec = useMemo(() => getMetricSpec(chartView), [chartView])
+
   const bars = useMemo(() => {
     return limitedResults.map((result) => {
       let value: number | null = null
       if (chartView === 'median') value = result.stats.median_ms
       else if (chartView === 'p95') value = result.stats.p95_ms
-      else if (chartView === 'reliability')
-        value = result.stats.success_rate !== null ? result.stats.success_rate * 100 : null
-      else if (chartView === 'blocking')
-        value = result.stats.blocking_efficacy !== null ? result.stats.blocking_efficacy * 100 : null
+      else value = metricSpec.extractValue(result.stats.success_rate, result.stats.blocking_efficacy)
 
       return {
         dns: result.resolver,
@@ -102,16 +93,15 @@ export function ChartsPanel({ results }: Props) {
         value,
         rawValue: value,
         failureRate: result.stats.failure_rate,
-        unit: chartView === 'median' || chartView === 'p95' ? ' ms' : '%',
+        unit: metricSpec.yAxisUnit,
       } as BarEntry
     })
       .filter((b) => b.value !== null)
-      .sort((a, b) =>
-        chartView === 'blocking'
-          ? (b.value ?? -Infinity) - (a.value ?? -Infinity)
-          : (a.value ?? Infinity) - (b.value ?? Infinity),
-      )
-  }, [limitedResults, chartView])
+      .sort((a, b) => {
+        const dir = metricSpec.sortDirection === 'desc' ? -1 : 1
+        return ((a.value ?? 0) - (b.value ?? 0)) * dir
+      })
+  }, [limitedResults, chartView, metricSpec])
 
   const sortedValues = useMemo(() => bars.map((b) => b.value as number).filter((v) => v !== null), [bars])
 
@@ -171,14 +161,14 @@ export function ChartsPanel({ results }: Props) {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="dns" angle={-35} textAnchor="end" height={70} interval={0} stroke="var(--muted)" />
                 <YAxis
-                  unit={chartView === 'reliability' || chartView === 'blocking' ? '%' : ' ms'}
+                  unit={metricSpec.yAxisUnit}
                   stroke="var(--muted)"
-                  domain={chartView === 'reliability' ? [95, 100] : chartView === 'blocking' ? [0, 100] : ['auto', 'auto']}
+                  domain={metricSpec.yAxisDomain as [number | 'auto', number | 'auto']}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={48}>
                   {bars.map((entry, index) => (
-                    <Cell key={index} fill={performanceColor(entry.value, sortedValues)} />
+                    <Cell key={index} fill={colorForValue(entry.value, sortedValues, metricSpec.favorableDirection)} />
                   ))}
                 </Bar>
               </BarChart>

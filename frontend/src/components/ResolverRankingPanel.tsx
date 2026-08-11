@@ -1,6 +1,7 @@
 import { useI18n } from '@/lib/useI18n'
 import type { ResolverResult } from '@/lib/types'
 import { fmtMs, resolverBlockingScore, resolverReliabilityScore } from '@/lib/utils'
+import { formatRankLabel } from '@/lib/chartPresentation'
 
 interface Props {
   id?: string
@@ -31,12 +32,12 @@ export function ResolverRankingPanel({ id, results, emptyMessage, onSelect }: Pr
             {results.map((row, index) => {
               const reliabilityPct = (resolverReliabilityScore(row) * 100).toFixed(1)
               const scoreTotal = row.stats.score_total === null ? 'NA' : row.stats.score_total.toFixed(3)
-              const rankLabel = index === 0 ? '#' : index === 1 ? '#' : index === 2 ? '#' : `#${index + 1}`
+              const rankLabel = formatRankLabel(index + 1)
               return (
                 <li key={row.resolver} className={`ranking-row${index < 3 ? ` ranking-row-rank-${index + 1}` : ''}`}>
                   <div className="ranking-main">
                   <p className="ranking-line">
-                      <span className="ranking-rank">{rankLabel}{index + 1}</span> {row.provider_name} - {row.resolver}
+                      <span className="ranking-rank">{rankLabel}</span> {row.provider_name} - {row.resolver}
                       <span className="badge badge-protocol">{row.protocol === 'dot' ? t('protocol.dot') : row.protocol === 'doh' ? t('protocol.doh') : t('protocol.udp')}</span>
                       {row.stats.nxdomain_hijack_detected === true ? (
                         <span className="badge badge-danger" title={t('results.nxdomainHijacked')}>{t('results.nxdomainBadge')}</span>
