@@ -217,3 +217,125 @@ export interface RunComparisonResponse {
   missing_baseline_results: string[]
   missing_candidate_results: string[]
 }
+
+export type ProtocolComparisonAdmissionReason =
+  | 'no_common_targets'
+  | 'attempt_budget_exceeded'
+  | 'duration_budget_exceeded'
+
+export interface ProtocolComparisonStartPayload {
+  protocols: BenchmarkProtocol[]
+  target_snapshot: TargetSnapshot
+  scoring_profile: ScoringProfile
+  mode: BenchmarkMode
+  queries?: string[]
+  runs?: number
+  timeout_sec: number
+}
+
+export interface ProtocolEndpointIdentity {
+  resolver: string
+  udp_resolver_ip: string
+  dot_hostname: string | null
+  doh_url: string | null
+}
+
+export interface ProtocolExclusion {
+  resolver: string
+  protocol: BenchmarkProtocol
+  code: string
+}
+
+export interface ProtocolComparisonPreflight {
+  canonical_protocols: BenchmarkProtocol[]
+  requested_target_snapshot: TargetSnapshot
+  common_eligible_target_snapshot: TargetSnapshot | null
+  exclusions: ProtocolExclusion[]
+  endpoint_identities: ProtocolEndpointIdentity[]
+  normal_query_plan_sha256: string
+  normal_query_count: number
+  blocking_query_plan_sha256: string
+  blocking_query_count: number
+  effective_runs: number
+  timeout_sec: number
+  total_attempts: number
+  estimated_duration_sec: number
+  admissible: boolean
+  admission_reason_codes: ProtocolComparisonAdmissionReason[]
+}
+
+export interface ProtocolComparisonProgress {
+  current: number
+  total: number
+  current_protocol: BenchmarkProtocol | null
+  current_resolver: string | null
+  last_sample_at: number | null
+  avg_latency_ms: number | null
+}
+
+export interface ProtocolComparisonManifest {
+  manifest_version: number
+  scoring_profile: string
+  requested_target_snapshot: TargetSnapshot
+  common_eligible_target_snapshot: TargetSnapshot
+  canonical_protocols: BenchmarkProtocol[]
+  normal_query_plan_sha256: string
+  normal_query_count: number
+  blocking_query_plan_sha256: string
+  blocking_query_count: number
+  diagnostic_policy_version: string
+  diagnostic_plan_sha256: string
+  effective_runs: number
+  timeout_sec: number
+  endpoint_identities: ProtocolEndpointIdentity[]
+}
+
+export interface ProtocolSubrunError {
+  code: string
+  message: string
+}
+
+export interface ProtocolSubrunResult {
+  protocol: BenchmarkProtocol
+  status: 'done' | 'failed'
+  complete: boolean
+  error: ProtocolSubrunError | null
+  results: ResolverResult[]
+}
+
+export interface ProtocolMetrics {
+  median_ms: number | null
+  p95_ms: number | null
+  success_rate: number | null
+  failure_rate: number | null
+  blocking_efficacy: number | null
+  score_total: number | null
+}
+
+export type ProtocolMetricDeltas = ProtocolMetrics
+
+export interface ProtocolDeltaRow {
+  resolver: string
+  baseline: ProtocolMetrics | null
+  candidate: ProtocolMetrics | null
+  deltas: ProtocolMetricDeltas
+}
+
+export interface ProtocolDeltaPair {
+  baseline_protocol: BenchmarkProtocol
+  candidate_protocol: BenchmarkProtocol
+  rows: ProtocolDeltaRow[]
+}
+
+export interface ProtocolComparisonStatus {
+  comparison_id: string
+  status: 'queued' | 'running' | 'done' | 'failed'
+  complete: boolean
+  error: string | null
+  run_storage_warning: string | null
+  progress: ProtocolComparisonProgress
+  manifest: ProtocolComparisonManifest
+  exclusions: ProtocolExclusion[]
+  subruns: ProtocolSubrunResult[]
+  delta_pairs: ProtocolDeltaPair[]
+}

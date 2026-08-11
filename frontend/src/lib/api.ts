@@ -1,4 +1,4 @@
-import type { BenchmarkMode, BenchmarkProtocol, BenchmarkStatus, Goal, ProbeResponse, Provider, RunComparisonResponse, ScoringProfile, SystemDnsPayload, TargetSnapshot } from './types'
+import type { BenchmarkMode, BenchmarkProtocol, BenchmarkStatus, Goal, ProbeResponse, Provider, ProtocolComparisonPreflight, ProtocolComparisonStartPayload, ProtocolComparisonStatus, RunComparisonResponse, ScoringProfile, SystemDnsPayload, TargetSnapshot } from './types'
 import { API_BASE } from './utils'
 
 interface StartBenchmarkPayload {
@@ -122,6 +122,47 @@ export async function compareRuns(
   const query = new URLSearchParams({ baseline_id: baselineId, candidate_id: candidateId })
   const res = await fetch(`${API_BASE}/api/benchmarks/compare?${query.toString()}`, { signal })
   if (!res.ok) throw new Error('No se pudo comparar')
+  return res.json()
+}
+
+export async function preflightProtocolComparison(
+  payload: ProtocolComparisonStartPayload,
+  signal?: AbortSignal,
+): Promise<ProtocolComparisonPreflight> {
+  const res = await fetch(`${API_BASE}/api/protocol-comparisons/preflight`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal,
+  })
+  if (!res.ok) {
+    const detail = await safeError(res)
+    throw new Error(detail)
+  }
+  return res.json()
+}
+
+export async function startProtocolComparison(
+  payload: ProtocolComparisonStartPayload,
+): Promise<{ comparison_id: string }> {
+  const res = await fetch(`${API_BASE}/api/protocol-comparisons`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const detail = await safeError(res)
+    throw new Error(detail)
+  }
+  return res.json()
+}
+
+export async function getProtocolComparison(
+  comparisonId: string,
+  signal?: AbortSignal,
+): Promise<ProtocolComparisonStatus> {
+  const res = await fetch(`${API_BASE}/api/protocol-comparisons/${comparisonId}`, { signal })
+  if (!res.ok) throw new Error('No se pudo consultar comparación')
   return res.json()
 }
 

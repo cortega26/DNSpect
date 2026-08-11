@@ -189,4 +189,28 @@ describe('i18n copy contract gate', () => {
       ['comparison.metricSuccessRate', 'Taxa de sucesso'],
     ])
   })
+
+  it('protects protocol-comparison mode copy (ES/PT)', () => {
+    assertCopyContract('es', [
+      ['comparisonMode.toggle', 'Comparar protocolos (UDP/DoT/DoH)'],
+      ['comparisonMode.selectTwo', 'Selecciona al menos dos protocolos.'],
+      ['comparisonMode.exclusionReason.dot_hostname_missing', 'sin hostname DoT'],
+      ['comparisonMode.exclusionReason.doh_url_invalid', 'URL DoH inválida'],
+      ['comparisonMode.reason.no_common_targets', 'sin resolvers compatibles'],
+      ['protocolComparison.title', 'Comparación de protocolos'],
+      ['protocolComparison.statusPartial', 'Completada parcialmente'],
+      ['protocolComparison.deltaUnavailable', 'no disponible'],
+    ])
+
+    assertCopyContract('pt', [
+      ['comparisonMode.toggle', 'Comparar protocolos (UDP/DoT/DoH)'],
+      ['comparisonMode.selectTwo', 'Selecione pelo menos dois protocolos.'],
+      ['comparisonMode.exclusionReason.dot_hostname_missing', 'sem hostname DoT'],
+      ['comparisonMode.exclusionReason.doh_url_invalid', 'URL DoH inválida'],
+      ['comparisonMode.reason.no_common_targets', 'sem resolvers compatíveis'],
+      ['protocolComparison.title', 'Comparação de protocolos'],
+      ['protocolComparison.statusPartial', 'Concluída parcialmente'],
+      ['protocolComparison.deltaUnavailable', 'não disponível'],
+    ])
+  })
 })

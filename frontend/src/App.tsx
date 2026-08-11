@@ -11,10 +11,12 @@ import { RunComparisonPanel } from '@/components/RunComparisonPanel'
 import { RunHistoryPanel } from '@/components/RunHistoryPanel'
 import { useBenchmarkSession } from '@/hooks/useBenchmarkSession'
 import { useGuidedVerification } from '@/hooks/useGuidedVerification'
+import { useProtocolComparison } from '@/hooks/useProtocolComparison'
 import { useRunComparison } from '@/hooks/useRunComparison'
 import { useRunHistory } from '@/hooks/useRunHistory'
 
 const ChartsPanel = lazy(() => import('@/components/ChartsPanel').then((m) => ({ default: m.ChartsPanel })))
+const ProtocolComparisonPanel = lazy(() => import('@/components/ProtocolComparisonPanel').then((m) => ({ default: m.ProtocolComparisonPanel })))
 const ResolverDetailModal = lazy(() => import('@/components/ResolverDetailModal').then((m) => ({ default: m.ResolverDetailModal })))
 import { buildDnsClipboardText, buildGuidedDnsSet, detectPlatformGroup } from '@/lib/applyGuide'
 import { useI18n } from '@/lib/useI18n'
@@ -231,6 +233,21 @@ function App() {
     selectPair: selectComparisonPair,
     clear: clearComparison,
   } = comparison
+  const [comparisonOpen, setComparisonOpen] = useState<boolean>(false)
+  const [comparisonProtocols, setComparisonProtocols] = useState<BenchmarkProtocol[]>(['udp', 'dot'])
+  const protocolComparison = useProtocolComparison()
+  const {
+    preflight: comparisonPreflight,
+    preflightLoading: comparisonPreflightLoading,
+    preflightError: comparisonPreflightError,
+    comparison: protocolComparisonData,
+    comparisonId: protocolComparisonId,
+    comparisonLoading: protocolComparisonLoading,
+    comparisonError: protocolComparisonError,
+    runPreflight: runProtocolComparisonPreflight,
+    start: startProtocolComparisonRun,
+    clear: clearProtocolComparison,
+  } = protocolComparison
   const rankingPanelRef = useRef<HTMLElement | null>(null)
   const localeMenuRef = useRef<HTMLDivElement>(null)
   const resolverListRef = useRef<HTMLDivElement>(null)
@@ -340,6 +357,70 @@ function App() {
     })
     return catalog
   }, [providers, systemDns?.resolvers, t])
+
+  const protocolComparisonPayload = useMemo(() => {
+    if (!comparisonOpen || comparisonProtocols.length < 2) return null
+    const customQueries = parseQueries(queriesText)
+    const resolverIps = Array.from(selectedResolvers)
+    const scopeDerived = deriveTargetResolvers(providers, targetScope, systemDns)
+    const targetSnapshot = buildTargetSnapshot(
+      resolverIps,
+      { get: (ip) => resolverCatalog.get(ip)?.providerId ?? null },
+      selectionSourceFor(resolverIps, scopeDerived),
+    )
+    return {
+      protocols: comparisonProtocols,
+      target_snapshot: targetSnapshot,
+      scoring_profile: scoringProfile,
+      mode,
+      runs,
+      timeout_sec: timeoutSec,
+      ...(customQueries.length > 0 ? { queries: customQueries } : {}),
+    }
+  }, [
+    comparisonOpen,
+    comparisonProtocols,
+    mode,
+    providers,
+    queriesText,
+    resolverCatalog,
+    runs,
+    scoringProfile,
+    selectedResolvers,
+    systemDns,
+    targetScope,
+    timeoutSec,
+  ])
+
+  useEffect(() => {
+    if (!protocolComparisonPayload) return
+    runProtocolComparisonPreflight(protocolComparisonPayload)
+  }, [protocolComparisonPayload, runProtocolComparisonPreflight])
+
+  const protocolComparisonActive = Boolean(
+    protocolComparisonData?.status === 'queued' || protocolComparisonData?.status === 'running',
+  )
+
+  function handleToggleComparison() {
+    if (comparisonOpen) {
+      clearProtocolComparison()
+    }
+    setComparisonOpen((prev) => !prev)
+  }
+
+  function handleToggleComparisonProtocol(nextProtocol: BenchmarkProtocol) {
+    setComparisonProtocols((prev) => {
+      if (prev.includes(nextProtocol)) {
+        return prev.filter((protocol) => protocol !== nextProtocol)
+      }
+      return [...prev, nextProtocol]
+    })
+  }
+
+  function handleStartComparison() {
+    if (!protocolComparisonPayload) return
+    void startProtocolComparisonRun(protocolComparisonPayload)
+  }
   const selectedResolverCatalog = useMemo(
     () =>
       Array.from(selectedResolvers)
@@ -1053,6 +1134,15 @@ function App() {
           onStart={() => {
             void handleStart()
           }}
+          comparisonOpen={comparisonOpen}
+          comparisonProtocols={comparisonProtocols}
+          comparisonPreflight={comparisonPreflight}
+          comparisonPreflightLoading={comparisonPreflightLoading}
+          comparisonPreflightError={comparisonPreflightError}
+          comparisonActive={protocolComparisonActive}
+          onToggleComparison={handleToggleComparison}
+          onToggleComparisonProtocol={handleToggleComparisonProtocol}
+          onStartComparison={handleStartComparison}
         />
       )}
 
@@ -1446,6 +1536,16 @@ function App() {
           error={comparisonError}
           onClear={clearComparison}
         />
+      )}
+
+      {protocolComparisonId && (
+        <Suspense fallback={null}>
+          <ProtocolComparisonPanel
+            comparison={protocolComparisonData}
+            loading={protocolComparisonLoading}
+            error={protocolComparisonError}
+          />
+        </Suspense>
       )}
 
       {selectedResult && (
