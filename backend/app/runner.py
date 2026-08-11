@@ -13,11 +13,11 @@ import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from time import perf_counter
-from typing import Any
+from typing import Any, Literal
 
 import dns.exception
 import dns.message
@@ -29,17 +29,25 @@ from pydantic import ValidationError
 
 from .detect_dns import detect_system_dns
 from .models import (
+    BenchmarkProtocol,
     BenchmarkRequest,
     ComparisonReasonCode,
     ProbeRequest,
+    ProtocolComparisonPreflightResponse,
+    ProtocolComparisonRequest,
+    ProtocolEndpointIdentity,
+    ProtocolExclusion,
     RunComparisonDeltas,
     RunComparisonMetrics,
     RunComparisonResponse,
     RunComparisonRow,
     RunManifest,
+    TargetSnapshot,
 )
 from .providers import (
     build_default_resolvers,
+    is_valid_dns_hostname,
+    is_valid_doh_url,
     load_blocking_domains,
     load_default_queries,
     load_providers,
@@ -60,6 +68,13 @@ RESPONSE_SEMANTICS_VERSION = "dns-response-v1"
 SCORING_SEMANTICS_VERSION = "score-v1"
 NORMAL_QUERY_SCHEDULE_VERSION = "round-robin-v1"
 DIAGNOSTIC_POLICY_VERSION = "random-nxdomain-v1"
+
+PROTOCOL_COMPARISON_MANIFEST_VERSION = 1
+PROTOCOL_COMPARISON_DIAGNOSTIC_POLICY_VERSION = "protocol-v1"
+
+COMPARISON_ADMISSION_REASON_CODES: tuple[
+    Literal["no_common_targets", "attempt_budget_exceeded", "duration_budget_exceeded"], ...
+] = ("no_common_targets", "attempt_budget_exceeded", "duration_budget_exceeded")
 
 COMPARISON_REASON_ORDER: tuple[ComparisonReasonCode, ...] = (
     ComparisonReasonCode.manifest_missing,
@@ -292,6 +307,185 @@ def _ranked_resolvers(data: dict[str, Any]) -> dict[str, int]:
     return {str(item.get("resolver", "")): index + 1 for index, item in enumerate(results)}
 
 
+def _protocol_diagnostic_domain(parent_id: str) -> str:
+    nonce = hashlib.sha256(f"dnspect-protocol-v1:{parent_id}".encode()).hexdigest()[:16]
+    return f"{nonce}.dnspect.invalid"
+
+
+def _protocol_endpoint_eligibility(
+    resolver: str,
+    protocol: BenchmarkProtocol,
+    provider_index: dict[str, dict[str, Any]],
+) -> tuple[str | None, str | None]:
+    """Return (endpoint, exclusion_code) for one resolver under one transport."""
+    if protocol == BenchmarkProtocol.udp:
+        return resolver, None
+    provider = provider_index.get(resolver)
+    features = (provider or {}).get("features") or {}
+    if protocol == BenchmarkProtocol.dot:
+        hostname = features.get("dot_hostname")
+        if not isinstance(hostname, str) or not hostname.strip():
+            return None, "dot_hostname_missing"
+        if not is_valid_dns_hostname(hostname):
+            return None, "dot_hostname_invalid"
+        return hostname, None
+    if protocol == BenchmarkProtocol.doh:
+        url = features.get("doh_url")
+        if not isinstance(url, str) or not url.strip():
+            return None, "doh_url_missing"
+        if not is_valid_doh_url(url):
+            return None, "doh_url_invalid"
+        return url, None
+    return None, "dot_hostname_missing"
+
+
+def _protocol_metrics_dict(result: dict[str, Any]) -> dict[str, float | None]:
+    stats = result.get("stats") or {}
+    return {
+        "median_ms": _opt_float(stats.get("median_ms")),
+        "p95_ms": _opt_float(stats.get("p95_ms")),
+        "success_rate": _opt_float(stats.get("success_rate")),
+        "failure_rate": _opt_float(stats.get("failure_rate")),
+        "blocking_efficacy": _opt_float(stats.get("blocking_efficacy")),
+        "score_total": _opt_float(stats.get("score_total")),
+    }
+
+
+def _protocol_deltas_dict(
+    baseline: dict[str, float | None], candidate: dict[str, float | None]
+) -> dict[str, float | None]:
+    deltas: dict[str, float | None] = {}
+    for key in COMPARISON_METRIC_KEYS:
+        baseline_value = baseline.get(key)
+        candidate_value = candidate.get(key)
+        if baseline_value is None or candidate_value is None:
+            deltas[key] = None
+        else:
+            deltas[key] = round(candidate_value - baseline_value, 4)
+    return deltas
+
+
+def _subrun_results_by_resolver(subrun: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+    if subrun is None:
+        return {}
+    return {str(item.get("resolver", "")): item for item in subrun.get("results") or []}
+
+
+def _protocol_delta_pairs(state: ProtocolComparisonState) -> list[dict[str, Any]]:
+    manifest = state.manifest or {}
+    canonical = manifest.get("canonical_protocols") or []
+    common_resolvers = (manifest.get("common_eligible_target_snapshot") or {}).get("resolver_ips") or []
+    if not canonical or not common_resolvers:
+        return []
+    done_subruns = {
+        subrun.get("protocol"): subrun for subrun in state.subruns if subrun.get("status") == "done"
+    }
+    baseline_protocol = canonical[0]
+    pairs: list[dict[str, Any]] = []
+    for candidate_protocol in canonical[1:]:
+        baseline_results = _subrun_results_by_resolver(done_subruns.get(baseline_protocol))
+        candidate_results = _subrun_results_by_resolver(done_subruns.get(candidate_protocol))
+        rows: list[dict[str, Any]] = []
+        for resolver in common_resolvers:
+            baseline_result = baseline_results.get(resolver)
+            candidate_result = candidate_results.get(resolver)
+            baseline_metrics = (
+                _protocol_metrics_dict(baseline_result) if baseline_result is not None else None
+            )
+            candidate_metrics = (
+                _protocol_metrics_dict(candidate_result) if candidate_result is not None else None
+            )
+            if baseline_metrics is None or candidate_metrics is None:
+                deltas: dict[str, float | None] = {key: None for key in COMPARISON_METRIC_KEYS}
+            else:
+                deltas = _protocol_deltas_dict(baseline_metrics, candidate_metrics)
+            rows.append(
+                {
+                    "resolver": resolver,
+                    "baseline": baseline_metrics,
+                    "candidate": candidate_metrics,
+                    "deltas": deltas,
+                }
+            )
+        pairs.append(
+            {
+                "baseline_protocol": baseline_protocol,
+                "candidate_protocol": candidate_protocol,
+                "rows": rows,
+            }
+        )
+    return pairs
+
+
+@dataclass
+class ProtocolComparisonState:
+    comparison_id: str
+    status: str
+    started_at: str
+    finished_at: str | None = None
+    complete: bool = False
+    error: str | None = None
+    run_storage_warning: str | None = None
+    progress_current: int = 0
+    progress_total: int = 0
+    current_protocol: str | None = None
+    current_resolver: str | None = None
+    last_sample_at: int | None = None
+    observed_latency_total_ms: float = 0.0
+    observed_latency_count: int = 0
+    manifest: dict[str, Any] | None = None
+    exclusions: list[dict[str, Any]] = field(default_factory=list)
+    subruns: list[dict[str, Any]] = field(default_factory=list)
+    delta_pairs: list[dict[str, Any]] = field(default_factory=list)
+
+    def as_response(self) -> dict[str, Any]:
+        progress = {
+            "current": self.progress_current,
+            "total": self.progress_total,
+            "current_protocol": self.current_protocol,
+            "current_resolver": self.current_resolver,
+            "last_sample_at": self.last_sample_at,
+            "avg_latency_ms": (
+                round(self.observed_latency_total_ms / self.observed_latency_count, 3)
+                if self.observed_latency_count > 0
+                else None
+            ),
+        }
+        subruns: list[dict[str, Any]] = []
+        for subrun in self.subruns:
+            serialized = dict(subrun)
+            serialized["results"] = (
+                _sanitize_results(subrun.get("results") or [], include_samples=False) or []
+            )
+            subruns.append(serialized)
+        return {
+            "comparison_id": self.comparison_id,
+            "status": self.status,
+            "complete": self.complete,
+            "error": self.error,
+            "run_storage_warning": self.run_storage_warning,
+            "progress": progress,
+            "manifest": self.manifest,
+            "exclusions": self.exclusions,
+            "subruns": subruns,
+            "delta_pairs": self.delta_pairs,
+        }
+
+
+@dataclass
+class ProtocolComparisonPlan:
+    comparison_id: str
+    canonical_protocols: list[str]
+    resolver_ips: list[str]
+    schedule: list[str]
+    blocking_queries: list[str]
+    timeout_sec: float
+    effective_runs: int
+    diagnostic_domain: str
+    scoring_profile: str
+    endpoints: dict[str, dict[str, str]]
+
+
 @dataclass
 class BenchmarkState:
     id: str
@@ -456,6 +650,7 @@ class BenchmarkManager:
     ) -> None:
         self._lock = threading.RLock()
         self._states: dict[str, BenchmarkState] = {}
+        self._protocol_comparison_states: dict[str, ProtocolComparisonState] = {}
         self.max_concurrent_jobs = max_concurrent_jobs or _to_positive_int(
             os.getenv("DNS_SPEED_LAB_MAX_CONCURRENT_JOBS"), 2
         )
@@ -595,6 +790,12 @@ class BenchmarkManager:
             self._cleanup_terminal_states_locked()
             running_count = sum(1 for item in self._states.values() if item.status == "running")
             queued_count = sum(1 for item in self._states.values() if item.status == "queued")
+            running_count += sum(
+                1 for item in self._protocol_comparison_states.values() if item.status == "running"
+            )
+            queued_count += sum(
+                1 for item in self._protocol_comparison_states.values() if item.status == "queued"
+            )
             if running_count + queued_count >= (self.max_concurrent_jobs + self.max_queued_jobs):
                 raise ValueError("Capacidad de benchmark agotada. Intenta nuevamente en unos minutos.")
             self._states[benchmark_id] = state
@@ -750,6 +951,546 @@ class BenchmarkManager:
 
         runs.sort(key=_sort_key, reverse=True)
         return {"runs": runs[:50]}
+
+    def preflight_protocol_comparison(
+        self, request: ProtocolComparisonRequest
+    ) -> ProtocolComparisonPreflightResponse:
+        """Single source of eligibility truth for the preflight and start routes.
+
+        Never allocates an ID, submits work, or reserves queue capacity.
+        """
+        canonical_protocols = list(request.protocols)
+        requested_target = request.target_snapshot
+        queries = request.queries or self.default_queries
+        if not queries:
+            raise ValueError("No hay dominios para consultar")
+        effective_runs = request.effective_runs()
+        timeout_sec = float(request.timeout_sec)
+
+        common_resolvers: list[str] = []
+        endpoint_identities: list[dict[str, Any]] = []
+        exclusions: list[dict[str, Any]] = []
+        for resolver in requested_target.resolver_ips:
+            endpoints: dict[str, str | None] = {}
+            excluded: list[tuple[str, str]] = []
+            for protocol in canonical_protocols:
+                endpoint, exclusion = _protocol_endpoint_eligibility(resolver, protocol, self.provider_index)
+                endpoints[protocol.value] = endpoint
+                if exclusion is not None:
+                    excluded.append((protocol.value, exclusion))
+            for protocol_value, exclusion in excluded:
+                exclusions.append({"resolver": resolver, "protocol": protocol_value, "code": exclusion})
+            if excluded:
+                continue
+            common_resolvers.append(resolver)
+            endpoint_identities.append(
+                {
+                    "resolver": resolver,
+                    "udp_resolver_ip": resolver,
+                    "dot_hostname": (
+                        endpoints.get("dot") if BenchmarkProtocol.dot in canonical_protocols else None
+                    ),
+                    "doh_url": (
+                        endpoints.get("doh") if BenchmarkProtocol.doh in canonical_protocols else None
+                    ),
+                }
+            )
+
+        if common_resolvers:
+            provider_ids: dict[str, str] | None = None
+            if requested_target.provider_ids is not None:
+                provider_ids = {
+                    ip: pid for ip, pid in requested_target.provider_ids.items() if ip in common_resolvers
+                }
+            common_target = TargetSnapshot(
+                resolver_ips=common_resolvers,
+                selection_source=requested_target.selection_source,
+                provider_ids=provider_ids,
+            )
+        else:
+            common_target = None
+
+        schedule = [queries[run_idx % len(queries)] for run_idx in range(effective_runs)]
+        normal_plan_sha256 = _canonical_json_sha256(schedule)
+        blocking_plan_sha256 = _canonical_json_sha256(self.blocking_test_queries)
+
+        work = self._estimate_benchmark_work(
+            resolver_count=len(common_resolvers),
+            runs=effective_runs,
+            timeout_sec=timeout_sec,
+            protocol_count=len(canonical_protocols),
+        )
+
+        reason_codes: list[
+            Literal["no_common_targets", "attempt_budget_exceeded", "duration_budget_exceeded"]
+        ] = []
+        if len(common_resolvers) == 0:
+            reason_codes.append("no_common_targets")
+        if work.total_attempts > self.max_query_attempts:
+            reason_codes.append("attempt_budget_exceeded")
+        if work.estimated_duration_sec > self.max_estimated_duration_sec:
+            reason_codes.append("duration_budget_exceeded")
+
+        return ProtocolComparisonPreflightResponse(
+            canonical_protocols=canonical_protocols,
+            requested_target_snapshot=requested_target,
+            common_eligible_target_snapshot=common_target,
+            exclusions=[ProtocolExclusion(**item) for item in exclusions],
+            endpoint_identities=[ProtocolEndpointIdentity(**item) for item in endpoint_identities],
+            normal_query_plan_sha256=normal_plan_sha256,
+            normal_query_count=len(schedule),
+            blocking_query_plan_sha256=blocking_plan_sha256,
+            blocking_query_count=len(self.blocking_test_queries),
+            effective_runs=effective_runs,
+            timeout_sec=timeout_sec,
+            total_attempts=work.total_attempts,
+            estimated_duration_sec=work.estimated_duration_sec,
+            admissible=not reason_codes,
+            admission_reason_codes=reason_codes,
+        )
+
+    def _reject_inadmissible_preflight(self, preflight: ProtocolComparisonPreflightResponse) -> None:
+        codes = preflight.admission_reason_codes
+        if "no_common_targets" in codes:
+            raise ValueError("Sin resolvers compatibles con todos los protocolos seleccionados")
+        if "attempt_budget_exceeded" in codes:
+            raise ValueError(
+                "Demasiados intentos de consulta. "
+                f"Reduzca cantidad de resolvers o ejecuciones "
+                f"(máximo: {self.max_query_attempts} intentos)."
+            )
+        if "duration_budget_exceeded" in codes:
+            raise ValueError(
+                "Duración estimada excede el límite. "
+                f"Reduzca tiempo de espera, resolvers o ejecuciones "
+                f"(máximo: {self.max_estimated_duration_sec} segundos)."
+            )
+
+    def start_protocol_comparison(self, request: ProtocolComparisonRequest) -> str:
+        preflight = self.preflight_protocol_comparison(request)
+        self._reject_inadmissible_preflight(preflight)
+        common_target = preflight.common_eligible_target_snapshot
+        if common_target is None:
+            raise ValueError("Sin resolvers compatibles con todos los protocolos seleccionados")
+
+        work = self._estimate_benchmark_work(
+            resolver_count=len(common_target.resolver_ips),
+            runs=preflight.effective_runs,
+            timeout_sec=preflight.timeout_sec,
+            protocol_count=len(preflight.canonical_protocols),
+        )
+        if work.total_attempts > self.max_query_attempts:
+            raise ValueError(
+                "Demasiados intentos de consulta. "
+                f"Reduzca cantidad de resolvers o ejecuciones "
+                f"(máximo: {self.max_query_attempts} intentos)."
+            )
+        if work.estimated_duration_sec > self.max_estimated_duration_sec:
+            raise ValueError(
+                "Duración estimada excede el límite. "
+                f"Reduzca tiempo de espera, resolvers o ejecuciones "
+                f"(máximo: {self.max_estimated_duration_sec} segundos)."
+            )
+
+        comparison_id = uuid.uuid4().hex
+        diagnostic_domain = _protocol_diagnostic_domain(comparison_id)
+        queries = request.queries or self.default_queries
+        preflight_schedule = [queries[run_idx % len(queries)] for run_idx in range(preflight.effective_runs)]
+        manifest: dict[str, Any] = {
+            "manifest_version": PROTOCOL_COMPARISON_MANIFEST_VERSION,
+            "scoring_profile": request.scoring_profile.value,
+            "requested_target_snapshot": request.target_snapshot.model_dump(),
+            "common_eligible_target_snapshot": common_target.model_dump(),
+            "canonical_protocols": [protocol.value for protocol in preflight.canonical_protocols],
+            "normal_query_plan_sha256": preflight.normal_query_plan_sha256,
+            "normal_query_count": preflight.normal_query_count,
+            "blocking_query_plan_sha256": preflight.blocking_query_plan_sha256,
+            "blocking_query_count": preflight.blocking_query_count,
+            "diagnostic_policy_version": PROTOCOL_COMPARISON_DIAGNOSTIC_POLICY_VERSION,
+            "diagnostic_plan_sha256": _canonical_json_sha256(diagnostic_domain),
+            "effective_runs": preflight.effective_runs,
+            "timeout_sec": preflight.timeout_sec,
+            "endpoint_identities": [item.model_dump() for item in preflight.endpoint_identities],
+        }
+        state = ProtocolComparisonState(
+            comparison_id=comparison_id,
+            status="queued",
+            started_at=datetime.now(UTC).isoformat(),
+            last_sample_at=int(datetime.now(UTC).timestamp() * 1000),
+            progress_total=work.total_attempts,
+            manifest=manifest,
+            exclusions=[item.model_dump() for item in preflight.exclusions],
+        )
+        with self._lock:
+            self._cleanup_protocol_comparison_states_locked()
+            running_count = sum(1 for item in self._states.values() if item.status == "running")
+            queued_count = sum(1 for item in self._states.values() if item.status == "queued")
+            running_count += sum(
+                1 for item in self._protocol_comparison_states.values() if item.status == "running"
+            )
+            queued_count += sum(
+                1 for item in self._protocol_comparison_states.values() if item.status == "queued"
+            )
+            if running_count + queued_count >= (self.max_concurrent_jobs + self.max_queued_jobs):
+                raise ValueError("Capacidad de benchmark agotada. Intenta nuevamente en unos minutos.")
+            self._protocol_comparison_states[comparison_id] = state
+
+        plan = ProtocolComparisonPlan(
+            comparison_id=comparison_id,
+            canonical_protocols=[protocol.value for protocol in preflight.canonical_protocols],
+            resolver_ips=list(common_target.resolver_ips),
+            schedule=list(preflight_schedule),
+            blocking_queries=list(self.blocking_test_queries),
+            timeout_sec=preflight.timeout_sec,
+            effective_runs=preflight.effective_runs,
+            diagnostic_domain=diagnostic_domain,
+            scoring_profile=request.scoring_profile.value,
+            endpoints=self._plan_endpoints(preflight),
+        )
+        try:
+            self._executor.submit(self._run_protocol_comparison, comparison_id, plan)
+        except RuntimeError as exc:
+            with self._lock:
+                self._protocol_comparison_states.pop(comparison_id, None)
+            raise ValueError("No se pudo iniciar benchmark en este momento.") from exc
+        return comparison_id
+
+    def _plan_endpoints(self, preflight: ProtocolComparisonPreflightResponse) -> dict[str, dict[str, str]]:
+        endpoints: dict[str, dict[str, str]] = {}
+        for identity in preflight.endpoint_identities:
+            entry: dict[str, str] = {"udp": identity.udp_resolver_ip}
+            if identity.dot_hostname is not None:
+                entry["dot"] = identity.dot_hostname
+            if identity.doh_url is not None:
+                entry["doh"] = identity.doh_url
+            endpoints[identity.resolver] = entry
+        return endpoints
+
+    def get_protocol_comparison(self, comparison_id: str) -> ProtocolComparisonState | None:
+        with self._lock:
+            self._cleanup_protocol_comparison_states_locked()
+            state = self._protocol_comparison_states.get(comparison_id)
+            if state:
+                return state
+            result_path = self._persisted_protocol_comparison_path(comparison_id)
+            if result_path is None or not result_path.exists():
+                return None
+        try:
+            data: dict[str, Any] = json.loads(result_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return None
+        progress = data.get("progress") or {}
+        loaded = ProtocolComparisonState(
+            comparison_id=str(data.get("comparison_id", comparison_id)),
+            status="done" if data.get("status") == "done" else "failed",
+            started_at=str(data.get("started_at", "")),
+            finished_at=str(data.get("finished_at") or ""),
+            complete=bool(data.get("complete")),
+            error=data.get("error"),
+            run_storage_warning=data.get("run_storage_warning"),
+            progress_current=int(progress.get("current") or 0),
+            progress_total=int(progress.get("total") or 0),
+            current_protocol=progress.get("current_protocol"),
+            current_resolver=progress.get("current_resolver"),
+            last_sample_at=progress.get("last_sample_at"),
+            manifest=data.get("manifest"),
+            exclusions=data.get("exclusions") or [],
+            subruns=data.get("subruns") or [],
+            delta_pairs=data.get("delta_pairs") or [],
+        )
+        with self._lock:
+            self._cleanup_protocol_comparison_states_locked()
+            self._protocol_comparison_states[comparison_id] = loaded
+        return loaded
+
+    def _persisted_protocol_comparison_path(self, comparison_id: str) -> Path | None:
+        """Contained nested path only for canonical lowercase UUIDv4 hex IDs."""
+        if not is_generated_run_id(comparison_id):
+            return None
+        candidate = self._data_runs_dir / "protocol-comparisons" / f"{comparison_id}.json"
+        try:
+            if not candidate.resolve().is_relative_to(self._data_runs_dir.resolve()):
+                return None
+        except OSError:
+            return None
+        return candidate
+
+    def _cleanup_protocol_comparison_states_locked(self) -> None:
+        now_ts = datetime.now(UTC).timestamp()
+        expired_ids: list[str] = []
+        for comparison_id, state in self._protocol_comparison_states.items():
+            if state.status not in TERMINAL_STATUSES:
+                continue
+            if not state.finished_at:
+                continue
+            try:
+                finished_ts = datetime.fromisoformat(state.finished_at).timestamp()
+            except ValueError:
+                finished_ts = now_ts
+            if now_ts - finished_ts >= self.terminal_ttl_sec:
+                expired_ids.append(comparison_id)
+        for comparison_id in expired_ids:
+            self._protocol_comparison_states.pop(comparison_id, None)
+
+        if len(self._protocol_comparison_states) <= self.max_retained_states:
+            return
+        terminal_candidates: list[tuple[float, str]] = []
+        for comparison_id, state in self._protocol_comparison_states.items():
+            if state.status not in TERMINAL_STATUSES:
+                continue
+            if state.finished_at:
+                try:
+                    finished_ts = datetime.fromisoformat(state.finished_at).timestamp()
+                except ValueError:
+                    finished_ts = 0.0
+            else:
+                finished_ts = 0.0
+            terminal_candidates.append((finished_ts, comparison_id))
+        terminal_candidates.sort()
+        while len(self._protocol_comparison_states) > self.max_retained_states and terminal_candidates:
+            _, comparison_id = terminal_candidates.pop(0)
+            self._protocol_comparison_states.pop(comparison_id, None)
+
+    def _set_comparison_storage_warning(self, comparison_id: str, warning: str) -> None:
+        with self._lock:
+            state = self._protocol_comparison_states.get(comparison_id)
+            if state:
+                state.run_storage_warning = warning
+
+    def _clear_comparison_storage_warning(self, comparison_id: str) -> None:
+        with self._lock:
+            state = self._protocol_comparison_states.get(comparison_id)
+            if state:
+                state.run_storage_warning = None
+
+    def _persist_protocol_comparison(self, comparison_id: str) -> None:
+        state = self.get_protocol_comparison(comparison_id)
+        if not state or state.status not in ("done", "failed"):
+            return
+        try:
+            path = self._persisted_protocol_comparison_path(comparison_id)
+            if path is None:
+                return
+            path.parent.mkdir(parents=True, exist_ok=True)
+            self._write_json_file(
+                path,
+                json.dumps(state.as_response(), ensure_ascii=False, indent=2),
+            )
+        except OSError as exc:
+            self._set_comparison_storage_warning(comparison_id, self._format_storage_warning(exc))
+            return
+        self._clear_comparison_storage_warning(comparison_id)
+
+    def _update_comparison_progress(
+        self,
+        comparison_id: str,
+        increment: int = 1,
+        protocol: str | None = None,
+        resolver: str | None = None,
+        observed_latency_ms: float | None = None,
+    ) -> None:
+        with self._lock:
+            state = self._protocol_comparison_states.get(comparison_id)
+            if not state:
+                return
+            state.progress_current += increment
+            if protocol:
+                state.current_protocol = protocol
+            if resolver:
+                state.current_resolver = resolver
+            sample_timestamp_ms = int(datetime.now(UTC).timestamp() * 1000)
+            state.last_sample_at = max(state.last_sample_at or sample_timestamp_ms, sample_timestamp_ms)
+            if observed_latency_ms is not None:
+                state.observed_latency_total_ms += observed_latency_ms
+                state.observed_latency_count += 1
+
+    def _set_comparison_running(self, comparison_id: str) -> None:
+        with self._lock:
+            state = self._protocol_comparison_states.get(comparison_id)
+            if state and state.status == "queued":
+                state.status = "running"
+
+    def _finish_protocol_comparison(self, comparison_id: str) -> None:
+        with self._lock:
+            state = self._protocol_comparison_states[comparison_id]
+            state.status = "done"
+            state.finished_at = datetime.now(UTC).isoformat()
+            state.current_protocol = None
+            state.current_resolver = None
+            state.complete = bool(state.subruns) and all(
+                subrun.get("status") == "done" for subrun in state.subruns
+            )
+            state.delta_pairs = _protocol_delta_pairs(state)
+        self._persist_protocol_comparison(comparison_id)
+
+    def _fail_protocol_comparison(self, comparison_id: str, message: str) -> None:
+        with self._lock:
+            state = self._protocol_comparison_states.get(comparison_id)
+            if not state:
+                return
+            state.status = "failed"
+            state.error = message
+            state.finished_at = datetime.now(UTC).isoformat()
+            state.complete = False
+            state.current_protocol = None
+            state.current_resolver = None
+        self._persist_protocol_comparison(comparison_id)
+
+    def _run_protocol_comparison(self, comparison_id: str, plan: ProtocolComparisonPlan) -> None:
+        try:
+            self._set_comparison_running(comparison_id)
+            engine = select_engine()
+            for protocol in plan.canonical_protocols:
+                subrun = self._run_protocol_subrun(comparison_id, plan, protocol, engine)
+                with self._lock:
+                    state = self._protocol_comparison_states.get(comparison_id)
+                    if state:
+                        state.subruns.append(subrun)
+                        state.current_protocol = None
+            self._finish_protocol_comparison(comparison_id)
+        except Exception as exc:  # noqa: BLE001
+            self._fail_protocol_comparison(comparison_id, str(exc))
+
+    def _run_protocol_subrun(
+        self,
+        comparison_id: str,
+        plan: ProtocolComparisonPlan,
+        protocol: str,
+        engine: str,
+    ) -> dict[str, Any]:
+        results: list[dict[str, Any]] = []
+        try:
+            for resolver in plan.resolver_ips:
+                results.append(
+                    self._measure_comparison_resolver(comparison_id, plan, protocol, resolver, engine)
+                )
+            apply_normalized_scoring(results, goal=plan.scoring_profile)
+            return {
+                "protocol": protocol,
+                "status": "done",
+                "complete": True,
+                "error": None,
+                "results": results,
+            }
+        except Exception as exc:  # noqa: BLE001
+            return {
+                "protocol": protocol,
+                "status": "failed",
+                "complete": False,
+                "error": {"code": "transport_execution_failed", "message": str(exc)[:500]},
+                "results": results,
+            }
+
+    def _measure_comparison_resolver(
+        self,
+        comparison_id: str,
+        plan: ProtocolComparisonPlan,
+        protocol: str,
+        resolver: str,
+        engine: str,
+    ) -> dict[str, Any]:
+        endpoint = plan.endpoints[resolver][protocol]
+        successful_ms: list[float] = []
+        samples: list[dict[str, Any]] = []
+
+        for run_idx, domain in enumerate(plan.schedule):
+            sample = self._measure_comparison_sample(
+                resolver, domain, protocol, endpoint, plan.timeout_sec, engine
+            )
+            sample["run_index"] = run_idx + 1
+            samples.append(sample)
+            if sample.get("ok") and sample.get("ms") is not None:
+                successful_ms.append(float(sample["ms"]))
+            observed_latency = (
+                float(sample["ms"]) if sample.get("ok") and sample.get("ms") is not None else None
+            )
+            self._update_comparison_progress(
+                comparison_id,
+                increment=1,
+                protocol=protocol,
+                resolver=resolver,
+                observed_latency_ms=observed_latency,
+            )
+
+        timeout_count = sum(1 for sample in samples if sample.get("failure_kind") == "timeout")
+        failure_count = sum(
+            1 for sample in samples if sample.get("failure_kind") in RELIABILITY_FAILURE_KINDS
+        )
+        stats = compute_stats(
+            successful_ms,
+            total_runs=plan.effective_runs,
+            timeout_count=timeout_count,
+            failure_count=failure_count,
+        )
+
+        blocking_samples: list[dict[str, Any]] = []
+        for domain in plan.blocking_queries:
+            b_sample = self._measure_comparison_sample(
+                resolver, domain, protocol, endpoint, plan.timeout_sec, engine
+            )
+            b_sample["run_index"] = 0
+            b_sample["blocking_test"] = True
+            blocking_samples.append(b_sample)
+            self._update_comparison_progress(comparison_id, increment=1, protocol=protocol, resolver=resolver)
+        blocking_raw = compute_blocking_efficacy(blocking_samples)
+        stats["blocking_efficacy"] = blocking_raw["blocking_efficacy"]
+        stats["blocked_count"] = blocking_raw["blocked_count"]
+        stats["blocking_test_count"] = blocking_raw["blocking_test_count"]
+
+        hijack_sample = self._measure_comparison_sample(
+            resolver, plan.diagnostic_domain, protocol, endpoint, plan.timeout_sec, engine
+        )
+        hijack_detected: bool | None = None
+        if hijack_sample.get("ok") and hijack_sample.get("answer_ips"):
+            hijack_detected = True
+        elif hijack_sample.get("failure_kind") == "nxdomain":
+            hijack_detected = False
+        stats["nxdomain_hijack_detected"] = hijack_detected
+        self._update_comparison_progress(comparison_id, increment=1, protocol=protocol, resolver=resolver)
+
+        dnssec_sample = self._measure_comparison_sample(
+            resolver, "badsig.go.dnscheck.tools", protocol, endpoint, plan.timeout_sec, engine
+        )
+        dnssec_validating: bool | None = None
+        if dnssec_sample.get("failure_kind") == "servfail":
+            dnssec_validating = True
+        elif dnssec_sample.get("ok"):
+            dnssec_validating = False
+        stats["dnssec_validating"] = dnssec_validating
+        self._update_comparison_progress(comparison_id, increment=1, protocol=protocol, resolver=resolver)
+
+        provider = self.provider_index.get(
+            resolver,
+            {
+                "id": "isp-detectado",
+                "name": "ISP (Detectado)",
+                "notes_es": "Resolver detectado desde el sistema local.",
+            },
+        )
+        return {
+            "resolver": resolver,
+            "provider_id": provider.get("id", "desconocido"),
+            "provider_name": provider.get("name", "Desconocido"),
+            "engine": engine,
+            "protocol": protocol,
+            "stats": stats,
+            "samples": samples,
+        }
+
+    def _measure_comparison_sample(
+        self,
+        resolver: str,
+        domain: str,
+        protocol: str,
+        endpoint: str,
+        timeout_sec: float,
+        engine: str,
+    ) -> dict[str, Any]:
+        if protocol == "dot":
+            return run_dot_query(resolver, domain, timeout_sec, endpoint)
+        if protocol == "doh":
+            return run_doh_query(resolver, domain, timeout_sec, endpoint)
+        return measure_query(resolver=resolver, domain=domain, timeout_sec=timeout_sec, engine=engine)
 
     def compare_runs(self, baseline_id: str, candidate_id: str) -> RunComparisonResponse | None:
         """Compare two persisted runs under the immutable manifest contract.

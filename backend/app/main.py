@@ -15,7 +15,14 @@ from fastapi.staticfiles import StaticFiles
 
 from . import __version__
 from .geoip import geoip_lookup
-from .models import BenchmarkRequest, ProbeRequest, RunComparisonResponse
+from .models import (
+    BenchmarkRequest,
+    ProbeRequest,
+    ProtocolComparisonPreflightResponse,
+    ProtocolComparisonRequest,
+    ProtocolComparisonStatusResponse,
+    RunComparisonResponse,
+)
 from .runner import BenchmarkManager, is_generated_run_id
 
 app = FastAPI(title="DNSpect API", version=__version__)
@@ -131,6 +138,31 @@ def compare_benchmarks(
     if response is None:
         raise HTTPException(status_code=404, detail="benchmark no encontrado")
     return response
+
+
+@app.post("/api/protocol-comparisons/preflight", response_model=ProtocolComparisonPreflightResponse)
+def protocol_comparison_preflight(request: ProtocolComparisonRequest) -> ProtocolComparisonPreflightResponse:
+    try:
+        return manager.preflight_protocol_comparison(request)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/protocol-comparisons")
+def start_protocol_comparison(request: ProtocolComparisonRequest) -> dict:
+    try:
+        comparison_id = manager.start_protocol_comparison(request)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"comparison_id": comparison_id}
+
+
+@app.get("/api/protocol-comparisons/{comparison_id}", response_model=ProtocolComparisonStatusResponse)
+def protocol_comparison_status(comparison_id: str) -> ProtocolComparisonStatusResponse:
+    state = manager.get_protocol_comparison(comparison_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail="comparación no encontrada")
+    return ProtocolComparisonStatusResponse.model_validate(state.as_response())
 
 
 @app.get("/api/benchmarks/{benchmark_id}")
