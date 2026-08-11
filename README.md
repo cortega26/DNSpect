@@ -47,6 +47,7 @@ Most "DNS speed test" pages run from a remote browser context or cloud vantage p
 - Live ranking panel during benchmark execution with motion budget controls.
 - **Dashboard panel** with post-benchmark overview metrics.
 - **Run history sidebar** for browsing and comparing past runs.
+- **Historical run comparison** — deterministic side-by-side deltas only for runs whose immutable run manifests match exactly (resolver targets, query plan, protocol, scoring policy, and catalog digest). Runs that do not share a manifest are never shown a numerical diff; they get an explicit reason instead. Comparisons are local, require matching immutable manifests, and do not prove a causal resolver regression.
 - **Protocol badges** (UDP/DoT/DoH) in ranking and history views.
 - Optional sample inclusion (`include_samples=1`) for deep diagnostics.
 - Last-run persistence in browser storage with schema/version invalidation.
@@ -231,7 +232,6 @@ cd frontend && npm run lint && npm run typecheck && npm test && npm run build
 
 ## Roadmap
 
-- [ ] Historical run comparison — side-by-side benchmark diffing (backlog)
 - [ ] Continuous monitoring mode — background daemon re-checking resolvers at intervals
 - [ ] Scheduled/recurring benchmarks with persistent history
 - [ ] Configurable alerting when a resolver degrades beyond threshold

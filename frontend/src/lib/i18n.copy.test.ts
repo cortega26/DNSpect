@@ -169,4 +169,24 @@ describe('i18n copy contract gate', () => {
       ['modal.descriptionSpanishOnly', 'A descrição deste provedor está disponível apenas em espanhol.'],
     ])
   })
+
+  it('protects run-comparison manifest and reason-code copy (ES/PT)', () => {
+    assertCopyContract('es', [
+      ['comparison.title', 'Comparación de ejecuciones'],
+      ['comparison.notComparable', 'No comparable'],
+      ['comparison.reason.target_snapshot_mismatch', 'Conjunto de resolvers distinto'],
+      ['comparison.reason.provider_catalog_mismatch', 'Catálogo de proveedores distinto'],
+      ['comparison.manifestUnavailable', 'El manifest de esta ejecución no está disponible.'],
+      ['comparison.metricSuccessRate', 'Tasa de éxito'],
+    ])
+
+    assertCopyContract('pt', [
+      ['comparison.title', 'Comparação de execuções'],
+      ['comparison.notComparable', 'Não comparável'],
+      ['comparison.reason.target_snapshot_mismatch', 'Conjunto de resolvers diferente'],
+      ['comparison.reason.provider_catalog_mismatch', 'Catálogo de provedores diferente'],
+      ['comparison.manifestUnavailable', 'O manifest desta execução não está disponível.'],
+      ['comparison.metricSuccessRate', 'Taxa de sucesso'],
+    ])
+  })
 })

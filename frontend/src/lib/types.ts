@@ -148,3 +148,72 @@ export interface ProbeResponse {
   queried_at: string
   results: ProbeResult[]
 }
+
+export type ComparisonReasonCode =
+  | 'manifest_missing'
+  | 'manifest_invalid'
+  | 'manifest_version_mismatch'
+  | 'response_semantics_mismatch'
+  | 'scoring_semantics_mismatch'
+  | 'scoring_profile_mismatch'
+  | 'target_snapshot_mismatch'
+  | 'protocol_mismatch'
+  | 'query_plan_mismatch'
+  | 'mode_mismatch'
+  | 'runs_mismatch'
+  | 'timeout_mismatch'
+  | 'diagnostic_policy_mismatch'
+  | 'provider_catalog_mismatch'
+
+export interface RunManifest {
+  run_manifest_version: number
+  response_semantics_version: string
+  scoring_semantics_version: string
+  scoring_profile: string
+  target_snapshot: TargetSnapshot | null
+  protocol: BenchmarkProtocol
+  mode: BenchmarkMode
+  runs: number
+  timeout_sec: number
+  normal_query_schedule_version: string
+  normal_query_plan_sha256: string
+  normal_query_count: number
+  blocking_query_plan_sha256: string
+  blocking_query_count: number
+  diagnostic_policy_version: string
+  provider_catalog_sha256: string
+}
+
+export interface RunComparisonMetrics {
+  median_ms: number | null
+  p95_ms: number | null
+  success_rate: number | null
+  failure_rate: number | null
+  blocking_efficacy: number | null
+  score_total: number | null
+}
+
+export interface RunComparisonDeltas extends RunComparisonMetrics {
+  rank: number
+}
+
+export interface RunComparisonRow {
+  resolver: string
+  baseline: RunComparisonMetrics
+  candidate: RunComparisonMetrics
+  baseline_rank: number
+  candidate_rank: number
+  deltas: RunComparisonDeltas
+}
+
+export interface RunComparisonResponse {
+  baseline_id: string
+  candidate_id: string
+  baseline_manifest: RunManifest | null
+  candidate_manifest: RunManifest | null
+  comparable: boolean
+  reason_codes: ComparisonReasonCode[]
+  rows: RunComparisonRow[]
+  missing_baseline_results: string[]
+  missing_candidate_results: string[]
+}

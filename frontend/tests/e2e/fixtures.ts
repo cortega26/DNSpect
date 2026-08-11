@@ -1,6 +1,6 @@
 import type { Page, Route } from '@playwright/test'
 import type { RunHistoryEntry } from '../../src/lib/api'
-import type { BenchmarkStatus, ProbeResponse, Provider, ResolverResult, ResolverStats, SystemDnsPayload } from '../../src/lib/types'
+import type { BenchmarkStatus, ProbeResponse, Provider, ResolverResult, ResolverStats, RunComparisonResponse, RunManifest, SystemDnsPayload } from '../../src/lib/types'
 
 export const APP_ORIGIN = 'http://127.0.0.1:5173'
 
@@ -248,6 +248,98 @@ export function historyEntry(id: string, topResolver: string, topProvider: strin
   }
 }
 
+export function makeRunManifest(): RunManifest {
+  return {
+    run_manifest_version: 1,
+    response_semantics_version: 'dns-response-v1',
+    scoring_semantics_version: 'score-v1',
+    scoring_profile: 'speed',
+    target_snapshot: {
+      resolver_ips: ['1.1.1.1', '9.9.9.9'],
+      selection_source: 'manual',
+      provider_ids: null,
+    },
+    protocol: 'udp',
+    mode: 'standard',
+    runs: 30,
+    timeout_sec: 2,
+    normal_query_schedule_version: 'round-robin-v1',
+    normal_query_plan_sha256: 'a'.repeat(64),
+    normal_query_count: 30,
+    blocking_query_plan_sha256: 'b'.repeat(64),
+    blocking_query_count: 9,
+    diagnostic_policy_version: 'random-nxdomain-v1',
+    provider_catalog_sha256: 'c'.repeat(64),
+  }
+}
+
+export const BASELINE_RUN_ID = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+export const CANDIDATE_RUN_ID = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+
+export function comparableComparisonResponse(): RunComparisonResponse {
+  return {
+    baseline_id: BASELINE_RUN_ID,
+    candidate_id: CANDIDATE_RUN_ID,
+    baseline_manifest: makeRunManifest(),
+    candidate_manifest: makeRunManifest(),
+    comparable: true,
+    reason_codes: [],
+    rows: [
+      {
+        resolver: '1.1.1.1',
+        baseline: { median_ms: 12.3, p95_ms: 17.22, success_rate: 1, failure_rate: 0, blocking_efficacy: null, score_total: 0.91 },
+        candidate: { median_ms: 15.2, p95_ms: 21.28, success_rate: 1, failure_rate: 0, blocking_efficacy: null, score_total: 0.95 },
+        baseline_rank: 1,
+        candidate_rank: 2,
+        deltas: { median_ms: 2.9, p95_ms: 4.06, success_rate: 0, failure_rate: 0, blocking_efficacy: null, score_total: 0.04, rank: 1 },
+      },
+      {
+        resolver: '9.9.9.9',
+        baseline: { median_ms: 26.4, p95_ms: 36.96, success_rate: 1, failure_rate: 0, blocking_efficacy: null, score_total: 0.97 },
+        candidate: { median_ms: 20.1, p95_ms: 28.14, success_rate: 1, failure_rate: 0, blocking_efficacy: null, score_total: 0.9 },
+        baseline_rank: 2,
+        candidate_rank: 1,
+        deltas: { median_ms: -6.3, p95_ms: -8.82, success_rate: 0, failure_rate: 0, blocking_efficacy: null, score_total: -0.07, rank: -1 },
+      },
+    ],
+    missing_baseline_results: [],
+    missing_candidate_results: [],
+  }
+}
+
+export function nonComparableComparisonResponse(): RunComparisonResponse {
+  return {
+    baseline_id: BASELINE_RUN_ID,
+    candidate_id: CANDIDATE_RUN_ID,
+    baseline_manifest: makeRunManifest(),
+    candidate_manifest: {
+      ...makeRunManifest(),
+      scoring_profile: 'security',
+      protocol: 'dot',
+      target_snapshot: { resolver_ips: ['1.1.1.1'], selection_source: 'manual', provider_ids: null },
+    },
+    comparable: false,
+    reason_codes: ['target_snapshot_mismatch', 'protocol_mismatch', 'scoring_profile_mismatch'],
+    rows: [],
+    missing_baseline_results: [],
+    missing_candidate_results: [],
+  }
+}
+
+export function manifestMissingComparisonResponse(): RunComparisonResponse {
+  return {
+    baseline_id: BASELINE_RUN_ID,
+    candidate_id: CANDIDATE_RUN_ID,
+    baseline_manifest: null,
+    candidate_manifest: makeRunManifest(),
+    comparable: false,
+    reason_codes: ['manifest_missing'],
+    rows: [],
+    missing_baseline_results: [],
+    missing_candidate_results: [],
+  }
+}
+
 export function probeFixture(recommendedMedianMs = 12.0): ProbeResponse {
   const now = new Date().toISOString()
   return {
@@ -313,6 +405,7 @@ export class MockApi {
     this.handlers.set('GET /api/dns/system', () => json(systemDnsFixture))
     this.handlers.set('GET /api/benchmarks/history', () => json({ runs: [this.historyRunA(), this.historyRunB()] }))
     this.handlers.set('POST /api/benchmarks', () => json({ benchmark_id: newBenchmarkId() }))
+    this.handlers.set('GET /api/benchmarks/compare', () => json(comparableComparisonResponse()))
     this.handlers.set('GET /api/benchmarks/:id', (params) => json(runningBenchmark(params.id)))
     this.handlers.set('GET /api/benchmarks/:id/export.csv', () => csv('resolver,provider_name,score_total\n1.1.1.1,Cloudflare,0.97\n'))
     this.handlers.set('POST /api/probe', () => json(probeFixture()))

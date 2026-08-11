@@ -7,9 +7,11 @@ import { GuidedApplyModal } from '@/components/GuidedApplyModal'
 import { LiveRankingPanel } from '@/components/LiveRankingPanel'
 import { RecommendedResolverPanel } from '@/components/RecommendedResolverPanel'
 import { ResolverRankingPanel } from '@/components/ResolverRankingPanel'
+import { RunComparisonPanel } from '@/components/RunComparisonPanel'
 import { RunHistoryPanel } from '@/components/RunHistoryPanel'
 import { useBenchmarkSession } from '@/hooks/useBenchmarkSession'
 import { useGuidedVerification } from '@/hooks/useGuidedVerification'
+import { useRunComparison } from '@/hooks/useRunComparison'
 import { useRunHistory } from '@/hooks/useRunHistory'
 
 const ChartsPanel = lazy(() => import('@/components/ChartsPanel').then((m) => ({ default: m.ChartsPanel })))
@@ -219,6 +221,16 @@ function App() {
   const [nowMs, setNowMs] = useState<number>(() => Date.now())
   const [isInitializing, setIsInitializing] = useState<boolean>(true)
   const { history, historyLoading } = useRunHistory(status?.id ?? null)
+  const comparison = useRunComparison()
+  const {
+    baselineId: comparisonBaselineId,
+    candidateId: comparisonCandidateId,
+    comparison: comparisonData,
+    comparisonLoading,
+    comparisonError,
+    selectPair: selectComparisonPair,
+    clear: clearComparison,
+  } = comparison
   const rankingPanelRef = useRef<HTMLElement | null>(null)
   const localeMenuRef = useRef<HTMLDivElement>(null)
   const resolverListRef = useRef<HTMLDivElement>(null)
@@ -1415,7 +1427,26 @@ function App() {
         </div>
       )}
 
-      <RunHistoryPanel runs={history} loading={historyLoading} onSelectRun={(runId) => void handleSelectRun(runId)} />
+      <RunHistoryPanel
+        runs={history}
+        loading={historyLoading}
+        onSelectRun={(runId) => void handleSelectRun(runId)}
+        baselineId={comparisonBaselineId}
+        candidateId={comparisonCandidateId}
+        onSetBaseline={(runId) => selectComparisonPair(runId, comparisonCandidateId)}
+        onSetCandidate={(runId) => selectComparisonPair(comparisonBaselineId, runId)}
+      />
+
+      {comparisonBaselineId && comparisonCandidateId && (
+        <RunComparisonPanel
+          baselineId={comparisonBaselineId}
+          candidateId={comparisonCandidateId}
+          comparison={comparisonData}
+          loading={comparisonLoading}
+          error={comparisonError}
+          onClear={clearComparison}
+        />
+      )}
 
       {selectedResult && (
         <Suspense fallback={null}>

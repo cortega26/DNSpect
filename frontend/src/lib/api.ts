@@ -1,4 +1,4 @@
-import type { BenchmarkMode, BenchmarkProtocol, BenchmarkStatus, Goal, ProbeResponse, Provider, ScoringProfile, SystemDnsPayload, TargetSnapshot } from './types'
+import type { BenchmarkMode, BenchmarkProtocol, BenchmarkStatus, Goal, ProbeResponse, Provider, RunComparisonResponse, ScoringProfile, SystemDnsPayload, TargetSnapshot } from './types'
 import { API_BASE } from './utils'
 
 interface StartBenchmarkPayload {
@@ -111,6 +111,17 @@ export async function getBenchmark(id: string, includeSamples = false, signal?: 
   const suffix = includeSamples ? '?include_samples=1' : ''
   const res = await fetch(`${API_BASE}/api/benchmarks/${id}${suffix}`, { signal })
   if (!res.ok) throw new Error('No se pudo consultar benchmark')
+  return res.json()
+}
+
+export async function compareRuns(
+  baselineId: string,
+  candidateId: string,
+  signal?: AbortSignal,
+): Promise<RunComparisonResponse> {
+  const query = new URLSearchParams({ baseline_id: baselineId, candidate_id: candidateId })
+  const res = await fetch(`${API_BASE}/api/benchmarks/compare?${query.toString()}`, { signal })
+  if (!res.ok) throw new Error('No se pudo comparar')
   return res.json()
 }
 
