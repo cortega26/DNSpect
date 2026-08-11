@@ -9,6 +9,7 @@ import { RecommendedResolverPanel } from '@/components/RecommendedResolverPanel'
 import { ResolverRankingPanel } from '@/components/ResolverRankingPanel'
 import { RunHistoryPanel } from '@/components/RunHistoryPanel'
 import { useBenchmarkSession } from '@/hooks/useBenchmarkSession'
+import { useGuidedVerification } from '@/hooks/useGuidedVerification'
 import { useRunHistory } from '@/hooks/useRunHistory'
 
 const ChartsPanel = lazy(() => import('@/components/ChartsPanel').then((m) => ({ default: m.ChartsPanel })))
@@ -17,8 +18,7 @@ import { buildDnsClipboardText, buildGuidedDnsSet, detectPlatformGroup } from '@
 import { useI18n } from '@/lib/useI18n'
 import type { Language } from '@/lib/i18n-translations'
 import { computeRunningEtaText, formatEtaRange } from '@/lib/eta'
-import { getProviders, getPublicIp, getSystemDns, lookupGeoIp, probeResolvers } from '@/lib/api'
-import { compareProbeSummaries, parseProbeResponse, type ProbeOutcome, type ProbeSummary } from '@/lib/probe'
+import { getProviders, getPublicIp, getSystemDns, lookupGeoIp } from '@/lib/api'
 import {
   buildBenchmarkCsv,
   buildShareSummary,
@@ -32,7 +32,6 @@ import {
 import {
   computeStallThresholds,
   isSmallImprovement,
-  shouldAcceptAsyncResult,
 } from '@/lib/runtime'
 import { useTheme } from '@/lib/useTheme'
 import type { BenchmarkMode, BenchmarkProtocol, Provider, ResolverResult, ScoringProfile, SystemDnsPayload, TargetSnapshot } from '@/lib/types'
@@ -111,14 +110,6 @@ interface ResolverCatalogItem {
   resolver: string
   providerName: string
   providerId: string
-}
-
-interface VerificationSummary {
-  outcome: ProbeOutcome
-  recommended: ProbeSummary | null
-  current: ProbeSummary | null
-  currentResolver: string | null
-  sampleSize: number
 }
 
 function parseQueries(value: string): string[] {
@@ -212,9 +203,7 @@ function App() {
   const [summaryCopyStatus, setSummaryCopyStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [guidedApplyOpen, setGuidedApplyOpen] = useState<boolean>(false)
   const [guidedCopyStatus, setGuidedCopyStatus] = useState<'idle' | 'success' | 'error'>('idle')
-  const [isVerifyingGuided, setIsVerifyingGuided] = useState<boolean>(false)
-  const [guidedVerifyError, setGuidedVerifyError] = useState<string | null>(null)
-  const [guidedVerification, setGuidedVerification] = useState<VerificationSummary | null>(null)
+  const guidedVerification = useGuidedVerification(setSystemDns)
   const [savedLastRun, setSavedLastRun] = useState<SavedLastRunV1 | null>(null)
   const [savedRunNotice, setSavedRunNotice] = useState<string | null>(null)
   const [localeMenuOpen, setLocaleMenuOpen] = useState<boolean>(false)
@@ -227,15 +216,6 @@ function App() {
   useFocusTrap(resolverListRef, resolverListOpen)
   const localeTriggerRef = useRef<HTMLButtonElement>(null)
   const localeOptionRefs = useRef<Array<HTMLButtonElement | null>>([])
-  const verifyRequestSeqRef = useRef<number>(0)
-  const mountedRef = useRef(false)
-
-  useEffect(() => {
-    mountedRef.current = true
-    return () => {
-      mountedRef.current = false
-    }
-  }, [])
 
   useEffect(() => {
     const loaded: LoadSavedLastRunResult = loadSavedLastRun()
@@ -620,15 +600,12 @@ function App() {
   }
 
   function handleStart() {
-    verifyRequestSeqRef.current += 1
+    guidedVerification.cancel()
 
     setCopyStatus('idle')
     setSummaryCopyStatus('idle')
     setGuidedApplyOpen(false)
     setGuidedCopyStatus('idle')
-    setGuidedVerification(null)
-    setGuidedVerifyError(null)
-    setIsVerifyingGuided(false)
     setSavedRunNotice(null)
 
     const customQueries = parseQueries(queriesText)
@@ -679,11 +656,9 @@ function App() {
 
   function applyRecommendation() {
     if (!primaryResult) return
-    verifyRequestSeqRef.current += 1
+    guidedVerification.cancel()
     setGuidedApplyOpen(true)
     setGuidedCopyStatus('idle')
-    setGuidedVerifyError(null)
-    setGuidedVerification(null)
   }
 
   function handleViewFullRanking() {
@@ -711,67 +686,12 @@ function App() {
     }
   }
 
-  async function handleGuidedVerify() {
+  function handleGuidedVerify() {
     if (!primaryResult) return
-    const requestSeq = verifyRequestSeqRef.current + 1
-    verifyRequestSeqRef.current = requestSeq
-    setGuidedVerifyError(null)
-    setGuidedVerification(null)
-    setIsVerifyingGuided(true)
-
-    try {
-      let latestSystemDns = systemDns
-      try {
-        latestSystemDns = await getSystemDns()
-        setSystemDns(latestSystemDns)
-      } catch {
-        // Keep the previously loaded system DNS if refresh fails.
-      }
-
-      const currentResolver = latestSystemDns?.resolvers?.[0] ?? null
-      const resolverTargets = Array.from(new Set([primaryResult.resolver, currentResolver].filter(Boolean))) as string[]
-      if (resolverTargets.length === 0) {
-        setGuidedVerification({
-          outcome: 'inconclusive',
-          recommended: null,
-          current: null,
-          currentResolver: null,
-          sampleSize: 0,
-        })
-        return
-      }
-
-      const probePayload = await probeResolvers({
-        resolvers: resolverTargets,
-        runs_per_resolver: 4,
-        timeout_sec: 1.5,
-      })
-      if (!shouldAcceptAsyncResult(requestSeq, verifyRequestSeqRef.current, mountedRef.current)) return
-      const parsed = parseProbeResponse(probePayload)
-      const recommendedProbe = parsed.get(primaryResult.resolver) ?? null
-      const currentProbe = currentResolver ? parsed.get(currentResolver) ?? null : null
-
-      const outcome = compareProbeSummaries(recommendedProbe, currentProbe)
-      const sampleSize = Math.min(
-        recommendedProbe?.sampleCount ?? 0,
-        currentProbe?.sampleCount ?? recommendedProbe?.sampleCount ?? 0,
-      )
-
-      setGuidedVerification({
-        outcome,
-        recommended: recommendedProbe,
-        current: currentProbe,
-        currentResolver,
-        sampleSize,
-      })
-    } catch (e) {
-      if (!shouldAcceptAsyncResult(requestSeq, verifyRequestSeqRef.current, mountedRef.current)) return
-      setGuidedVerifyError(e instanceof Error ? e.message : t('applyGuide.verifyUnknownError'))
-    } finally {
-      if (requestSeq === verifyRequestSeqRef.current) {
-        setIsVerifyingGuided(false)
-      }
-    }
+    void guidedVerification.verify({
+      recommendedResolver: primaryResult.resolver,
+      systemDns,
+    })
   }
 
   function handleViewSavedRun() {
@@ -1439,8 +1359,8 @@ function App() {
       <GuidedApplyModal
         open={guidedApplyOpen && Boolean(primaryResult)}
         onClose={() => {
+          guidedVerification.cancel()
           setGuidedApplyOpen(false)
-          setIsVerifyingGuided(false)
         }}
         detectedPlatformLabel={detectedPlatformLabel}
         detectedPlatformGroup={detectedPlatformGroup}
@@ -1451,9 +1371,9 @@ function App() {
         ipv6Dns={guidedDnsSet.ipv6}
         allDns={guidedDnsSet.all}
         copyStatus={guidedCopyStatus}
-        isVerifying={isVerifyingGuided}
-        verifyError={guidedVerifyError}
-        verification={guidedVerification}
+        isVerifying={guidedVerification.isVerifying}
+        verifyError={guidedVerification.verifyError}
+        verification={guidedVerification.verification}
         onCopyIpv4={() => void handleGuidedCopy(guidedDnsSet.ipv4)}
         onCopyIpv6={() => void handleGuidedCopy(guidedDnsSet.ipv6)}
         onCopyAll={() => void handleGuidedCopy(guidedDnsSet.all)}
