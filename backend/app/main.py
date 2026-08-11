@@ -15,8 +15,8 @@ from fastapi.staticfiles import StaticFiles
 
 from . import __version__
 from .geoip import geoip_lookup
-from .models import BenchmarkRequest, ProbeRequest
-from .runner import BenchmarkManager
+from .models import BenchmarkRequest, ProbeRequest, RunComparisonResponse
+from .runner import BenchmarkManager, is_generated_run_id
 
 app = FastAPI(title="DNSpect API", version=__version__)
 manager = BenchmarkManager()
@@ -114,6 +114,23 @@ def start_benchmark(request: BenchmarkRequest) -> dict:
 @app.get("/api/benchmarks/history")
 def benchmark_history() -> dict:
     return manager.list_history()
+
+
+@app.get("/api/benchmarks/compare", response_model=RunComparisonResponse)
+def compare_benchmarks(
+    baseline_id: str | None = Query(default=None),
+    candidate_id: str | None = Query(default=None),
+) -> RunComparisonResponse:
+    for run_id in (baseline_id, candidate_id):
+        if run_id is None or not is_generated_run_id(run_id):
+            raise HTTPException(status_code=404, detail="benchmark no encontrado")
+    try:
+        response = manager.compare_runs(baseline_id or "", candidate_id or "")
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if response is None:
+        raise HTTPException(status_code=404, detail="benchmark no encontrado")
+    return response
 
 
 @app.get("/api/benchmarks/{benchmark_id}")
