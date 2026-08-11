@@ -4,7 +4,7 @@
 
 - App ID: `io.github.cortega26.DNSpect`
 - Verification path: GitHub-based Flathub verification, using the existing upstream repository `https://github.com/cortega26/DNSpect`
-- Architecture scope in this baseline: `x86_64` and `aarch64`
+- Architecture scope: `x86_64` and `aarch64`
 
 Why this ID:
 
@@ -21,120 +21,91 @@ Primary references:
 
 ## Packaging strategy
 
-DNSpect already ships as a single local HTTP process: FastAPI serves the built React frontend from `frontend/dist`, and the binary or CLI opens `http://127.0.0.1:<port>`. The Flatpak packaging keeps that model instead of introducing a separate embedded browser or rewriting the app as a native toolkit UI.
+DNSpect ships as a single local HTTP process: FastAPI serves the built React frontend from `frontend/dist`, and the binary or CLI opens `http://127.0.0.1:<port>`. The Flatpak packaging keeps that model instead of introducing a separate embedded browser or rewriting the app as a native toolkit UI.
 
 Strategy details:
 
 - Install the Python backend into `/app` from source.
-- Build the React frontend inside Flatpak using `org.freedesktop.Sdk.Extension.node22`.
+- Build the React frontend inside Flatpak using `org.freedesktop.Sdk.Extension.node24`.
 - Install the generated `frontend/dist` bundle into `/app/share/dnspect/frontend`.
-- Install the provider/query data into `/app/share/dnspect/data`.
+- Install the provider/query/blocking-domain data into `/app/share/dnspect/data`.
 - Launch through a small wrapper that sets the Flatpak-specific data/frontend paths, waits for the local server, and opens the localhost UI.
 - Request only `--share=network`, because DNS benchmarking and the localhost UI both require networking, but no host filesystem or privileged D-Bus access is needed.
 
-Why this is the safest current path:
+Why this is the current path:
 
-- It preserves the shipped runtime model already validated by the repo’s packaged Linux binary.
-- It avoids bundling the existing PyInstaller executable into Flathub.
-- It builds from the upstream GitHub release tag instead of relying on local checkout-only sources.
-- It uses an offline npm source manifest generated from `frontend/package-lock.json`, which matches Flathub’s offline build expectations.
+- The Flatpak platform/SDK and node24 extension use branch `25.08`, whose SDK runs Python 3.13 (`flatpak run --user --command=python3 org.freedesktop.Sdk/x86_64/25.08 --version` reports `Python 3.13.12`), matching the repository contract `requires-python = ">=3.13"`.
+- The manifest builds from the immutable release tag `v1.3.0` (commit `871bc46adee22347b466a0df96b30dd3213a93ca`), which contains the exact backend and frontend dependency inputs being packaged.
+- Both generated Flatpak inputs are mechanically regenerable (see below); neither is safe to hand-edit.
 
-## Files added or updated
+## Generated release inputs
 
-- `io.github.cortega26.DNSpect.yaml`: Flatpak manifest for local validation and packaging.
-- `packaging/flatpak/requirements.txt`: Flatpak-only Python runtime dependency list.
-- `packaging/flatpak/python3-requirements.json`: pinned Python source/wheel inputs for offline Flatpak builds.
-- `packaging/flatpak/generated-sources.json`: pinned npm sources for offline frontend builds inside Flatpak.
-- `packaging/flatpak/dnspect-launcher`: wrapper that injects Flatpak paths and opens the localhost UI.
-- `packaging/flatpak/io.github.cortega26.DNSpect.desktop`: desktop entry for app launch and Software Manager discovery.
-- `packaging/flatpak/io.github.cortega26.DNSpect.metainfo.xml`: AppStream metadata for Flathub and Linux software centers.
-- `packaging/flatpak/io.github.cortega26.DNSpect.svg`: scalable app icon.
-- `backend/pyproject.toml`: simplified license metadata to remove setuptools deprecation noise during Flatpak builds.
+Two generated files are derived from repository locks and must be regenerated together in release preparation:
 
-## Validation results
+| Source of truth | Generated artifact | Command |
+|---|---|---|
+| `packaging/flatpak/requirements.txt` (exact runtime projection of `backend/pyproject.toml`, no dev/geoip/pack entries) | `packaging/flatpak/python3-requirements.json` | `make flatpak-python-deps` (see bootstrap below) |
+| `frontend/package-lock.json` | `packaging/flatpak/generated-sources.json` | `make flatpak-deps` |
+
+Python module bootstrap (pinned generator in a throwaway virtual environment):
+
+```bash
+DNSPECT_FLATPAK_TOOL_VENV="$(mktemp -d)" && \
+  python3.13 -m venv "$DNSPECT_FLATPAK_TOOL_VENV" && \
+  "$DNSPECT_FLATPAK_TOOL_VENV/bin/pip" install "flatpak-pip-generator==2026.5.28" && \
+  FLATPAK_PIP_GENERATOR="$DNSPECT_FLATPAK_TOOL_VENV/bin/python3.13 -m flatpak_pip_generator.__main__" \
+  make flatpak-python-deps; rc=$?; rm -rf "$DNSPECT_FLATPAK_TOOL_VENV"; exit "$rc"
+```
+
+Notes on the generators:
+
+- The pinned `flatpak-pip-generator==2026.5.28` console script is broken upstream (`flatpak_pip_generator` references a `main` that does not exist), so the bootstrap invokes the same pinned package through `python -m flatpak_pip_generator.__main__`. The Makefile default (`FLATPAK_PIP_GENERATOR ?= flatpak-pip-generator`) still works on hosts where the script is functional.
+- The target passes `--prefer-wheels=pydantic-core,uvloop,httptools,watchfiles` so the C-extension packages resolve to CPython 3.13 x86_64/aarch64 wheels instead of sdists that would need a Rust/C toolchain inside the build sandbox.
+- The npm target uses `flatpak-node-generator npm --stub-requests`: it emits sources from the lockfile's own registry URLs and integrity data and skips the special "playwright browser" sources. Test-tooling browsers are not part of the packaged application; the manifest installs the frontend with `npm install --offline --ignore-scripts`.
+- If a future generator version fixes the playwright browser URL handling, the `--stub-requests` flag can be removed from `make flatpak-deps`.
+
+## Validation results (2026-08-11, v1.3.0 / 25.08)
 
 ### Static validation
 
 - `desktop-file-validate packaging/flatpak/io.github.cortega26.DNSpect.desktop`
   - Result: pass
 - `appstreamcli validate --no-net packaging/flatpak/io.github.cortega26.DNSpect.metainfo.xml`
-  - Result: pass
-- `python3 -c 'import yaml; yaml.safe_load(open("io.github.cortega26.DNSpect.yaml", encoding="utf-8")); print("manifest-ok")'`
-  - Result: pass
-
-### App build and test validation
-
-- `cd frontend && npm run build`
-  - Result: pass
-  - Note: Vite emitted the existing large-chunk warning for the main JS bundle; build still succeeded.
-- `cd backend && ./.venv/bin/pytest -q`
-  - Result: `38 passed`
-- `bash scripts/smoke_test.sh`
-  - Result: pass
-- `bash scripts/smoke_packaged_linux.sh dist/dnspect-linux`
+  - Result: pass (one informational redundancy notice)
+- `flatpak-builder-lint manifest io.github.cortega26.DNSpect.yaml`
   - Result: pass
 
-### Flatpak build validation
+### Flatpak build validation (native x86_64)
 
-- `flatpak remote-add --if-not-exists --user flathub-user https://dl.flathub.org/repo/flathub.flatpakrepo`
-  - Result: pass
-- `flatpak install --user -y flathub-user org.freedesktop.Sdk//24.08 org.flatpak.Builder//stable`
-  - Result: pass
-- `flatpak install --user -y flathub-user org.freedesktop.Sdk.Extension.node22//24.08`
-  - Result: pass
-- `flatpak run org.flatpak.Builder --user --disable-rofiles-fuse --force-clean --install-deps-from=flathub-user build-flatpak io.github.cortega26.DNSpect.yaml`
-  - Result: pass
-  - Note: `--disable-rofiles-fuse` was needed on this host because a subsequent rebuild hit a local `Transport endpoint is not connected` rofiles-fuse error.
-- Build source shape:
-  - Manifest pulls upstream source from `https://github.com/cortega26/DNSpect.git` at `v1.0.1` commit `fec2979a8fa0910433f9951f73b8a6a75b545a98`
-  - Frontend is built offline from `packaging/flatpak/generated-sources.json`
-
-### Flatpak runtime smoke validation
-
-- `flatpak run org.flatpak.Builder --run build-flatpak io.github.cortega26.DNSpect.yaml sh -lc 'DNS_SPEED_LAB_GUI=headless DNS_SPEED_LAB_PORT=18083 DNS_SPEED_LAB_FRONTEND_DIR=/app/share/dnspect/frontend DNS_SPEED_LAB_DATA_DIR=/app/share/dnspect/data dnspect'`
-  - Result: pass
-- `curl -fsS http://127.0.0.1:18083/api/health`
-  - Result: pass
-- `curl -fsS -X POST http://127.0.0.1:18083/api/benchmarks -H 'Content-Type: application/json' -d '{"runs":2,"timeout_sec":1,"resolvers":["1.1.1.1"],"queries":["example.com"],"mode":"quick"}'`
-  - Result: pass
-- Polled benchmark result from sandboxed Flatpak run
-  - Result: pass
-  - Observed engine: `dnspython`
-
-### Installed Flatpak launcher validation
-
-- `flatpak run org.flatpak.Builder --user --install --force-clean --install-deps-from=flathub-user build-flatpak io.github.cortega26.DNSpect.yaml`
-  - Result: pass
-- `flatpak run --env=DNS_SPEED_LAB_PORT=18084 io.github.cortega26.DNSpect`
-  - Result: pass
-  - Evidence: the launcher started the server, hit `/api/health`, opened `/`, and loaded `/assets/*`, `/api/providers`, and `/api/dns/system`.
+- `make flatpak-validate FLATPAK_BUILDER="flatpak run --command=flatpak-builder org.flatpak.Builder" FLATPAK_BUILDER_LINT="flatpak run --command=flatpak-builder-lint org.flatpak.Builder"`
+  - Native build from the `v1.3.0` source tag with the 25.08 SDK and node24 extension: pass.
+  - Manifest lint: pass.
+  - Builddir lint: one known pre-submission item, `appstream-external-screenshot-url` (screenshots are not mirrored to `https://dl.flathub.org/media` yet). Flathub mirrors screenshot media after the submission PR; this item is expected to clear on Flathub's infrastructure and is recorded here rather than suppressed.
+- Built-app Python import smoke:
+  - `flatpak run org.flatpak.Builder --run build-flatpak/build io.github.cortega26.DNSpect.yaml python3 -c 'import fastapi, starlette, httpx, dns, multipart, pydantic_core; print("flatpak-python-imports-ok")'`
+  - Result: `flatpak-python-imports-ok` (the generated module supplies the full runtime closure; the manifest installs with `pip3 install --no-deps`)
+- Headless health smoke (bounded, no sandbox permission changes):
+  - Launched `dnspect` headless on port 18083 inside the built app and polled `/api/health`.
+  - Result: `{"status":"ok",...}`; the background process was terminated after the check.
 
 ## Runtime and sandbox notes
 
-- Required permission: `--share=network`
-  - Needed for outbound DNS benchmarking and the localhost UI on `127.0.0.1`.
+- Required permission: `--share=network` (outbound DNS benchmarking and the localhost UI).
 - No host filesystem permission is requested.
 - No extra D-Bus permission is requested.
-- `drill` is not bundled in the Flatpak baseline.
-  - Observed runtime engine inside Flatpak: `dnspython`
-- Localhost flow works inside the sandbox.
-  - The app serves the UI and API on `127.0.0.1`.
-  - The installed Flatpak launcher successfully triggered browser traffic to `/`.
+- `drill` is not bundled; the observed runtime engine inside Flatpak is `dnspython`.
+- The localhost flow works inside the sandbox.
 
 ## Known gaps and remaining risks
 
-- System DNS auto-detection is degraded inside the sandbox.
-  - In the Flatpak UI, `/api/dns/system` reported the sandbox-visible resolver stub (`127.0.0.53`) via `resolv.conf`, not the fuller host resolver set seen outside Flatpak.
-  - Benchmarking explicit resolvers still worked.
-  - If DNSpect needs host-accurate system DNS detection inside Flatpak, that will require a follow-up design decision, likely involving a more privileged host-call path.
-- The manifest is pinned to upstream `v1.0.1`.
-  - To submit a newer release, update the `commit` in [io.github.cortega26.DNSpect.yaml](/home/carlos/VS_Code_Projects/DNS_app/io.github.cortega26.DNSpect.yaml), refresh `packaging/flatpak/generated-sources.json` if frontend dependencies changed, and rebuild locally before updating Flathub.
-- The Python dependency module now pins `pydantic-core` wheels for both `x86_64` and `aarch64` using `only-arches`.
-  - If wider multi-arch support becomes necessary later, revisit the dependency module or add the missing Rust toolchain path for source builds.
+- System DNS auto-detection is degraded inside the sandbox: `/api/dns/system` reports the sandbox-visible resolver stub via `resolv.conf`, not the fuller host resolver set. Benchmarking explicit resolvers works. Host-accurate system DNS detection inside Flatpak needs a separate design decision.
+- The AppStream release entry says `1.3.0` (the approved release tag), while `backend/pyproject.toml` still reports application version `1.2.0`. Bumping the backend/frontend version pair to `1.3.0` is a release-preparation step that must land before the Flathub PR so the packaged app advertises the same version as its metadata.
+- The pre-submission builddir lint screenshot item described above will clear once Flathub mirrors the screenshot media.
+- Multi-arch: the generated Python module contains x86_64 and aarch64-compatible CPython 3.13 inputs, but only the native x86_64 build was executed locally.
 
 ## Exact next manual actions
 
-1. Merge these packaging changes to `github.com/cortega26/DNSpect`.
+1. Bump `backend/pyproject.toml` and `frontend/package.json` to `1.3.0` (version parity) and cut the release commit for the Flathub PR.
 2. Fork `flathub/flathub` with the `new-pr` branch included, as required by Flathub submission docs.
 3. Clone your fork on the `new-pr` branch and create a submission branch.
 4. Copy these files into the root of that Flathub branch:
@@ -147,7 +118,7 @@ Why this is the safest current path:
    - `packaging/flatpak/io.github.cortega26.DNSpect.svg`
 5. Commit and push that branch, then open the PR against `flathub/flathub:new-pr`.
 6. After acceptance and collaborator access, complete GitHub-based verification in the Flathub Developer Portal.
-7. Decide whether the sandboxed “system DNS detected” view is acceptable for v1, or whether it should be called out in release notes before submission.
+7. Decide whether the sandboxed “system DNS detected” view is acceptable for v1, or whether it should be called out in release notes.
 
 ## Reproduction commands
 
@@ -155,33 +126,31 @@ Why this is the safest current path:
 # Metadata validation
 desktop-file-validate packaging/flatpak/io.github.cortega26.DNSpect.desktop
 appstreamcli validate --no-net packaging/flatpak/io.github.cortega26.DNSpect.metainfo.xml
-python3 -c 'import yaml; yaml.safe_load(open("io.github.cortega26.DNSpect.yaml", encoding="utf-8")); print("manifest-ok")'
+flatpak run --command=flatpak-builder-lint org.flatpak.Builder manifest io.github.cortega26.DNSpect.yaml
 
-# Project validation
-cd frontend && npm run build
-cd ../backend && ./.venv/bin/pytest -q
-cd ..
-bash scripts/smoke_test.sh
-bash scripts/smoke_packaged_linux.sh dist/dnspect-linux
+# Flatpak tooling bootstrap (25.08 / node24 / builder)
+flatpak install -y flathub org.freedesktop.Sdk//25.08
+flatpak install -y flathub org.freedesktop.Sdk.Extension.node24//25.08
+flatpak install -y flathub org.flatpak.Builder
 
-# Flatpak tooling bootstrap (user install)
-flatpak remote-add --if-not-exists --user flathub-user https://dl.flathub.org/repo/flathub.flatpakrepo
-flatpak install --user -y flathub-user org.freedesktop.Sdk//24.08 org.flatpak.Builder//stable
-flatpak install --user -y flathub-user org.freedesktop.Sdk.Extension.node22//24.08
+# Regenerate the Python module (pinned generator, throwaway venv)
+DNSPECT_FLATPAK_TOOL_VENV="$(mktemp -d)" && \
+  python3.13 -m venv "$DNSPECT_FLATPAK_TOOL_VENV" && \
+  "$DNSPECT_FLATPAK_TOOL_VENV/bin/pip" install "flatpak-pip-generator==2026.5.28" && \
+  FLATPAK_PIP_GENERATOR="$DNSPECT_FLATPAK_TOOL_VENV/bin/python3.13 -m flatpak_pip_generator.__main__" \
+  make flatpak-python-deps; rc=$?; rm -rf "$DNSPECT_FLATPAK_TOOL_VENV"; exit "$rc"
 
-# Flatpak build
-flatpak run org.flatpak.Builder --user --disable-rofiles-fuse --force-clean --install-deps-from=flathub-user build-flatpak io.github.cortega26.DNSpect.yaml
+# Regenerate the npm sources from the audited lock
+make flatpak-deps   # uses flatpak-node-generator npm --stub-requests
 
-# Sandbox smoke test
-flatpak run org.flatpak.Builder --run build-flatpak io.github.cortega26.DNSpect.yaml sh -lc 'DNS_SPEED_LAB_GUI=headless DNS_SPEED_LAB_PORT=18083 DNS_SPEED_LAB_FRONTEND_DIR=/app/share/dnspect/frontend DNS_SPEED_LAB_DATA_DIR=/app/share/dnspect/data dnspect'
+# Flatpak build + lint (native architecture)
+make flatpak-validate FLATPAK_BUILDER="flatpak run --command=flatpak-builder org.flatpak.Builder" FLATPAK_BUILDER_LINT="flatpak run --command=flatpak-builder-lint org.flatpak.Builder"
 
-# Install the locally built Flatpak
-flatpak run org.flatpak.Builder --user --install --force-clean --install-deps-from=flathub-user build-flatpak io.github.cortega26.DNSpect.yaml
+# Built-app import smoke
+flatpak run org.flatpak.Builder --run build-flatpak/build io.github.cortega26.DNSpect.yaml python3 -c 'import fastapi, starlette, httpx, dns, multipart, pydantic_core; print("flatpak-python-imports-ok")'
 
-# Run the installed app on a non-default port during testing
-flatpak run --env=DNS_SPEED_LAB_PORT=18084 io.github.cortega26.DNSpect
-
-# Flathub submission branch bootstrap
-gh repo fork --clone flathub/flathub && cd flathub && git checkout --track origin/new-pr
-git checkout -b dnspect-submission new-pr
+# Sandbox headless health smoke
+flatpak run org.flatpak.Builder --run build-flatpak/build io.github.cortega26.DNSpect.yaml \
+  sh -lc 'DNS_SPEED_LAB_GUI=headless DNS_SPEED_LAB_PORT=18083 DNS_SPEED_LAB_FRONTEND_DIR=/app/share/dnspect/frontend DNS_SPEED_LAB_DATA_DIR=/app/share/dnspect/data dnspect' &
+curl -fsS http://127.0.0.1:18083/api/health
 ```
