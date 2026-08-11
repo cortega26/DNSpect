@@ -389,3 +389,73 @@ def test_protocol_reflected_in_history(monkeypatch, tmp_path) -> None:
     matching = [r for r in history["runs"] if r["id"] == benchmark_id]
     assert len(matching) == 1
     assert matching[0]["protocol"] == "dot"
+
+
+def test_doh_flag_only_without_url_is_rejected(monkeypatch, tmp_path) -> None:
+    manager = BenchmarkManager(max_concurrent_jobs=1, max_queued_jobs=1, data_runs_dir=tmp_path / "runs")
+
+    monkeypatch.setattr(
+        manager,
+        "provider_index",
+        {
+            "1.1.1.1": {
+                "id": "test",
+                "name": "Test",
+                "features": {"doh": "yes", "doh_url": ""},
+            }
+        },
+    )
+
+    with pytest.raises(ValueError, match="No hay resolvers disponibles"):
+        manager.start(
+            BenchmarkRequest(
+                runs=1,
+                timeout_sec=1.0,
+                resolvers=["1.1.1.1"],
+                queries=["example.com"],
+                protocol="doh",
+            )
+        )
+
+
+def test_doh_url_with_non_yes_flag_is_eligible(monkeypatch, tmp_path) -> None:
+    manager = BenchmarkManager(max_concurrent_jobs=1, max_queued_jobs=1, data_runs_dir=tmp_path / "runs")
+
+    monkeypatch.setattr(
+        manager,
+        "provider_index",
+        {
+            "1.1.1.1": {
+                "id": "test",
+                "name": "Test",
+                "features": {"doh": "no", "doh_url": "https://dns.example.com/dns-query"},
+            }
+        },
+    )
+
+    def fake_measure(*, resolver, domain, timeout_sec, engine):
+        del timeout_sec, engine
+        return {
+            "ok": True,
+            "ms": 20.0,
+            "query": domain,
+            "error": None,
+            "failure_kind": None,
+            "resolver": resolver,
+        }
+
+    monkeypatch.setattr("app.runner.measure_query", fake_measure)
+    monkeypatch.setattr("app.runner.select_engine", lambda: "dnspython")
+    manager.blocking_test_queries = []
+
+    benchmark_id = manager.start(
+        BenchmarkRequest(
+            runs=1,
+            timeout_sec=1.0,
+            resolvers=["1.1.1.1"],
+            queries=["example.com"],
+            protocol="doh",
+        )
+    )
+    state = _wait_terminal(manager, benchmark_id)
+    assert state["status"] == "done"
