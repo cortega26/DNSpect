@@ -95,24 +95,28 @@ test.describe('accessibility and i18n contract', () => {
     await page.goto('/')
 
     await page.keyboard.press('Tab')
-    const skipFocused = await page.evaluate(() => document.activeElement?.classList.contains('skip-link'))
-    expect(skipFocused).toBe(true)
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.classList.contains('skip-link') ?? false))
+      .toBe(true)
 
     await page.keyboard.press('Enter')
-    const mainFocused = await page.evaluate(() => document.activeElement?.id === 'main-content')
-    expect(mainFocused).toBe(true)
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.id === 'main-content'))
+      .toBe(true)
 
     await page.keyboard.press('Tab')
-    const focusInfo = await page.evaluate(() => {
-      const active = document.activeElement
-      const main = document.getElementById('main-content')
-      return {
-        inMain: active !== null && main !== null && main.contains(active),
-        isThemeToggle: active?.classList.contains('theme-toggle') ?? false,
-      }
-    })
-    expect(focusInfo.isThemeToggle).toBe(false)
-    expect(focusInfo.inMain).toBe(true)
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const active = document.activeElement
+          const main = document.getElementById('main-content')
+          return {
+            inMain: active !== null && main !== null && main.contains(active),
+            isThemeToggle: active?.classList.contains('theme-toggle') ?? false,
+          }
+        }),
+      )
+      .toEqual({ inMain: true, isThemeToggle: false })
     expect(api.unhandledRequests).toEqual([])
   })
 
