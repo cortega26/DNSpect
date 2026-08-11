@@ -16,8 +16,12 @@ Incluye:
 ## Scope
 
 Este proyecto está diseñado para ejecutarse localmente y no incluye telemetría.
-Realiza consultas DNS salientes hacia los resolvers configurados por el usuario.
-No debe usarse para escaneo de red ni pruebas no autorizadas.
+Realiza consultas DNS salientes hacia los resolvers configurados por el usuario
+y, cuando la detección automática de región está activa, un único request a
+`https://api.ipify.org?format=json` (solo la IP pública, timeout de 5 s, sin
+caché ni reintentos) seguido de una consulta local a `/api/geoip`; la política
+aprobada está documentada en `docs/REGION_TARGETING.md`. No debe usarse para
+escaneo de red ni pruebas no autorizadas.
 
 ## Security Baseline
 

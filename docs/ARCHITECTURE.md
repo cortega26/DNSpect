@@ -29,15 +29,17 @@ Ruta: `backend/app/`
 
 ### Scoring y Ranking
 
-El scoring usa pesos ajustables por goal (speed, security, privacy, ad-blocking, family):
+El scoring usa pesos ajustables por perfil de puntuación (speed, security, privacy, ad-blocking, family). Las cuatro dimensiones son latencia, confiabilidad, estabilidad y bloqueo (`GOAL_WEIGHTS` en `backend/app/stats.py`):
 
-| Goal       | Latency | Reliability | Stability |
-|------------|---------|-------------|-----------|
-| speed      | 0.60    | 0.30        | 0.10      |
-| security   | 0.35    | 0.50        | 0.15      |
-| privacy    | 0.40    | 0.40        | 0.20      |
-| ad-blocking| 0.35    | 0.50        | 0.15      |
-| family     | 0.30    | 0.55        | 0.15      |
+| Perfil       | Latency | Reliability | Stability | Blocking |
+|--------------|---------|-------------|-----------|----------|
+| speed        | 0.55    | 0.25        | 0.10      | 0.10     |
+| security     | 0.30    | 0.40        | 0.10      | 0.20     |
+| privacy      | 0.35    | 0.35        | 0.15      | 0.15     |
+| ad-blocking  | 0.25    | 0.40        | 0.10      | 0.25     |
+| family       | 0.25    | 0.40        | 0.10      | 0.25     |
+
+El perfil de puntuación controla la política de ranking y es independiente de la selección de resolvers; el snapshot de destino (`target_snapshot`) registra de forma inmutable qué conjunto exacto se midió (ver `docs/PROFILE_MODEL.md`).
 
 El ranking se ordena por:
 
@@ -46,7 +48,7 @@ El ranking se ordena por:
 3. `score_stability` asc
 4. `resolver` (tie-break lexicográfico)
 
-Un resolver con `failure_rate > 5%` se marca `is_unreliable` y se evita para recomendaciones.
+Un resolver con `failure_rate > 5%` (o sin tasa calculable) se marca `is_unreliable` y se evita para recomendaciones. La recomendación elige el primer resolver confiable con estadísticas utilizables según el ranking; si todos son no confiables se devuelve el primero utilizable junto con una advertencia, y sin resultados utilizables no hay recomendación (`RECOMMENDATION_WARNING_ALL_UNRELIABLE` / `RECOMMENDATION_WARNING_NO_USABLE_RESULTS`).
 
 ### Contrato de BenchmarkStatus
 
@@ -55,7 +57,7 @@ Un resolver con `failure_rate > 5%` se marca `is_unreliable` y se evita para rec
 - `status`: `queued | running | done | failed | cancelled`
 - `progress`: `current`, `total`, `current_resolver`, `last_sample_at`, `avg_latency_ms`
 - `results`: solo cuando `done`, sin muestras por defecto (`samples: []` + `sample_count`).
-- `recommended_resolver`: el mejor resolver confiable, o el primero si todos son `is_unreliable`.
+- `recommended_resolver`: el primer resolver confiable según el ranking; con advertencia si todos son no confiables o no hay resultados utilizables.
 
 Para incluir muestras:
 
@@ -72,6 +74,7 @@ Para incluir muestras:
 | `/api/geoip` | GET | GeoIP lookup opcional |
 | `/api/probe` | POST | Probe rápida (sample pequeño) |
 | `/api/benchmarks` | POST | Iniciar benchmark |
+| `/api/benchmarks/history` | GET | Historial de runs persistidos |
 | `/api/benchmarks/{id}` | GET | Poll de estado/resultados |
 | `/api/benchmarks/{id}/export.csv` | GET | Exportación CSV |
 | `/api/benchmarks/{id}/export.json` | GET | Exportación JSON |
@@ -90,13 +93,15 @@ Para incluir muestras:
 Ruta: `frontend/src/`
 
 - `App.tsx`: orquestación principal, estado, polling, i18n, tema.
-- `DashboardControls.tsx`: selección de resolvers, modo, goal, timeout.
+- `DashboardControls.tsx`: selección de resolvers, modo, perfil de puntuación, timeout y alcance de región.
 - `LiveRankingPanel.tsx`: ranking animado durante benchmark.
 - `RecommendedResolverPanel.tsx`: recomendación post-benchmark.
 - `ResolverRankingPanel.tsx`: tabla completa con filtros.
 - `ChartsPanel.tsx`: gráficos lazy-loaded (Recharts: mediana, p95, confiabilidad).
 - `GuidedApplyModal.tsx`: guía para aplicar DNS.
 - `ResolverDetailModal.tsx`: detalle por resolver con serie temporal/histograma.
+
+La detección automática de alcance de región hace un único request público a `https://api.ipify.org?format=json` (IP solamente, timeout de 5 s, sin caché ni reintentos) y una consulta local a `/api/geoip`; solo se consume la región normalizada del backend y el resultado se descarta si el usuario ya eligió un alcance manual (política aprobada en `docs/REGION_TARGETING.md`).
 
 ## Packaging (Release)
 
