@@ -5,7 +5,7 @@ import re
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 
 HOSTNAME_RE = re.compile(r"^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*\.?$")
 
@@ -43,7 +43,9 @@ class TargetSnapshot(BaseModel):
 
     @field_validator("provider_ids")
     @classmethod
-    def validate_provider_ids(cls, value: dict[str, str] | None, info) -> dict[str, str] | None:
+    def validate_provider_ids(
+        cls, value: dict[str, str] | None, info: ValidationInfo
+    ) -> dict[str, str] | None:
         if value is None:
             return None
         resolver_ips = set(info.data.get("resolver_ips", []))

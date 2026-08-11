@@ -75,13 +75,22 @@ def system_dns() -> dict:
     return manager.system_dns_payload()
 
 
+EMPTY_GEOIP_RESPONSE = {
+    "country_code": None,
+    "country_name": None,
+    "region": None,
+    "city": None,
+    "source": None,
+}
+
+
 @app.get("/api/geoip")
 def geoip(request: Request, ip: str = Query(default="")) -> dict:
     client_ip = ip.strip() or request.client.host if request.client else ""
-    if not client_ip:
-        return {"country_code": None, "country_name": None, "region": None, "city": None}
-    result = geoip_lookup(client_ip)
-    result["source"] = "GeoIP database" if result.get("country_code") else None
+    result = dict(EMPTY_GEOIP_RESPONSE)
+    if client_ip:
+        result.update(geoip_lookup(client_ip))
+        result["source"] = "GeoIP database" if result.get("country_code") else None
     return result
 
 

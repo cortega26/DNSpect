@@ -460,6 +460,29 @@ class BenchmarkManager:
             "results": results,
         }
 
+    def _persisted_run_path(self, benchmark_id: str) -> Path | None:
+        """Return the metadata path only for canonical lowercase UUIDv4 hex IDs.
+
+        Accepts exactly the 32-character lowercase hex form produced by
+        ``uuid.uuid4().hex`` in ``start()``. Any other identifier returns None
+        without touching the disk; the resolved candidate must also stay
+        contained in the runs directory.
+        """
+        try:
+            parsed = uuid.UUID(benchmark_id)
+        except (ValueError, AttributeError, TypeError):
+            return None
+        if parsed.version != 4 or parsed.hex != benchmark_id:
+            return None
+
+        candidate = self._data_runs_dir / f"{parsed.hex}.json"
+        try:
+            if not candidate.resolve().is_relative_to(self._data_runs_dir.resolve()):
+                return None
+        except OSError:
+            return None
+        return candidate
+
     def get(self, benchmark_id: str, include_samples: bool = False) -> dict[str, Any] | None:
         with self._lock:
             self._cleanup_terminal_states_locked()
@@ -467,9 +490,9 @@ class BenchmarkManager:
             if state:
                 return state.as_response(include_samples=include_samples)
 
-        # Fallback: load from disk
-        result_path = self._data_runs_dir / f"{benchmark_id}.json"
-        if not result_path.exists():
+        # Fallback: load from disk, only for canonical generated IDs
+        result_path = self._persisted_run_path(benchmark_id)
+        if result_path is None or not result_path.exists():
             return None
         try:
             data: dict[str, Any] = json.loads(result_path.read_text(encoding="utf-8"))
@@ -511,7 +534,7 @@ class BenchmarkManager:
             except (json.JSONDecodeError, OSError):
                 continue
 
-        def _sort_key(entry: dict[str, Any]) -> tuple[int, str, str]:
+        def _sort_key(entry: dict[str, Any]) -> tuple[float, int, str]:
             started_raw = entry.get("started_at")
             try:
                 parsed = datetime.fromisoformat(str(started_raw))
