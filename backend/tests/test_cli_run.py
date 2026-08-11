@@ -4,9 +4,10 @@ import csv
 import io
 import json
 
-from app.cli_run import run, run_parser
+from app.cli_run import build_request, run, run_parser
 from app.export import EXPORT_CSV_COLUMNS
 from app.models import BenchmarkRequest
+from app.runner import BenchmarkManager
 
 
 class FakeManager:
@@ -156,3 +157,13 @@ def test_run_progress_suppressed_when_not_tty(capsys) -> None:
     assert code == 0
     assert "progress=" not in captured.out
     assert "progress=" not in captured.err
+
+
+def test_cli_request_builds_manifest_compatible_snapshot() -> None:
+    args = run_parser().parse_args(["--resolvers", "1.1.1.1", "--mode", "quick"])
+    request = build_request(args)
+    assert request.target_snapshot is None
+    cfg = BenchmarkManager()._build_config(request)
+    assert cfg.target_snapshot is not None
+    assert cfg.target_snapshot["resolver_ips"] == ["1.1.1.1"]
+    assert cfg.target_snapshot["selection_source"] == "manual"
