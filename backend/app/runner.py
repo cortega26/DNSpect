@@ -98,6 +98,7 @@ class BenchmarkState:
     observed_latency_count: int = 0
     mode: str = "standard"
     goal: str = "speed"
+    scoring_profile: str = "speed"
     protocol: str = "udp"
     timeout_sec: float = 2.0
     runs: int = 30
@@ -105,11 +106,12 @@ class BenchmarkState:
     error: str | None = None
     results: list[dict[str, Any]] | None = None
     run_storage_warning: str | None = None
+    target_snapshot: dict[str, object] | None = None
 
     def as_response(self, include_samples: bool = False) -> dict[str, Any]:
         sanitized_results = _sanitize_results(self.results, include_samples=include_samples)
         recommended_resolver, recommendation_warning = select_recommended_resolver(sanitized_results or [])
-        return {
+        response: dict[str, Any] = {
             "id": self.id,
             "status": self.status,
             "progress": {
@@ -126,6 +128,8 @@ class BenchmarkState:
             "started_at": self.started_at,
             "finished_at": self.finished_at,
             "mode": self.mode,
+            "goal": self.goal,
+            "scoring_profile": self.scoring_profile,
             "protocol": self.protocol,
             "timeout_sec": self.timeout_sec,
             "runs": self.runs,
@@ -135,7 +139,9 @@ class BenchmarkState:
             "results": sanitized_results,
             "recommended_resolver": recommended_resolver,
             "recommendation_warning": recommendation_warning,
+            "target_snapshot": self.target_snapshot,
         }
+        return response
 
 
 @dataclass
@@ -146,7 +152,9 @@ class BenchmarkConfig:
     timeout_sec: float
     mode: str
     goal: str
+    scoring_profile: str
     protocol: str
+    target_snapshot: dict[str, object] | None = None
 
 
 def _sanitize_results(
@@ -285,14 +293,21 @@ class BenchmarkManager:
         if not resolvers:
             raise ValueError("No hay resolvers disponibles para el protocolo seleccionado")
 
+        scoring_profile = req.effective_scoring_profile()
+        target_snapshot_dict: dict[str, object] | None = None
+        if req.target_snapshot is not None:
+            target_snapshot_dict = req.target_snapshot.model_dump()
+
         return BenchmarkConfig(
             resolvers=resolvers,
             queries=queries,
             runs=runs,
             timeout_sec=timeout_sec,
             mode=req.mode.value,
-            goal=req.goal.value,
+            goal=scoring_profile,
+            scoring_profile=scoring_profile,
             protocol=req.protocol.value,
+            target_snapshot=target_snapshot_dict,
         )
 
     def start(self, req: BenchmarkRequest) -> str:
@@ -307,9 +322,11 @@ class BenchmarkManager:
             progress_total=len(config.resolvers) * config.runs + blocking_total,
             mode=config.mode,
             goal=config.goal,
+            scoring_profile=config.scoring_profile,
             protocol=config.protocol,
             timeout_sec=config.timeout_sec,
             runs=config.runs,
+            target_snapshot=config.target_snapshot,
         )
         with self._lock:
             self._cleanup_terminal_states_locked()
@@ -516,7 +533,7 @@ class BenchmarkManager:
 
     def _set_done(self, benchmark_id: str, engine: str, results: list[dict[str, Any]]) -> None:
         state = self.get_state(benchmark_id)
-        apply_normalized_scoring(results, goal=state.goal if state else None)
+        apply_normalized_scoring(results, goal=state.scoring_profile if state else None)
         ranked_results = sorted(results, key=_resolver_rank_key)
         with self._lock:
             state = self._states[benchmark_id]
@@ -533,7 +550,7 @@ class BenchmarkManager:
             if state.results is None:
                 state.results = []
             state.results.append(result)
-            apply_normalized_scoring(state.results, goal=state.goal)
+            apply_normalized_scoring(state.results, goal=state.scoring_profile)
             state.results.sort(key=_resolver_rank_key)
 
     def _set_failed(self, benchmark_id: str, message: str) -> None:

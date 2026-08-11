@@ -35,7 +35,7 @@ import {
   shouldPollBenchmark,
 } from '@/lib/runtime'
 import { useTheme } from '@/lib/useTheme'
-import type { BenchmarkMode, BenchmarkProtocol, BenchmarkStatus, Goal, Provider, ResolverResult, SystemDnsPayload } from '@/lib/types'
+import type { BenchmarkMode, BenchmarkProtocol, BenchmarkStatus, Provider, ResolverResult, ScoringProfile, SystemDnsPayload, TargetSnapshot } from '@/lib/types'
 import { API_BASE, detectRegion, fmtMs, providersByGoal, providersByRegion, regionLabel, resolverReliabilityScore } from '@/lib/utils'
 
 const MODE_RUNS: Record<BenchmarkMode, number> = {
@@ -111,6 +111,7 @@ const POLL_INTERVAL_MS = 1000
 interface ResolverCatalogItem {
   resolver: string
   providerName: string
+  providerId: string
 }
 
 interface VerificationSummary {
@@ -198,7 +199,7 @@ function App() {
   const [timeoutSec, setTimeoutSec] = useState<number>(2)
   const [timeoutPreset, setTimeoutPreset] = useState<TimeoutPreset>('medium')
   const [queriesText, setQueriesText] = useState<string>('')
-  const [goal, setGoal] = useState<Goal>('speed')
+  const [scoringProfile, setScoringProfile] = useState<ScoringProfile>('speed')
   const [detectedRegion, setDetectedRegion] = useState<string | null>(() => detectRegion())
   const [regionOverride, setRegionOverride] = useState<string | null>(null)
   const [advancedOpen, setAdvancedOpen] = useState<boolean>(false)
@@ -435,11 +436,11 @@ function App() {
   }, [timeoutSec])
 
   const providerById = useMemo(() => new Map(providers.map((p) => [p.id, p])), [providers])
-  const goalFilteredProviders = useMemo(() => providersByGoal(providers, goal), [providers, goal])
+  const scoringFilteredProviders = useMemo(() => providersByGoal(providers, scoringProfile), [providers, scoringProfile])
   const effectiveRegion = regionOverride ?? detectedRegion
   const regionFilteredProviders = useMemo(
-    () => providersByRegion(goalFilteredProviders, effectiveRegion),
-    [goalFilteredProviders, effectiveRegion],
+    () => providersByRegion(scoringFilteredProviders, effectiveRegion),
+    [scoringFilteredProviders, effectiveRegion],
   )
   const resolverCatalog = useMemo(() => {
     const catalog = new Map<string, ResolverCatalogItem>()
@@ -448,6 +449,7 @@ function App() {
         catalog.set(ip, {
           resolver: ip,
           providerName: provider.name,
+          providerId: provider.id,
         })
       })
     })
@@ -456,6 +458,7 @@ function App() {
         catalog.set(resolver, {
           resolver,
           providerName: t('group.isp'),
+          providerId: 'isp-detectado',
         })
       }
     })
@@ -755,14 +758,29 @@ function App() {
 
     try {
       const customQueries = parseQueries(queriesText)
+      const resolverIps = Array.from(selectedResolvers)
+      const providerIds: Record<string, string> = {}
+      for (const ip of resolverIps) {
+        const catalogItem = resolverCatalog.get(ip)
+        if (catalogItem?.providerId && catalogItem.providerId !== 'isp-detectado') {
+          providerIds[ip] = catalogItem.providerId
+        }
+      }
+      const targetSnapshot: TargetSnapshot = {
+        resolver_ips: resolverIps,
+        selection_source: resolverIps.length > 0 ? 'manual' : 'catalog',
+        provider_ids: Object.keys(providerIds).length > 0 ? providerIds : null,
+      }
       const payload = {
         mode,
-        goal,
+        scoring_profile: scoringProfile,
+        goal: scoringProfile,
         protocol,
         runs,
         timeout_sec: timeoutSec,
-        resolvers: Array.from(selectedResolvers),
+        resolvers: resolverIps,
         ...(customQueries.length > 0 ? { queries: customQueries } : {}),
+        target_snapshot: targetSnapshot,
       }
       const response = await startBenchmark(payload)
       if (!shouldAcceptAsyncResult(requestSeq, startRequestSeqRef.current, mountedRef.current)) return
@@ -787,15 +805,8 @@ function App() {
     setRuns(MODE_RUNS[nextMode])
   }
 
-  function onGoalChange(nextGoal: Goal) {
-    setGoal(nextGoal)
-    setSelectedResolvers(() => {
-      const matching = new Set<string>()
-      const filtered = providersByGoal(providers, nextGoal)
-      filtered.forEach((p) => p.dns.forEach((ip) => matching.add(ip)))
-      systemDns?.resolvers?.forEach((ip) => matching.add(ip))
-      return matching
-    })
+  function onScoringProfileChange(nextProfile: ScoringProfile) {
+    setScoringProfile(nextProfile)
   }
 
   function applyRecommendation() {
@@ -1212,7 +1223,7 @@ function App() {
           selected={selectedResolvers}
           mode={mode}
           protocol={protocol}
-          goal={goal}
+          scoringProfile={scoringProfile}
           runs={runs}
           timeoutSec={timeoutSec}
           timeoutPreset={timeoutPreset}
@@ -1229,7 +1240,7 @@ function App() {
           onToggleResolver={toggleResolver}
           onModeChange={onModeChange}
           onProtocolChange={setProtocol}
-          onGoalChange={onGoalChange}
+          onScoringProfileChange={onScoringProfileChange}
           onRunsChange={(v) => setRuns(Math.max(1, Math.min(300, Number.isFinite(v) ? v : runs)))}
           onTimeoutChange={(v) => setTimeoutSec(Math.max(0.2, Math.min(10, Number.isFinite(v) ? v : timeoutSec)))}
           onTimeoutPresetChange={(preset) => {

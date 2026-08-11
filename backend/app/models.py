@@ -5,7 +5,7 @@ import re
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 HOSTNAME_RE = re.compile(r"^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*\.?$")
 
@@ -28,6 +28,29 @@ class BenchmarkProtocol(str, Enum):
     udp = "udp"
     dot = "dot"
     doh = "doh"
+
+
+class SelectionSource(str, Enum):
+    manual = "manual"
+    catalog = "catalog"
+    system = "system"
+
+
+class TargetSnapshot(BaseModel):
+    resolver_ips: list[str] = Field(min_length=1)
+    selection_source: SelectionSource
+    provider_ids: dict[str, str] | None = None
+
+    @field_validator("provider_ids")
+    @classmethod
+    def validate_provider_ids(cls, value: dict[str, str] | None, info) -> dict[str, str] | None:
+        if value is None:
+            return None
+        resolver_ips = set(info.data.get("resolver_ips", []))
+        for key in value:
+            if key not in resolver_ips:
+                raise ValueError(f"provider_ids key '{key}' not in resolver_ips")
+        return value
 
 
 MODE_DEFAULT_RUNS = {
@@ -73,8 +96,16 @@ class BenchmarkRequest(BaseModel):
     resolvers: Optional[list[str]] = None
     queries: Optional[list[str]] = None
     mode: BenchmarkMode = BenchmarkMode.standard
-    goal: BenchmarkGoal = BenchmarkGoal.speed
+    goal: BenchmarkGoal | None = Field(
+        default=None,
+        description="Deprecated: use scoring_profile instead.",
+    )
+    scoring_profile: BenchmarkGoal | None = Field(
+        default=None,
+        description="Canonical scoring profile that determines ranking weights.",
+    )
     protocol: BenchmarkProtocol = BenchmarkProtocol.udp
+    target_snapshot: TargetSnapshot | None = None
 
     @field_validator("resolvers")
     @classmethod
@@ -85,6 +116,17 @@ class BenchmarkRequest(BaseModel):
     @classmethod
     def validate_queries(cls, values: Optional[list[str]]) -> Optional[list[str]]:
         return _normalize_queries(values, max_items=256)
+
+    @model_validator(mode="after")
+    def resolve_scoring_profile(self) -> BenchmarkRequest:
+        goal = self.goal
+        scoring = self.scoring_profile
+        if goal is not None and scoring is not None and goal != scoring:
+            raise ValueError("goal y scoring_profile entran en conflicto")
+        return self
+
+    def effective_scoring_profile(self) -> str:
+        return (self.scoring_profile or self.goal or BenchmarkGoal.speed).value
 
     def effective_runs(self) -> int:
         if self.runs is not None:
