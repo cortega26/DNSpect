@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import threading
 import time
 import urllib.error
@@ -90,6 +91,11 @@ def _start_browser_mode(host: str, port: int) -> None:
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "run":
+        from .cli_run import main as run_main
+
+        raise SystemExit(run_main(sys.argv[2:]))
+
     host = os.getenv("DNS_SPEED_LAB_HOST", "127.0.0.1")
     port = _to_int(os.getenv("DNS_SPEED_LAB_PORT", "8000"), 8000)
 
