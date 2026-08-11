@@ -675,7 +675,7 @@ class BenchmarkManager:
         if protocol == "dot":
             return bool(features.get("dot_hostname") or features.get("dot") == "yes")
         if protocol == "doh":
-            return bool(features.get("doh_url") or features.get("doh") == "yes")
+            return bool(features.get("doh_url"))
         return False
 
     def _measure_with_protocol(

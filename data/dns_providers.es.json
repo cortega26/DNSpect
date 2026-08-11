@@ -567,7 +567,7 @@
       "filtering": "unknown",
       "malware_protection": "unknown",
       "family": "no",
-      "doh": "yes",
+      "doh": "no",
       "dot": "no",
       "doq": "no",
       "doh_url": "",
@@ -595,7 +595,7 @@
       "filtering": "unknown",
       "malware_protection": "unknown",
       "family": "no",
-      "doh": "yes",
+      "doh": "no",
       "dot": "no",
       "doq": "no",
       "doh_url": "",
@@ -887,7 +887,7 @@
       "filtering": "no",
       "malware_protection": "no",
       "family": "no",
-      "doh": "yes",
+      "doh": "no",
       "dot": "no",
       "doq": "no",
       "doh_url": "",
@@ -916,7 +916,7 @@
       "filtering": "yes",
       "malware_protection": "yes",
       "family": "no",
-      "doh": "yes",
+      "doh": "no",
       "dot": "no",
       "doq": "no",
       "doh_url": "",
@@ -946,7 +946,7 @@
       "filtering": "yes",
       "malware_protection": "yes",
       "family": "yes",
-      "doh": "yes",
+      "doh": "no",
       "dot": "no",
       "doq": "no",
       "doh_url": "",
@@ -1007,7 +1007,7 @@
       "filtering": "no",
       "malware_protection": "no",
       "family": "no",
-      "doh": "yes",
+      "doh": "no",
       "dot": "no",
       "doq": "no",
       "doh_url": "",
@@ -1456,35 +1456,5 @@
       "doq_hostname": ""
     },
     "notes_es": "Neustar con protección contra malware y amenazas cibernéticas."
-  },
-  {
-    "id": "comodo-family",
-    "name": "Comodo Secure DNS (familiar)",
-    "dns": [
-      "8.26.56.27",
-      "8.20.247.20"
-    ],
-    "tags": [
-      "global",
-      "seguridad"
-    ],
-    "region": "global",
-    "country": "US",
-    "goals": [
-      "security",
-      "family"
-    ],
-    "features": {
-      "filtering": "yes",
-      "malware_protection": "yes",
-      "family": "yes",
-      "doh": "no",
-      "dot": "no",
-      "doq": "no",
-      "doh_url": "",
-      "dot_hostname": "",
-      "doq_hostname": ""
-    },
-    "notes_es": "Comodo con filtro de seguridad avanzada. Bloquea malware y sitios peligrosos."
   }
 ]

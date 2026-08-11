@@ -5,6 +5,7 @@ import os
 import sys
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 
 def _resolve_data_root() -> Path:
@@ -37,7 +38,45 @@ def load_providers() -> list[dict[str, Any]]:
         providers = json.load(f)
     if not isinstance(providers, list):
         raise ValueError("dns_providers.es.json debe ser una lista")
+    _validate_providers(providers)
     return providers
+
+
+def _validate_providers(providers: list[dict[str, Any]]) -> None:
+    seen_ids: set[str] = set()
+    seen_resolvers: dict[str, str] = {}
+    for provider in providers:
+        pid = provider.get("id")
+        if not isinstance(pid, str) or not pid.strip():
+            raise ValueError("Provider sin id válido")
+        if pid in seen_ids:
+            raise ValueError(f"ID de provider duplicado: {pid}")
+        seen_ids.add(pid)
+
+        dns = provider.get("dns")
+        if not isinstance(dns, list) or len(dns) == 0:
+            raise ValueError(f"Provider '{pid}' no tiene lista dns o está vacía")
+        for ip in dns:
+            if not isinstance(ip, str) or not ip.strip():
+                raise ValueError(f"Resolver vacío en provider '{pid}'")
+            if ip in seen_resolvers:
+                raise ValueError(f"Resolver duplicado '{ip}' en provider '{pid}' y '{seen_resolvers[ip]}'")
+            seen_resolvers[ip] = pid
+
+    for provider in providers:
+        pid = provider.get("id", "")
+        features = provider.get("features")
+        if not isinstance(features, dict):
+            continue
+        doh_flag = features.get("doh")
+        if doh_flag != "yes":
+            continue
+        doh_url = features.get("doh_url", "")
+        if not isinstance(doh_url, str) or not doh_url.strip():
+            raise ValueError(f"Provider '{pid}' declara doh=yes sin doh_url configurable")
+        parsed = urlparse(doh_url)
+        if parsed.scheme != "https" or not parsed.hostname:
+            raise ValueError(f"Provider '{pid}' tiene doh_url inválido: {doh_url}")
 
 
 def load_default_queries() -> list[str]:
@@ -77,6 +116,11 @@ def build_default_resolvers(providers: list[dict[str, Any]]) -> list[str]:
 def resolver_provider_index(providers: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     index: dict[str, dict[str, Any]] = {}
     for provider in providers:
+        pid = provider.get("id", "")
         for ip in provider.get("dns", []):
+            if ip in index:
+                raise ValueError(
+                    f"Resolver duplicado '{ip}' en provider '{pid}' y '{index[ip].get('id', '')}'"
+                )
             index[ip] = provider
     return index
