@@ -79,6 +79,14 @@ def _validate_providers(providers: list[dict[str, Any]]) -> None:
         parsed = urlparse(doh_url)
         if parsed.scheme != "https" or not parsed.hostname:
             raise ValueError(f"Provider '{pid}' tiene doh_url inválido: {doh_url}")
+        doq_flag = features.get("doq")
+        if doq_flag != "yes":
+            continue
+        doq_hostname = features.get("doq_hostname")
+        if not isinstance(doq_hostname, str) or not doq_hostname.strip():
+            raise ValueError(f"Provider '{pid}' declara doq=yes sin doq_hostname configurable")
+        if not is_valid_dns_hostname(doq_hostname):
+            raise ValueError(f"Provider '{pid}' tiene doq_hostname inválido: {doq_hostname}")
 
 
 def load_default_queries() -> list[str]:
