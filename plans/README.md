@@ -69,8 +69,8 @@ priority describes expected impact, effort is an implementation estimate.
 | [018 — controlled protocol comparison](archive/018-controlled-protocol-comparison.md) | P3 / L | 009, 010, 012, 014, 015, 016, 017 | **Complete** — `ba24025` |
 | [019 — backend CSV diagnostics parity](019-backend-csv-diagnostics-parity.md) | P2 / S | — | **DONE** — implemented in worktree `/tmp/opencode/dnspect-019` (branch `plan/019-backend-csv-diagnostics-parity`, commits `66f65e2`, `814a912`); criteria re-verified by reviewer; **merge pending user decision** |
 | [020 — headless CLI benchmark](020-headless-cli-benchmark.md) | P2 / M | 019 | **DONE** — implemented in worktree `/tmp/opencode/dnspect-020` (branch `plan/020-headless-cli-benchmark`, commits `4a3f732`, `f3caa56`, `4315f21`, `93faf7d`); criteria re-verified by reviewer; **merge pending user decision** |
-| [021 — monitoring mode design spike](021-monitoring-mode-design-spike.md) | P1 / L | — | TODO |
-| [022 — DNS-over-QUIC design spike](022-dns-over-quic-design-spike.md) | P2 / L | — | TODO |
+| [021 — monitoring mode design spike](021-monitoring-mode-design-spike.md) | P1 / L | — | **DONE** — worktree `/tmp/opencode/dnspect-021` (branch `plan/021-monitoring-mode-design-spike`, commits `7a8e58a`, `aa23449`); criteria + doc re-verified by reviewer; **merge pending user decision**; spike evidence files deleted per decision 2 |
+| [022 — DNS-over-QUIC design spike](022-dns-over-quic-design-spike.md) | P2 / L | — | **DONE** — worktree `/tmp/opencode/dnspect-022` (branch `plan/022-dns-over-quic-design-spike`, commits `e02b6a1`, `cc3cb19`); criteria + doc re-verified by reviewer; **merge pending user decision**; spike evidence files deleted per decision 2 |
 
 ## Roadmap wave dependency notes (019-022)
 
@@ -86,6 +86,40 @@ priority describes expected impact, effort is an implementation estimate.
   egress without the plan-004 policy process.
 - Execution order: 019 → 020 first (cheap, self-contained), then 021/022
   spikes in either order.
+
+## Signed-off decisions (2026-08-11)
+
+The plan-021 and plan-022 decision gates were signed off by the operator
+(delegated to the advisor) per the recommendations recorded in
+`docs/MONITORING_MODE.md` and `docs/DOQ_SUPPORT.md`. These are binding for
+the build plans that follow; a build plan may only revisit one with new
+evidence.
+
+**Monitoring (plan 021):**
+- v1 scope: in-app watch only (runs while the app is open; persisted
+  `watch/` dir makes resume-on-launch free). No background daemon.
+- Thresholds: single default set (`median_ms: 25`, `failure_rate: 5`,
+  `success_rate: 5`, others off), per-watch overridable; per-goal defaults
+  only if user testing shows false alerts.
+- Alert channel: in-app banner v1; OS notifications deferred (needs a
+  permission-UX product decision).
+- Watch runs: persisted normally (comparison requires it), tagged and
+  excluded from recommendation/history by default; no manifest change now.
+- Watch protocols: single-protocol v1; a DoQ watch reuses the
+  protocol-comparison eligibility machinery after plan 022 lands.
+
+**DNS-over-QUIC (plan 022):**
+- Comparison timing: **(b)** standalone DoQ benchmark first; the frozen
+  comparison methodology is extended only in a dedicated, approved follow-up.
+- `aioquic`: optional extra `doq = ["aioquic==1.3.0"]`; the DoQ badge and
+  protocol option are hidden when `dns.quic.have_quic` is False; packaged
+  builds include the extra (desktop users always measure).
+- Port policy: 853 default; no per-provider port catalog field until a
+  provider diverges.
+- Catalog cleanup (plan-006 gate, becomes step 0 of the DoQ build plan):
+  remove `doq: "yes"` on cloudflare + google until a primary source appears;
+  update adguard's `doq_hostname` to `dns.adguard-dns.com` and review its
+  `dot_hostname`/`doh_url` (same legacy alias); quad9 + quad9-unsecured stay.
 
 ## Reaudit checkpoint (2026-08-11)
 
