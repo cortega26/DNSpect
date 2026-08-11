@@ -8,6 +8,9 @@ import { LiveRankingPanel } from '@/components/LiveRankingPanel'
 import { RecommendedResolverPanel } from '@/components/RecommendedResolverPanel'
 import { ResolverRankingPanel } from '@/components/ResolverRankingPanel'
 import { RunHistoryPanel } from '@/components/RunHistoryPanel'
+import { useBenchmarkSession } from '@/hooks/useBenchmarkSession'
+import { useGuidedVerification } from '@/hooks/useGuidedVerification'
+import { useRunHistory } from '@/hooks/useRunHistory'
 
 const ChartsPanel = lazy(() => import('@/components/ChartsPanel').then((m) => ({ default: m.ChartsPanel })))
 const ResolverDetailModal = lazy(() => import('@/components/ResolverDetailModal').then((m) => ({ default: m.ResolverDetailModal })))
@@ -15,8 +18,7 @@ import { buildDnsClipboardText, buildGuidedDnsSet, detectPlatformGroup } from '@
 import { useI18n } from '@/lib/useI18n'
 import type { Language } from '@/lib/i18n-translations'
 import { computeRunningEtaText, formatEtaRange } from '@/lib/eta'
-import { getBenchmark, getBenchmarkHistory, getProviders, getSystemDns, probeResolvers, startBenchmark, type RunHistoryEntry } from '@/lib/api'
-import { compareProbeSummaries, parseProbeResponse, type ProbeOutcome, type ProbeSummary } from '@/lib/probe'
+import { getProviders, getSystemDns } from '@/lib/api'
 import { resolveEgressScope } from '@/lib/egress'
 import {
   buildBenchmarkCsv,
@@ -30,13 +32,10 @@ import {
 } from '@/lib/reporting'
 import {
   computeStallThresholds,
-  isActivePollSession,
   isSmallImprovement,
-  shouldAcceptAsyncResult,
-  shouldPollBenchmark,
 } from '@/lib/runtime'
 import { useTheme } from '@/lib/useTheme'
-import type { BenchmarkMode, BenchmarkProtocol, BenchmarkStatus, Provider, ResolverResult, ScoringProfile, SystemDnsPayload } from '@/lib/types'
+import type { BenchmarkMode, BenchmarkProtocol, Provider, ResolverResult, ScoringProfile, SystemDnsPayload } from '@/lib/types'
 import { API_BASE, fmtMs, providersByGoal, regionLabel, resolverReliabilityScore } from '@/lib/utils'
 import {
   buildTargetSnapshot,
@@ -114,20 +113,11 @@ const FALLBACK_PROVIDERS: Provider[] = [
   },
 ]
 
-const POLL_INTERVAL_MS = 1000
 
 interface ResolverCatalogItem {
   resolver: string
   providerName: string
   providerId: string
-}
-
-interface VerificationSummary {
-  outcome: ProbeOutcome
-  recommended: ProbeSummary | null
-  current: ProbeSummary | null
-  currentResolver: string | null
-  sampleSize: number
 }
 
 function parseQueries(value: string): string[] {
@@ -213,11 +203,8 @@ function App() {
   const scopeSourceRef = useRef<'auto' | 'manual'>('auto')
   const [advancedOpen, setAdvancedOpen] = useState<boolean>(false)
 
-  const [benchmarkId, setBenchmarkId] = useState<string | null>(null)
-  const [status, setStatus] = useState<BenchmarkStatus | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedResult, setSelectedResult] = useState<ResolverResult | null>(null)
-  const [loadingSamples, setLoadingSamples] = useState<boolean>(false)
+  const session = useBenchmarkSession()
+  const { benchmarkId, status, error, selectedResult, loadingSamples, viewingSavedRun, reportError } = session
   const [searchTerm, setSearchTerm] = useState<string>('')
   const [onlyReliable, setOnlyReliable] = useState<boolean>(false)
   const [resolverListOpen, setResolverListOpen] = useState<boolean>(false)
@@ -225,54 +212,19 @@ function App() {
   const [summaryCopyStatus, setSummaryCopyStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [guidedApplyOpen, setGuidedApplyOpen] = useState<boolean>(false)
   const [guidedCopyStatus, setGuidedCopyStatus] = useState<'idle' | 'success' | 'error'>('idle')
-  const [isVerifyingGuided, setIsVerifyingGuided] = useState<boolean>(false)
-  const [guidedVerifyError, setGuidedVerifyError] = useState<string | null>(null)
-  const [guidedVerification, setGuidedVerification] = useState<VerificationSummary | null>(null)
+  const guidedVerification = useGuidedVerification(setSystemDns)
   const [savedLastRun, setSavedLastRun] = useState<SavedLastRunV1 | null>(null)
   const [savedRunNotice, setSavedRunNotice] = useState<string | null>(null)
-  const [viewingSavedRun, setViewingSavedRun] = useState<boolean>(false)
   const [localeMenuOpen, setLocaleMenuOpen] = useState<boolean>(false)
   const [nowMs, setNowMs] = useState<number>(() => Date.now())
   const [isInitializing, setIsInitializing] = useState<boolean>(true)
-  const [history, setHistory] = useState<RunHistoryEntry[]>([])
-  const [historyLoading, setHistoryLoading] = useState(true)
+  const { history, historyLoading } = useRunHistory(status?.id ?? null)
   const rankingPanelRef = useRef<HTMLElement | null>(null)
   const localeMenuRef = useRef<HTMLDivElement>(null)
   const resolverListRef = useRef<HTMLDivElement>(null)
   useFocusTrap(resolverListRef, resolverListOpen)
   const localeTriggerRef = useRef<HTMLButtonElement>(null)
   const localeOptionRefs = useRef<Array<HTMLButtonElement | null>>([])
-  const pollTimerRef = useRef<number | null>(null)
-  const pollAbortRef = useRef<AbortController | null>(null)
-  const pollInFlightRef = useRef<boolean>(false)
-  const pollSessionIdRef = useRef<number>(0)
-  const activePollBenchmarkIdRef = useRef<string | null>(null)
-  const startRequestSeqRef = useRef<number>(0)
-  const startInFlightRef = useRef<boolean>(false)
-  const selectRequestSeqRef = useRef<number>(0)
-  const verifyRequestSeqRef = useRef<number>(0)
-  const mountedRef = useRef<boolean>(false)
-
-  useEffect(() => {
-    mountedRef.current = true
-    return () => {
-      mountedRef.current = false
-    }
-  }, [])
-
-  const stopPolling = useCallback(() => {
-    pollSessionIdRef.current += 1
-    if (pollTimerRef.current !== null) {
-      window.clearTimeout(pollTimerRef.current)
-      pollTimerRef.current = null
-    }
-    if (pollAbortRef.current) {
-      pollAbortRef.current.abort()
-      pollAbortRef.current = null
-    }
-    pollInFlightRef.current = false
-    activePollBenchmarkIdRef.current = null
-  }, [])
 
   useEffect(() => {
     const loaded: LoadSavedLastRunResult = loadSavedLastRun()
@@ -312,7 +264,7 @@ function App() {
           } else if (dnsResult.status === 'rejected') {
             reason = dnsResult.reason
           }
-          setError(reason instanceof Error ? reason.message : 'Error al cargar los datos iniciales')
+          reportError(reason instanceof Error ? reason.message : 'Error al cargar los datos iniciales')
         }
       } finally {
         if (!cancelled) setIsInitializing(false)
@@ -333,113 +285,16 @@ function App() {
       cancelled = true
       controller.abort()
     }
-  }, [])
+  }, [reportError])
 
-  const startPolling = useCallback(
-    (id: string) => {
-      stopPolling()
-      activePollBenchmarkIdRef.current = id
-      const sessionId = pollSessionIdRef.current
-      let cancelled = false
-
-      const isCurrentSession = () =>
-        !cancelled &&
-        isActivePollSession(sessionId, pollSessionIdRef.current, id, activePollBenchmarkIdRef.current) &&
-        mountedRef.current
-
-      const scheduleNext = (delayMs: number) => {
-        if (!isCurrentSession()) return
-        pollTimerRef.current = window.setTimeout(() => {
-          void pollOnce()
-        }, delayMs)
-      }
-
-      const pollOnce = async () => {
-        if (!isCurrentSession()) return
-        if (pollInFlightRef.current) {
-          scheduleNext(120)
-          return
-        }
-
-        pollInFlightRef.current = true
-        const controller = new AbortController()
-        pollAbortRef.current = controller
-
-        try {
-          const next = await getBenchmark(id, false, controller.signal)
-          if (!isCurrentSession()) return
-          setStatus(next)
-          if (next.status === 'running' || next.status === 'queued') {
-            scheduleNext(POLL_INTERVAL_MS)
-          } else {
-            stopPolling()
-          }
-        } catch (e) {
-          if (controller.signal.aborted || !isCurrentSession()) return
-          setError(e instanceof Error ? e.message : t('error.benchmarkPoll'))
-          stopPolling()
-        } finally {
-          pollInFlightRef.current = false
-          if (pollAbortRef.current === controller) {
-            pollAbortRef.current = null
-          }
-        }
-      }
-
-      void pollOnce()
-
-      return () => {
-        cancelled = true
-        if (isActivePollSession(sessionId, pollSessionIdRef.current, id, activePollBenchmarkIdRef.current)) {
-          stopPolling()
-        }
-      }
-    },
-    [stopPolling, t],
-  )
-
-  useEffect(() => {
-    if (!shouldPollBenchmark(benchmarkId, viewingSavedRun)) {
-      stopPolling()
-      return
-    }
-    return startPolling(benchmarkId)
-  }, [benchmarkId, startPolling, stopPolling, viewingSavedRun])
-
-  useEffect(() => {
-    return () => {
-      stopPolling()
-    }
-  }, [stopPolling])
-
-  useEffect(() => {
-    let cancelled = false
-    setHistoryLoading(true)
-    getBenchmarkHistory()
-      .then((res) => { if (!cancelled) { setHistory(res.runs); setHistoryLoading(false) } })
-      .catch(() => { if (!cancelled) setHistoryLoading(false) })
-    return () => { cancelled = true }
-  }, [status?.id])
-
-  const handleSelectRun = useCallback(async (runId: string) => {
-    stopPolling()
-    const requestSeq = selectRequestSeqRef.current + 1
-    selectRequestSeqRef.current = requestSeq
-    try {
-      const pastRun = await getBenchmark(runId)
-      if (!shouldAcceptAsyncResult(requestSeq, selectRequestSeqRef.current, mountedRef.current)) return
-      setStatus(pastRun)
-      setBenchmarkId(runId)
-      setViewingSavedRun(true)
-      setError(null)
-      setSelectedResult(null)
+  const handleSelectRun = useCallback(
+    async (runId: string) => {
       setCopyStatus('idle')
       setSummaryCopyStatus('idle')
-    } catch (e) {
-      if (!shouldAcceptAsyncResult(requestSeq, selectRequestSeqRef.current, mountedRef.current)) return
-      setError(e instanceof Error ? e.message : t('error.benchmarkLoad'))
-    }
-  }, [stopPolling, t])
+      await session.selectRun(runId)
+    },
+    [session],
+  )
 
   useEffect(() => {
     setTimeoutPreset(nearestTimeoutPreset(timeoutSec))
@@ -746,59 +601,35 @@ function App() {
     }
   }
 
-  async function handleStart() {
-    if (startInFlightRef.current) return
-    startInFlightRef.current = true
+  function handleStart() {
+    guidedVerification.cancel()
 
-    const requestSeq = startRequestSeqRef.current + 1
-    startRequestSeqRef.current = requestSeq
-    selectRequestSeqRef.current += 1
-    verifyRequestSeqRef.current += 1
-
-    setError(null)
-    setSelectedResult(null)
     setCopyStatus('idle')
     setSummaryCopyStatus('idle')
     setGuidedApplyOpen(false)
     setGuidedCopyStatus('idle')
-    setGuidedVerification(null)
-    setGuidedVerifyError(null)
-    setIsVerifyingGuided(false)
     setSavedRunNotice(null)
-    setViewingSavedRun(false)
-    stopPolling()
-    setStatus(null)
-    setBenchmarkId(null)
 
-    try {
-      const customQueries = parseQueries(queriesText)
-      const resolverIps = Array.from(selectedResolvers)
-      const scopeDerived = deriveTargetResolvers(providers, targetScope, systemDns)
-      const targetSnapshot = buildTargetSnapshot(
-        resolverIps,
-        { get: (ip) => resolverCatalog.get(ip)?.providerId ?? null },
-        selectionSourceFor(resolverIps, scopeDerived),
-      )
-      const payload = {
-        mode,
-        scoring_profile: scoringProfile,
-        goal: scoringProfile,
-        protocol,
-        runs,
-        timeout_sec: timeoutSec,
-        resolvers: resolverIps,
-        ...(customQueries.length > 0 ? { queries: customQueries } : {}),
-        target_snapshot: targetSnapshot,
-      }
-      const response = await startBenchmark(payload)
-      if (!shouldAcceptAsyncResult(requestSeq, startRequestSeqRef.current, mountedRef.current)) return
-      setBenchmarkId(response.benchmark_id)
-    } catch (e) {
-      if (!shouldAcceptAsyncResult(requestSeq, startRequestSeqRef.current, mountedRef.current)) return
-      setError(e instanceof Error ? e.message : t('error.benchmarkStart'))
-    } finally {
-      startInFlightRef.current = false
+    const customQueries = parseQueries(queriesText)
+    const resolverIps = Array.from(selectedResolvers)
+    const scopeDerived = deriveTargetResolvers(providers, targetScope, systemDns)
+    const targetSnapshot = buildTargetSnapshot(
+      resolverIps,
+      { get: (ip) => resolverCatalog.get(ip)?.providerId ?? null },
+      selectionSourceFor(resolverIps, scopeDerived),
+    )
+    const payload = {
+      mode,
+      scoring_profile: scoringProfile,
+      goal: scoringProfile,
+      protocol,
+      runs,
+      timeout_sec: timeoutSec,
+      resolvers: resolverIps,
+      ...(customQueries.length > 0 ? { queries: customQueries } : {}),
+      target_snapshot: targetSnapshot,
     }
+    void session.start(payload)
   }
 
   function toggleResolver(ip: string) {
@@ -835,11 +666,9 @@ function App() {
 
   function applyRecommendation() {
     if (!primaryResult) return
-    verifyRequestSeqRef.current += 1
+    guidedVerification.cancel()
     setGuidedApplyOpen(true)
     setGuidedCopyStatus('idle')
-    setGuidedVerifyError(null)
-    setGuidedVerification(null)
   }
 
   function handleViewFullRanking() {
@@ -867,80 +696,19 @@ function App() {
     }
   }
 
-  async function handleGuidedVerify() {
+  function handleGuidedVerify() {
     if (!primaryResult) return
-    const requestSeq = verifyRequestSeqRef.current + 1
-    verifyRequestSeqRef.current = requestSeq
-    setGuidedVerifyError(null)
-    setGuidedVerification(null)
-    setIsVerifyingGuided(true)
-
-    try {
-      let latestSystemDns = systemDns
-      try {
-        latestSystemDns = await getSystemDns()
-        setSystemDns(latestSystemDns)
-      } catch {
-        // Keep the previously loaded system DNS if refresh fails.
-      }
-
-      const currentResolver = latestSystemDns?.resolvers?.[0] ?? null
-      const resolverTargets = Array.from(new Set([primaryResult.resolver, currentResolver].filter(Boolean))) as string[]
-      if (resolverTargets.length === 0) {
-        setGuidedVerification({
-          outcome: 'inconclusive',
-          recommended: null,
-          current: null,
-          currentResolver: null,
-          sampleSize: 0,
-        })
-        return
-      }
-
-      const probePayload = await probeResolvers({
-        resolvers: resolverTargets,
-        runs_per_resolver: 4,
-        timeout_sec: 1.5,
-      })
-      if (!shouldAcceptAsyncResult(requestSeq, verifyRequestSeqRef.current, mountedRef.current)) return
-      const parsed = parseProbeResponse(probePayload)
-      const recommendedProbe = parsed.get(primaryResult.resolver) ?? null
-      const currentProbe = currentResolver ? parsed.get(currentResolver) ?? null : null
-
-      const outcome = compareProbeSummaries(recommendedProbe, currentProbe)
-      const sampleSize = Math.min(
-        recommendedProbe?.sampleCount ?? 0,
-        currentProbe?.sampleCount ?? recommendedProbe?.sampleCount ?? 0,
-      )
-
-      setGuidedVerification({
-        outcome,
-        recommended: recommendedProbe,
-        current: currentProbe,
-        currentResolver,
-        sampleSize,
-      })
-    } catch (e) {
-      if (!shouldAcceptAsyncResult(requestSeq, verifyRequestSeqRef.current, mountedRef.current)) return
-      setGuidedVerifyError(e instanceof Error ? e.message : t('applyGuide.verifyUnknownError'))
-    } finally {
-      if (requestSeq === verifyRequestSeqRef.current) {
-        setIsVerifyingGuided(false)
-      }
-    }
+    void guidedVerification.verify({
+      recommendedResolver: primaryResult.resolver,
+      systemDns,
+    })
   }
 
   function handleViewSavedRun() {
     if (!savedLastRun) return
-    stopPolling()
-    setError(null)
-    setSelectedResult(null)
-    setLoadingSamples(false)
     setCopyStatus('idle')
     setSummaryCopyStatus('idle')
-    setStatus(savedLastRun.payload)
-    setBenchmarkId(savedLastRun.payload.id)
-    setViewingSavedRun(true)
+    session.viewSavedRun(savedLastRun.payload)
   }
 
   function handleClearSavedRun() {
@@ -993,31 +761,11 @@ function App() {
   }
 
   function handleSelectResult(result: ResolverResult) {
-    selectRequestSeqRef.current += 1
-    setSelectedResult(result)
+    session.selectResult(result)
   }
 
   async function handleLoadSamples() {
-    if (!benchmarkId || !selectedResult || selectedResult.samples.length > 0 || loadingSamples) return
-    const requestSeq = selectRequestSeqRef.current + 1
-    selectRequestSeqRef.current = requestSeq
-    const targetResolver = selectedResult.resolver
-    setLoadingSamples(true)
-    try {
-      const full = await getBenchmark(benchmarkId, true)
-      if (!shouldAcceptAsyncResult(requestSeq, selectRequestSeqRef.current, mountedRef.current)) return
-      const resolved = full.results?.find((row) => row.resolver === targetResolver)
-      if (resolved) {
-        setSelectedResult(resolved)
-      }
-    } catch (e) {
-      if (!shouldAcceptAsyncResult(requestSeq, selectRequestSeqRef.current, mountedRef.current)) return
-      setError(e instanceof Error ? e.message : t('error.samples'))
-    } finally {
-      if (requestSeq === selectRequestSeqRef.current) {
-        setLoadingSamples(false)
-      }
-    }
+    await session.loadSamples()
   }
 
   const isCompleted = status?.status === 'done'
@@ -1622,8 +1370,8 @@ function App() {
       <GuidedApplyModal
         open={guidedApplyOpen && Boolean(primaryResult)}
         onClose={() => {
+          guidedVerification.cancel()
           setGuidedApplyOpen(false)
-          setIsVerifyingGuided(false)
         }}
         detectedPlatformLabel={detectedPlatformLabel}
         detectedPlatformGroup={detectedPlatformGroup}
@@ -1634,9 +1382,9 @@ function App() {
         ipv6Dns={guidedDnsSet.ipv6}
         allDns={guidedDnsSet.all}
         copyStatus={guidedCopyStatus}
-        isVerifying={isVerifyingGuided}
-        verifyError={guidedVerifyError}
-        verification={guidedVerification}
+        isVerifying={guidedVerification.isVerifying}
+        verifyError={guidedVerification.verifyError}
+        verification={guidedVerification.verification}
         onCopyIpv4={() => void handleGuidedCopy(guidedDnsSet.ipv4)}
         onCopyIpv6={() => void handleGuidedCopy(guidedDnsSet.ipv6)}
         onCopyAll={() => void handleGuidedCopy(guidedDnsSet.all)}
@@ -1680,8 +1428,7 @@ function App() {
             void handleLoadSamples()
           }}
           onClose={() => {
-            setSelectedResult(null)
-            setLoadingSamples(false)
+            session.selectResult(null)
           }}
         />
       </Suspense>

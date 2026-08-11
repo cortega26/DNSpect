@@ -84,6 +84,70 @@ test.describe('workflow regression floor (Chromium, mocked network)', () => {
     expect(api.unhandledRequests).toEqual([])
   })
 
+  test('a terminal response stops further polling', async ({ page }) => {
+    const api = new MockApi(page)
+    api.on(GET_BENCHMARK, (params) => api.deferredFor(GET_BENCHMARK, { id: params.id }))
+    await api.install()
+    await page.goto('/')
+
+    await page.locator('.btn-start').click()
+
+    await waitForRouteDeferred(api, GET_BENCHMARK, 1)
+    const [firstPoll] = api.deferredsFor(GET_BENCHMARK)
+    firstPoll.resolve({ body: runningBenchmark(firstPoll.meta.id) })
+    await expect(page.locator('.status-running')).toBeVisible()
+
+    await waitForRouteDeferred(api, GET_BENCHMARK, 2)
+    const [, secondPoll] = api.deferredsFor(GET_BENCHMARK)
+    secondPoll.resolve({ body: doneBenchmark(secondPoll.meta.id, CLOUDFLARE_RESULT) })
+    await expect(page.locator('#resolver-ranking-panel')).toBeVisible()
+
+    await page.waitForTimeout(2_500)
+    expect(api.countOf(GET_BENCHMARK)).toBe(2)
+    expect(api.unhandledRequests).toEqual([])
+  })
+
+  test('selecting a history run never resumes live polling', async ({ page }) => {
+    const api = new MockApi(page)
+    api.on(GET_BENCHMARK, (params) => api.deferredFor(GET_BENCHMARK, { id: params.id }))
+    await api.install()
+    await page.goto('/')
+
+    await expect(page.locator('.history-btn')).toHaveCount(2)
+    await page.locator('.history-btn', { hasText: 'Quad9' }).click()
+
+    await waitForRouteDeferred(api, GET_BENCHMARK, 1)
+    const [selection] = api.deferredsFor(GET_BENCHMARK)
+    selection.resolve({ body: doneBenchmark(selection.meta.id, QUAD9_RESULT) })
+    await expect(page.locator('.saved-run-viewing-badge')).toBeVisible()
+
+    await page.waitForTimeout(2_500)
+    expect(api.countOf(GET_BENCHMARK)).toBe(1)
+    await expect(page.locator('.status-running')).toHaveCount(0)
+    expect(api.unhandledRequests).toEqual([])
+  })
+
+  test('teardown abandons in-flight polling without unhandled requests', async ({ page }) => {
+    const api = new MockApi(page)
+    api.on(GET_BENCHMARK, (params) => api.deferredFor(GET_BENCHMARK, { id: params.id }))
+    const pageErrors: Error[] = []
+    page.on('pageerror', (error) => pageErrors.push(error))
+    await api.install()
+    await page.goto('/')
+
+    await page.locator('.btn-start').click()
+    await waitForRouteDeferred(api, GET_BENCHMARK, 1)
+
+    await page.goto('about:blank')
+
+    const [pendingPoll] = api.deferredsFor(GET_BENCHMARK)
+    pendingPoll.resolve({ body: runningBenchmark(pendingPoll.meta.id) })
+
+    await page.waitForTimeout(500)
+    expect(pageErrors).toEqual([])
+    expect(api.unhandledRequests).toEqual([])
+  })
+
   test('out-of-order history responses cannot overwrite the current selection', async ({ page }) => {
     const api = new MockApi(page)
     api.on(GET_BENCHMARK, (params) => api.deferredFor(GET_BENCHMARK, { id: params.id }))
