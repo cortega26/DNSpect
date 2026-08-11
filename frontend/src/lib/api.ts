@@ -40,15 +40,17 @@ export interface GeoIpResult {
   source: string | null
 }
 
-export async function lookupGeoIp(ip: string): Promise<GeoIpResult> {
-  const res = await fetch(`${API_BASE}/api/geoip?ip=${encodeURIComponent(ip)}`)
+export async function lookupGeoIp(ip: string, signal?: AbortSignal): Promise<GeoIpResult> {
+  const res = await fetch(`${API_BASE}/api/geoip?ip=${encodeURIComponent(ip)}`, { signal })
   if (!res.ok) return { country_code: null, country_name: null, region: null, city: null, source: null }
   return res.json()
 }
 
-export async function getPublicIp(): Promise<string | null> {
+export async function getPublicIp(signal?: AbortSignal): Promise<string | null> {
   try {
-    const res = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(5000) })
+    const res = await fetch('https://api.ipify.org?format=json', {
+      signal: signal ?? AbortSignal.timeout(5000),
+    })
     if (!res.ok) return null
     const data = await res.json()
     return typeof data.ip === 'string' ? data.ip : null

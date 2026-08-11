@@ -8,23 +8,9 @@ export function fmtMs(value: number | null): string {
   return `${value.toFixed(2)} ms`
 }
 
-export function detectRegion(): string | null {
-  try {
-    const locale = new Intl.Locale(navigator.language)
-    return locale.region || null
-  } catch {
-    return null
-  }
-}
-
 export function providersByGoal(providers: Provider[], goal: Goal): Provider[] {
   if (goal === 'speed') return providers
   return providers.filter((p) => p.goals.includes(goal) || p.id === 'isp-detectado')
-}
-
-export function providersByRegion(providers: Provider[], region: string | null): Provider[] {
-  if (!region || region === 'all') return providers
-  return providers.filter((p) => p.region === region || p.region === 'global' || p.id === 'isp-detectado')
 }
 
 export function regionLabel(region: string | null): string {

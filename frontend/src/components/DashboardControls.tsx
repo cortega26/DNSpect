@@ -2,6 +2,7 @@ import type { BenchmarkMode, BenchmarkProtocol, Goal, Provider, ScoringProfile }
 import { GOALS, PROTOCOLS } from '@/lib/types'
 import { useI18n } from '@/lib/useI18n'
 import { resolverGroup } from '@/lib/utils'
+import { CATALOG_SCOPES, type TargetScope } from '@/lib/targetScope'
 
 interface ResolverOption {
   ip: string
@@ -34,8 +35,8 @@ interface Props {
   mode: BenchmarkMode
   protocol: BenchmarkProtocol
   scoringProfile: ScoringProfile
-  detectedRegion: string | null
-  effectiveRegion: string | null
+  scope: TargetScope
+  scopeSource: 'auto' | 'manual'
   regionLabel: (r: string | null) => string
   runs: number
   timeoutSec: number
@@ -50,7 +51,8 @@ interface Props {
   onModeChange: (mode: BenchmarkMode) => void
   onProtocolChange: (protocol: BenchmarkProtocol) => void
   onScoringProfileChange: (profile: ScoringProfile) => void
-  onRegionChange: (region: string | null) => void
+  onScopeSelect: (scope: TargetScope) => void
+  onScopeReset: () => void
   onRunsChange: (value: number) => void
   onTimeoutChange: (value: number) => void
   onTimeoutPresetChange: (value: TimeoutPreset) => void
@@ -196,35 +198,35 @@ export function DashboardControls(props: Props) {
         <div className="mode-grid region-chips">
           <button
             type="button"
-            className={`chip-compact${props.effectiveRegion === props.detectedRegion && props.effectiveRegion !== 'all' && props.effectiveRegion !== 'global' ? ' chip-active' : ''}`}
-            onClick={() => props.onRegionChange(null)}
+            className={`chip-compact${props.scopeSource === 'auto' ? ' chip-active' : ''}`}
+            onClick={props.onScopeReset}
             disabled={props.isRunning}
           >
-            Auto{props.detectedRegion ? ` (${props.detectedRegion})` : ''}
+            {props.regionLabel(null)}
           </button>
-          {['global', 'europe', 'south-america', 'north-america', 'asia'].map((r) => (
+          {CATALOG_SCOPES.map((scope) => (
             <button
-              key={r}
+              key={scope}
               type="button"
-              className={`chip-compact${props.effectiveRegion === r ? ' chip-active' : ''}`}
-              onClick={() => props.onRegionChange(r)}
+              className={`chip-compact${props.scope === scope && props.scopeSource === 'manual' ? ' chip-active' : ''}`}
+              onClick={() => props.onScopeSelect(scope)}
               disabled={props.isRunning}
             >
-              {props.regionLabel(r)}
+              {props.regionLabel(scope)}
             </button>
           ))}
           <button
             type="button"
-            className={`chip-compact${props.effectiveRegion === 'all' ? ' chip-active' : ''}`}
-            onClick={() => props.onRegionChange('all')}
+            className={`chip-compact${props.scope === 'all' && props.scopeSource === 'manual' ? ' chip-active' : ''}`}
+            onClick={() => props.onScopeSelect('all')}
             disabled={props.isRunning}
           >
             {t('region.all')}
           </button>
         </div>
         <p className="helper-text">
-          {props.effectiveRegion && props.effectiveRegion !== 'all'
-            ? t('region.help', { region: props.regionLabel(props.effectiveRegion) })
+          {props.scopeSource === 'manual' && props.scope !== 'unknown' && props.scope !== 'all'
+            ? t('region.help', { region: props.regionLabel(props.scope) })
             : t('region.helpAll')}
         </p>
       </div>

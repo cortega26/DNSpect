@@ -15,8 +15,9 @@ import { buildDnsClipboardText, buildGuidedDnsSet, detectPlatformGroup } from '@
 import { useI18n } from '@/lib/useI18n'
 import type { Language } from '@/lib/i18n-translations'
 import { computeRunningEtaText, formatEtaRange } from '@/lib/eta'
-import { getBenchmark, getBenchmarkHistory, getProviders, getPublicIp, getSystemDns, lookupGeoIp, probeResolvers, startBenchmark, type RunHistoryEntry } from '@/lib/api'
+import { getBenchmark, getBenchmarkHistory, getProviders, getSystemDns, probeResolvers, startBenchmark, type RunHistoryEntry } from '@/lib/api'
 import { compareProbeSummaries, parseProbeResponse, type ProbeOutcome, type ProbeSummary } from '@/lib/probe'
+import { resolveEgressScope } from '@/lib/egress'
 import {
   buildBenchmarkCsv,
   buildShareSummary,
@@ -35,8 +36,15 @@ import {
   shouldPollBenchmark,
 } from '@/lib/runtime'
 import { useTheme } from '@/lib/useTheme'
-import type { BenchmarkMode, BenchmarkProtocol, BenchmarkStatus, Provider, ResolverResult, ScoringProfile, SystemDnsPayload, TargetSnapshot } from '@/lib/types'
-import { API_BASE, detectRegion, fmtMs, providersByGoal, providersByRegion, regionLabel, resolverReliabilityScore } from '@/lib/utils'
+import type { BenchmarkMode, BenchmarkProtocol, BenchmarkStatus, Provider, ResolverResult, ScoringProfile, SystemDnsPayload } from '@/lib/types'
+import { API_BASE, fmtMs, providersByGoal, regionLabel, resolverReliabilityScore } from '@/lib/utils'
+import {
+  buildTargetSnapshot,
+  deriveTargetResolvers,
+  scopeEligibleProviders,
+  selectionSourceFor,
+  type TargetScope,
+} from '@/lib/targetScope'
 
 const MODE_RUNS: Record<BenchmarkMode, number> = {
   quick: 12,
@@ -200,8 +208,9 @@ function App() {
   const [timeoutPreset, setTimeoutPreset] = useState<TimeoutPreset>('medium')
   const [queriesText, setQueriesText] = useState<string>('')
   const [scoringProfile, setScoringProfile] = useState<ScoringProfile>('speed')
-  const [detectedRegion, setDetectedRegion] = useState<string | null>(() => detectRegion())
-  const [regionOverride, setRegionOverride] = useState<string | null>(null)
+  const [targetScope, setTargetScope] = useState<TargetScope>('unknown')
+  const [scopeSource, setScopeSource] = useState<'auto' | 'manual'>('auto')
+  const scopeSourceRef = useRef<'auto' | 'manual'>('auto')
   const [advancedOpen, setAdvancedOpen] = useState<boolean>(false)
 
   const [benchmarkId, setBenchmarkId] = useState<string | null>(null)
@@ -279,23 +288,22 @@ function App() {
 
   useEffect(() => {
     let cancelled = false
+    const controller = new AbortController()
 
     async function init() {
+      let providersRes!: Provider[]
+      let dnsRes!: SystemDnsPayload | null
       try {
         const [providersResult, dnsResult] = await Promise.allSettled([getProviders(), getSystemDns()])
         if (cancelled) return
 
         const providersResRaw = providersResult.status === 'fulfilled' ? providersResult.value : []
-        const providersRes = providersResRaw.length > 0 ? providersResRaw : FALLBACK_PROVIDERS
-        const dnsRes = dnsResult.status === 'fulfilled' ? dnsResult.value : null
+        providersRes = providersResRaw.length > 0 ? providersResRaw : FALLBACK_PROVIDERS
+        dnsRes = dnsResult.status === 'fulfilled' ? dnsResult.value : null
 
         setProviders(providersRes)
         setSystemDns(dnsRes)
-
-        const defaults = new Set<string>()
-        providersRes.forEach((p) => p.dns.forEach((ip) => defaults.add(ip)))
-        ;(dnsRes?.resolvers ?? []).forEach((ip) => defaults.add(ip))
-        setSelectedResolvers(defaults)
+        setSelectedResolvers(new Set(deriveTargetResolvers(providersRes, 'unknown', dnsRes)))
 
         if (providersResult.status === 'rejected' || dnsResult.status === 'rejected') {
           let reason: unknown = 'Error al cargar los datos iniciales'
@@ -306,29 +314,24 @@ function App() {
           }
           setError(reason instanceof Error ? reason.message : 'Error al cargar los datos iniciales')
         }
-
-        // Optional GeoIP lookup to refine detected region
-        if (!cancelled) {
-          try {
-            const publicIp = await getPublicIp()
-            if (publicIp && !cancelled) {
-              const geo = await lookupGeoIp(publicIp)
-              if (geo.country_code && !cancelled) {
-                setDetectedRegion(geo.country_code)
-              }
-            }
-          } catch {
-            // GeoIP is non-critical; fall back to browser locale detection
-          }
-        }
       } finally {
         if (!cancelled) setIsInitializing(false)
       }
+
+      // Automatic egress scope: best-effort, after the critical init settles.
+      const scope = await resolveEgressScope({
+        signal: controller.signal,
+        isCurrent: () => scopeSourceRef.current === 'auto',
+      })
+      if (cancelled || scope === 'unknown') return
+      setTargetScope(scope)
+      setSelectedResolvers(new Set(deriveTargetResolvers(providersRes, scope, dnsRes)))
     }
     void init()
 
     return () => {
       cancelled = true
+      controller.abort()
     }
   }, [])
 
@@ -444,10 +447,9 @@ function App() {
 
   const providerById = useMemo(() => new Map(providers.map((p) => [p.id, p])), [providers])
   const scoringFilteredProviders = useMemo(() => providersByGoal(providers, scoringProfile), [providers, scoringProfile])
-  const effectiveRegion = regionOverride ?? detectedRegion
   const regionFilteredProviders = useMemo(
-    () => providersByRegion(scoringFilteredProviders, effectiveRegion),
-    [scoringFilteredProviders, effectiveRegion],
+    () => scopeEligibleProviders(scoringFilteredProviders, targetScope),
+    [scoringFilteredProviders, targetScope],
   )
   const resolverCatalog = useMemo(() => {
     const catalog = new Map<string, ResolverCatalogItem>()
@@ -771,18 +773,12 @@ function App() {
     try {
       const customQueries = parseQueries(queriesText)
       const resolverIps = Array.from(selectedResolvers)
-      const providerIds: Record<string, string> = {}
-      for (const ip of resolverIps) {
-        const catalogItem = resolverCatalog.get(ip)
-        if (catalogItem?.providerId && catalogItem.providerId !== 'isp-detectado') {
-          providerIds[ip] = catalogItem.providerId
-        }
-      }
-      const targetSnapshot: TargetSnapshot = {
-        resolver_ips: resolverIps,
-        selection_source: resolverIps.length > 0 ? 'manual' : 'catalog',
-        provider_ids: Object.keys(providerIds).length > 0 ? providerIds : null,
-      }
+      const scopeDerived = deriveTargetResolvers(providers, targetScope, systemDns)
+      const targetSnapshot = buildTargetSnapshot(
+        resolverIps,
+        { get: (ip) => resolverCatalog.get(ip)?.providerId ?? null },
+        selectionSourceFor(resolverIps, scopeDerived),
+      )
       const payload = {
         mode,
         scoring_profile: scoringProfile,
@@ -821,6 +817,20 @@ function App() {
 
   function onScoringProfileChange(nextProfile: ScoringProfile) {
     setScoringProfile(nextProfile)
+  }
+
+  function handleScopeSelect(scope: TargetScope) {
+    scopeSourceRef.current = 'manual'
+    setScopeSource('manual')
+    setTargetScope(scope)
+    setSelectedResolvers(new Set(deriveTargetResolvers(providers, scope, systemDns)))
+  }
+
+  function handleScopeReset() {
+    scopeSourceRef.current = 'auto'
+    setScopeSource('auto')
+    setTargetScope('unknown')
+    setSelectedResolvers(new Set(deriveTargetResolvers(providers, 'unknown', systemDns)))
   }
 
   function applyRecommendation() {
@@ -1201,7 +1211,7 @@ function App() {
                   <circle cx="12" cy="12" r="9" />
                   <path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z" />
                 </svg>
-                {regionLabel(effectiveRegion)}
+                {regionLabel(targetScope === 'unknown' ? null : targetScope)}
               </span>
               <span className="hero-meta-item">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14" aria-hidden="true">
@@ -1262,10 +1272,11 @@ function App() {
           advancedOpen={advancedOpen}
           workloadSummary={workloadMetrics.summary}
           startHelperText={startCtaHelpText}
-          detectedRegion={detectedRegion}
-          effectiveRegion={effectiveRegion}
+          scope={targetScope}
+          scopeSource={scopeSource}
           regionLabel={regionLabel}
-          onRegionChange={setRegionOverride}
+          onScopeSelect={handleScopeSelect}
+          onScopeReset={handleScopeReset}
           onToggleResolver={toggleResolver}
           onModeChange={onModeChange}
           onProtocolChange={setProtocol}
