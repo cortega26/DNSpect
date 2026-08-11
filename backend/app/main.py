@@ -22,7 +22,7 @@ from .models import (
     ProtocolComparisonStatusResponse,
     RunComparisonResponse,
 )
-from .runner import BenchmarkManager, is_generated_run_id
+from .runner import BenchmarkManager, dns_quic_available, is_generated_run_id
 
 app = FastAPI(title="DNSpect API", version=__version__)
 manager = BenchmarkManager()
@@ -68,6 +68,7 @@ def health() -> dict:
         "status": "ok",
         "version": __version__,
         "backend_time_utc": datetime.now(UTC).isoformat(),
+        "capabilities": {"doq": dns_quic_available()},
     }
 
 
