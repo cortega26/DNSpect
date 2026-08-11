@@ -33,11 +33,11 @@
   <screenshots>
     <screenshot type="default">
       <caption>Main dashboard with benchmark controls and live ranking</caption>
-      <image type="source">https://raw.githubusercontent.com/cortega26/DNSpect/69187bcbe6f7f210a0399629cfc94c3926a6f142/docs/screenshots/light-main.png</image>
+      <image type="source">https://raw.githubusercontent.com/cortega26/DNSpect/a1a97c3efe17f7822d2d5988206fa6adc2a02ed4/docs/screenshots/light-main.png</image>
     </screenshot>
     <screenshot>
       <caption>Completed benchmark view with charts and export actions</caption>
-      <image type="source">https://raw.githubusercontent.com/cortega26/DNSpect/69187bcbe6f7f210a0399629cfc94c3926a6f142/docs/screenshots/results.png</image>
+      <image type="source">https://raw.githubusercontent.com/cortega26/DNSpect/a1a97c3efe17f7822d2d5988206fa6adc2a02ed4/docs/screenshots/results.png</image>
     </screenshot>
   </screenshots>
   <provides>
