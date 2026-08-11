@@ -51,8 +51,10 @@ export function ResolverRankingPanel({ id, results, emptyMessage, onSelect }: Pr
                       ) : null}
                     </p>
                     <p className="muted ranking-meta">
-                      Score {scoreTotal} - {fmtMs(row.stats.score_latency)} - {reliabilityPct}%
-                      {row.stats.blocking_test_count > 0 ? ` - Bloqueo ${(resolverBlockingScore(row) * 100).toFixed(0)}%` : ''}
+                      {t('ranking.score', { value: scoreTotal })} - {fmtMs(row.stats.score_latency)} - {reliabilityPct}%
+                      {row.stats.blocking_test_count > 0
+                        ? ` - ${t('ranking.blocking', { value: (resolverBlockingScore(row) * 100).toFixed(0) })}`
+                        : ''}
                     </p>
                   </div>
                   {onSelect ? (

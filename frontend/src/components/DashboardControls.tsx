@@ -1,7 +1,7 @@
 import type { BenchmarkMode, BenchmarkProtocol, Goal, Provider, ScoringProfile } from '@/lib/types'
 import { GOALS, PROTOCOLS } from '@/lib/types'
 import { useI18n } from '@/lib/useI18n'
-import { resolverGroup } from '@/lib/utils'
+import { regionLabelKey, resolverGroup } from '@/lib/utils'
 import { CATALOG_SCOPES, type TargetScope } from '@/lib/targetScope'
 
 interface ResolverOption {
@@ -37,7 +37,6 @@ interface Props {
   scoringProfile: ScoringProfile
   scope: TargetScope
   scopeSource: 'auto' | 'manual'
-  regionLabel: (r: string | null) => string
   runs: number
   timeoutSec: number
   timeoutPreset: TimeoutPreset
@@ -202,7 +201,7 @@ export function DashboardControls(props: Props) {
             onClick={props.onScopeReset}
             disabled={props.isRunning}
           >
-            {props.regionLabel(null)}
+            {t(regionLabelKey(null))}
           </button>
           {CATALOG_SCOPES.map((scope) => (
             <button
@@ -212,7 +211,7 @@ export function DashboardControls(props: Props) {
               onClick={() => props.onScopeSelect(scope)}
               disabled={props.isRunning}
             >
-              {props.regionLabel(scope)}
+              {t(regionLabelKey(scope))}
             </button>
           ))}
           <button
@@ -226,7 +225,7 @@ export function DashboardControls(props: Props) {
         </div>
         <p className="helper-text">
           {props.scopeSource === 'manual' && props.scope !== 'unknown' && props.scope !== 'all'
-            ? t('region.help', { region: props.regionLabel(props.scope) })
+            ? t('region.help', { region: t(regionLabelKey(props.scope)) })
             : t('region.helpAll')}
         </p>
       </div>

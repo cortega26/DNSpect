@@ -1,3 +1,5 @@
+import type { TranslationKey } from './i18n-translations'
+import type { TargetScope } from './targetScope'
 import type { Goal, Provider, ResolverResult } from './types'
 
 const envApiBase = import.meta.env.VITE_API_BASE
@@ -13,19 +15,19 @@ export function providersByGoal(providers: Provider[], goal: Goal): Provider[] {
   return providers.filter((p) => p.goals.includes(goal) || p.id === 'isp-detectado')
 }
 
-export function regionLabel(region: string | null): string {
-  if (!region) return 'Auto'
-  const labels: Record<string, string> = {
-    global: 'Global',
-    europe: 'Europe',
-    'south-america': 'South America',
-    'north-america': 'North America',
-    asia: 'Asia',
-    oceania: 'Oceania',
-    africa: 'Africa',
-    auto: 'Auto',
-  }
-  return labels[region] ?? region
+const REGION_LABEL_KEYS: Record<string, TranslationKey> = {
+  global: 'region.global',
+  europe: 'region.europe',
+  'south-america': 'region.southAmerica',
+  'north-america': 'region.northAmerica',
+  asia: 'region.asia',
+}
+
+/** Translation key for the plan-004 normalized target scope label. */
+export function regionLabelKey(scope: TargetScope | null): TranslationKey {
+  if (scope === 'all') return 'region.all'
+  if (scope && scope !== 'unknown' && scope in REGION_LABEL_KEYS) return REGION_LABEL_KEYS[scope]
+  return 'region.auto'
 }
 
 export function resolverGroup(provider?: Provider): string {

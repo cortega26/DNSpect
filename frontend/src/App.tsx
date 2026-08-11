@@ -36,7 +36,7 @@ import {
 } from '@/lib/runtime'
 import { useTheme } from '@/lib/useTheme'
 import type { BenchmarkMode, BenchmarkProtocol, Provider, ResolverResult, ScoringProfile, SystemDnsPayload } from '@/lib/types'
-import { API_BASE, fmtMs, providersByGoal, regionLabel, resolverReliabilityScore } from '@/lib/utils'
+import { API_BASE, fmtMs, providersByGoal, regionLabelKey, resolverReliabilityScore } from '@/lib/utils'
 import {
   buildTargetSnapshot,
   deriveTargetResolvers,
@@ -845,7 +845,7 @@ function App() {
       <a href="#main-content" className="skip-link">
         {t('accessibility.skipToContent')}
       </a>
-      <main className="app-shell" id="main-content">
+      <div className="app-shell">
       <header className="app-header">
         <div className="app-topbar">
           <div className="app-brand">
@@ -930,7 +930,7 @@ function App() {
         </div>
 
         {isInitializing ? (
-          <div className="hero" style={{ display: 'grid', gap: 'var(--space-3)' }} aria-busy="true" aria-label="Cargando">
+          <div className="hero" style={{ display: 'grid', gap: 'var(--space-3)' }} aria-busy="true" aria-label={t('accessibility.loading')}>
             <span className="skeleton skeleton-heading" style={{ width: '28%' }} />
             <span className="skeleton skeleton-text" style={{ width: '48%' }} />
           </div>
@@ -959,7 +959,7 @@ function App() {
                   <circle cx="12" cy="12" r="9" />
                   <path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z" />
                 </svg>
-                {regionLabel(targetScope === 'unknown' ? null : targetScope)}
+                {t(regionLabelKey(targetScope))}
               </span>
               <span className="hero-meta-item">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14" aria-hidden="true">
@@ -987,8 +987,9 @@ function App() {
         )}
       </header>
 
+      <main id="main-content" tabIndex={-1}>
       {isInitializing ? (
-        <section className="card" style={{ display: 'grid', gap: 'var(--space-4)' }} aria-busy="true" aria-label="Cargando">
+        <section className="card" style={{ display: 'grid', gap: 'var(--space-4)' }} aria-busy="true" aria-label={t('accessibility.loading')}>
           <span className="skeleton skeleton-heading" style={{ width: '30%' }} />
           <span className="skeleton skeleton-text" style={{ width: '50%' }} />
           <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
@@ -1022,7 +1023,6 @@ function App() {
           startHelperText={startCtaHelpText}
           scope={targetScope}
           scopeSource={scopeSource}
-          regionLabel={regionLabel}
           onScopeSelect={handleScopeSelect}
           onScopeReset={handleScopeReset}
           onToggleResolver={toggleResolver}
@@ -1433,7 +1433,8 @@ function App() {
         />
       </Suspense>
       )}
-    </main>
+      </main>
+      </div>
     </>
   )
 }

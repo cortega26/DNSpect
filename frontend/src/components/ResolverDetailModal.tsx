@@ -36,7 +36,7 @@ function makeHistogram(samples: number[]): Array<{ bucket: string; count: number
 const FAILURE_KINDS = ['timeout', 'nxdomain', 'servfail', 'refused', 'noanswer', 'other'] as const
 
 export function ResolverDetailModal({ result, provider, canLoadSamples, isLoadingSamples, onLoadSamples, onClose }: Props) {
-  const { t } = useI18n()
+  const { language, t } = useI18n()
   const modalRef = useRef<HTMLDivElement>(null)
   useFocusTrap(modalRef, true)
   const lineData = result.samples.map((s) => ({ run: s.run_index, ms: s.ms ?? null }))
@@ -58,7 +58,13 @@ export function ResolverDetailModal({ result, provider, canLoadSamples, isLoadin
         <p className="muted">
           {t('modal.provider')}: {provider?.name ?? result.provider_name}
         </p>
-        <p className="muted">{provider?.notes_es ?? t('modal.noDescription')}</p>
+        <p className="muted">
+          {provider?.notes_es
+            ? language === 'es'
+              ? provider.notes_es
+              : t('modal.descriptionSpanishOnly')
+            : t('modal.noDescription')}
+        </p>
 
         {provider?.features ? (
           <div className="protocol-badges">
