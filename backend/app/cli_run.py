@@ -132,9 +132,7 @@ def build_request(args: argparse.Namespace) -> BenchmarkRequest:
 
 
 def _format_validation_error(exc: ValidationError) -> str:
-    return "; ".join(
-        f"{'/'.join(str(part) for part in err['loc'])}: {err['msg']}" for err in exc.errors()
-    )
+    return "; ".join(f"{'/'.join(str(part) for part in err['loc'])}: {err['msg']}" for err in exc.errors())
 
 
 def _cell_text(value: object) -> str:
@@ -145,13 +143,13 @@ def _cell_text(value: object) -> str:
 
 
 def _fmt_number(value: object) -> str:
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
+    if isinstance(value, int | float) and not isinstance(value, bool):
         return f"{value:.2f}"
     return "-"
 
 
 def _fmt_percent(value: object) -> str:
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
+    if isinstance(value, int | float) and not isinstance(value, bool):
         return f"{value * 100:.1f}"
     return "-"
 
@@ -190,9 +188,7 @@ def format_table(state: dict[str, Any]) -> str:
         for index, cell in enumerate(row):
             widths[index] = max(widths[index], len(cell))
     lines = ["  ".join(_align(cell, index, widths) for index, cell in enumerate(TABLE_HEADER))]
-    lines.extend(
-        "  ".join(_align(cell, index, widths) for index, cell in enumerate(row)) for row in rows
-    )
+    lines.extend("  ".join(_align(cell, index, widths) for index, cell in enumerate(row)) for row in rows)
     return "\n".join(lines) + "\n"
 
 
