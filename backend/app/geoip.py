@@ -19,6 +19,43 @@ def _resolve_db_path() -> Path | None:
     return candidate if candidate.exists() else None
 
 
+def _load_maxminddb() -> Any | None:
+    """Import the optional maxminddb package, or None when it is unavailable."""
+    try:
+        import maxminddb  # type: ignore[import-untyped]
+    except (ImportError, ModuleNotFoundError):
+        return None
+    return maxminddb
+
+
+def _open_geoip_reader(db_path: Path) -> Any | None:
+    """Open the GeoIP reader, or return None for expected component failures.
+
+    Expected failures are the optional maxminddb package being absent, an
+    unavailable/unreadable database path (OSError), the documented maxminddb
+    invalid-database error, and the ValueError raised when an empty or
+    unusable file cannot be mapped.
+    """
+    maxminddb = _load_maxminddb()
+    if maxminddb is None:
+        return None
+
+    try:
+        return maxminddb.open_database(str(db_path), maxminddb.MODE_AUTO)
+    except (OSError, ValueError):
+        return None
+    except maxminddb.errors.InvalidDatabaseError:
+        return None
+
+
+def _expected_geoip_read_errors() -> tuple[type[BaseException], ...]:
+    """Reader errors that mean 'GeoIP unavailable' rather than a bug."""
+    maxminddb = _load_maxminddb()
+    if maxminddb is None:
+        return (OSError, ValueError)
+    return (OSError, ValueError, maxminddb.errors.InvalidDatabaseError)
+
+
 def geoip_lookup(client_ip: str) -> dict[str, Any]:
     """Look up the client IP in the GeoIP database.
 
@@ -37,17 +74,14 @@ def geoip_lookup(client_ip: str) -> dict[str, Any]:
     if db_path is None:
         return {}
 
-    import maxminddb  # type: ignore[import-untyped]
-
-    try:
-        reader = maxminddb.open_database(str(db_path), maxminddb.MODE_AUTO)
-    except FileNotFoundError:
-        return {}
-    except ImportError:
+    reader = _open_geoip_reader(db_path)
+    if reader is None:
         return {}
 
     try:
         result = reader.get(client_ip)
+    except _expected_geoip_read_errors():
+        return {}
     finally:
         reader.close()
 
