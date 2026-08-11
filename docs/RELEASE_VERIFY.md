@@ -1,7 +1,7 @@
 # Release Artifact Verification
 
 DNSpect release assets include platform executables plus a `checksums.txt` file with SHA256 hashes.
-Current release channel publishes macOS as arm64-only.
+The release matrix publishes three assets: Linux x64, Windows x64, and macOS arm64 (macOS is published on the arm64 channel only).
 
 Expected artifact names:
 
@@ -9,7 +9,7 @@ Expected artifact names:
 - `dnspect-windows-x64.exe`
 - `dnspect-macos-arm64`
 - `checksums.txt`
-- `checksums.txt.sig` (optional, if signing is enabled)
+- `checksums.txt.sig` (optional, only if signing is enabled)
 
 ## 1) Download assets
 
@@ -84,3 +84,22 @@ curl -sS http://127.0.0.1:8000/api/health
 ```
 
 Expected: HTTP 200 with a healthy status payload.
+
+4. Verify the root route serves the frontend HTML:
+
+```bash
+curl -sS http://127.0.0.1:8000/ | head -5
+```
+
+Expected: the built frontend `index.html` document.
+
+## 6) Packaged Windows smoke
+
+Before uploading the Windows asset, run the packaged-artifact smoke:
+
+```powershell
+pwsh ./scripts/smoke_packaged_windows.ps1 -BinaryPath release-assets/dnspect-windows-x64.exe
+```
+
+Expected: the script starts the packaged binary, checks the health endpoint,
+and exits 0. See `docs/RELEASE_CHECKLIST.md` for the full pre-upload sequence.

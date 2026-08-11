@@ -42,7 +42,27 @@ Solución:
 - Si falla, usa `PYTHON_BIN` apuntando a un Python con pip:
   - `PYTHON_BIN=/ruta/python bash scripts/dev.sh`
 
-## 5) Benchmark con muchos timeouts
+## 5) Windows: versión de Python incorrecta en el venv local
+
+Síntoma: `scripts/dev.ps1` o `scripts/smoke_test.ps1` fallan y el proyecto exige
+Python 3.13+ (`requires-python = ">=3.13"`).
+
+Solución:
+
+1. Inspecciona el intérprete del venv:
+   `& .\backend\.venv\Scripts\python.exe -c "import sys; print(sys.version)"`
+   Si no reporta 3.13.x, el venv se creó con un Python anterior.
+2. Solo si eliges recrearlo, elimina el venv local obsoleto
+   (`Remove-Item -Recurse -Force .\backend\.venv`) y vuelve a ejecutar
+   `.\scripts\dev.ps1`, que crea el venv con el Python 3.13 detectado.
+3. Revisa el log del script para confirmar la versión usada antes de reinstalar
+   dependencias.
+4. Para el artefacto empaquetado, el smoke
+   `pwsh ./scripts/smoke_packaged_windows.ps1 -BinaryPath release-assets/dnspect-windows-x64.exe`
+   valida el binario de release y sus diagnósticos de log; úsalo antes de
+   reportar un fallo del binario empaquetado.
+
+## 6) Benchmark con muchos timeouts
 
 Causas comunes:
 
@@ -55,7 +75,7 @@ Qué hacer:
 - Usar modo `standard` inicialmente.
 - Revisar `timeout_rate` y `p95` además de la mediana.
 
-## 6) El JSON no trae muestras
+## 7) El JSON no trae muestras
 
 Comportamiento esperado por defecto para reducir payload.
 

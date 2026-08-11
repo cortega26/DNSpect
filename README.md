@@ -25,10 +25,10 @@ Most "DNS speed test" pages run from a remote browser context or cloud vantage p
 ## Features
 ### Core features
 - Local DNS benchmark API (`FastAPI`) and web UI (`React + Vite + TypeScript`).
-- **50 DNS providers** across all regions with complete metadata (goals, tags, features).
-- **Goal system** — five benchmark goals (`speed`, `security`, `privacy`, `ad-blocking`, `family`) with goal-aware scoring weights and provider filtering.
+- **49 DNS providers** in the catalog with metadata (goals, tags, features) used for test selection.
+- **Scoring profiles** — five profiles (`speed`, `security`, `privacy`, `ad-blocking`, `family`) with goal-aware ranking weights. A scoring profile controls ranking policy; the immutable target snapshot records exactly which resolvers were measured. See `docs/PROFILE_MODEL.md`.
 - **Encrypted DNS benchmarking** — full DoT (DNS-over-TLS) and DoH (DNS-over-HTTPS) support with protocol selector in UI and capability filtering.
-- **Region-based provider grouping** — automatic continent detection via GeoIP (optional MaxMind database) or browser locale, with region override selector.
+- **Region target scoping** — a region choice selects the measured resolver set (auto-detected through the approved egress GeoIP flow, or chosen manually). See `docs/REGION_TARGETING.md`.
 - Resolver benchmarking with per-run query samples and progress reporting.
 - Engine selection:
   - `drill` on Linux when available.
@@ -68,10 +68,10 @@ Most "DNS speed test" pages run from a remote browser context or cloud vantage p
 
 ### Platform compatibility
 - Release binaries generated for:
-  - Linux x64
-  - Windows x64
-  - macOS x64
-  - macOS arm64
+  - Linux x64 (`dnspect-linux-x64`)
+  - Windows x64 (`dnspect-windows-x64.exe`)
+  - macOS arm64 (`dnspect-macos-arm64`)
+- See `docs/RELEASE_VERIFY.md` for the verified release workflow and per-asset checks.
 - Development scripts for Linux/macOS (`scripts/dev.sh`) and Windows (`scripts/dev.ps1`).
 - DNS detection methods:
   - Linux: `resolvectl` then `/etc/resolv.conf`
@@ -80,7 +80,8 @@ Most "DNS speed test" pages run from a remote browser context or cloud vantage p
 
 ### Privacy considerations
 - Local-first execution: no telemetry or analytics pipeline in this repo.
-- Network egress is DNS query traffic to selected resolvers only.
+- Benchmark network traffic is DNS query traffic to the resolvers you selected.
+- When automatic region detection is enabled (the default until a manual region is chosen), the app makes one request to `https://api.ipify.org?format=json` (IP address only, 5-second timeout, no caching or retries) and one local GeoIP lookup against the bundled backend; the result is used only to derive the default target scope and falls back silently when unavailable. See `docs/REGION_TARGETING.md` for the approved policy.
 - Benchmark metadata is persisted under a platform user data path resolved by `platformdirs` (`user_data_path("dnspect", "DNSpect") / "runs"`); sample persistence is disabled by default unless `DNS_SPEED_LAB_PERSIST_SAMPLES=1`.
 - UI stores "last run" in browser local storage for convenience.
 
@@ -89,7 +90,7 @@ Most "DNS speed test" pages run from a remote browser context or cloud vantage p
 - Inbound surface: local HTTP server (`uvicorn`) on `127.0.0.1:8000` by default.
 - Browser/API surface: endpoints under `/api/*` for benchmark/probe/export.
 - Browser-origin policy surface: CORS is restricted to localhost/127.0.0.1 origins (including localhost regex ports).
-- Outbound surface: DNS queries to configured resolver IPs; local OS command execution for DNS detection (`resolvectl`, `scutil`, `networksetup`, `ipconfig`, `netsh`) and optional `drill`.
+- Outbound surface: DNS queries to configured resolver IPs; one approved public-IP request (`api.ipify.org`) and a local GeoIP lookup during automatic region detection; local OS command execution for DNS detection (`resolvectl`, `scutil`, `networksetup`, `ipconfig`, `netsh`) and optional `drill`.
 
 ### Input validation model
 - Resolver input must be literal IP addresses (IPv4/IPv6); invalid values fail validation.
@@ -230,8 +231,7 @@ cd frontend && npm run lint && npm run typecheck && npm test && npm run build
 
 ## Roadmap
 
-- [ ] Historical run comparison — side-by-side benchmark diffing
-- [ ] DNS leak detection — detect VPN/tunnel DNS leaks during benchmarking
+- [ ] Historical run comparison — side-by-side benchmark diffing (backlog)
 - [ ] Continuous monitoring mode — background daemon re-checking resolvers at intervals
 - [ ] Scheduled/recurring benchmarks with persistent history
 - [ ] Configurable alerting when a resolver degrades beyond threshold
