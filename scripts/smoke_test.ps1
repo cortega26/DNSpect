@@ -21,7 +21,7 @@ if ([version]$pyVer -lt [version]"3.13") {
   throw "Python del venv es $pyVer, se requiere >=3.13. Elimina backend/.venv y recrea con Python 3.13."
 }
 python -m ensurepip --upgrade | Out-Null
-python -m pip install -r constraints.txt -e .[dev] | Out-Null
+python -m pip install -c constraints.txt -e .[dev] | Out-Null
 
 $backendProc = Start-Process -PassThru powershell -ArgumentList "-NoProfile", "-Command", "cd '$root\backend'; .\.venv\Scripts\Activate.ps1; uvicorn app.main:app --host $backendHost --port $backendPort"
 
