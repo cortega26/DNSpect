@@ -152,3 +152,85 @@ class ProbeRequest(BaseModel):
     @classmethod
     def validate_queries(cls, values: Optional[list[str]]) -> Optional[list[str]]:
         return _normalize_queries(values, max_items=32)
+
+
+class RunManifest(BaseModel):
+    """Immutable measurement contract of a persisted run.
+
+    Two ``done`` runs are numerically comparable only when every field here is
+    exactly equal. See docs/ARCHITECTURE.md for the derivation rules.
+    """
+
+    run_manifest_version: int
+    response_semantics_version: str
+    scoring_semantics_version: str
+    scoring_profile: str
+    target_snapshot: dict[str, object] | None
+    protocol: str
+    mode: str
+    runs: int
+    timeout_sec: float
+    normal_query_schedule_version: str
+    normal_query_plan_sha256: str
+    normal_query_count: int
+    blocking_query_plan_sha256: str
+    blocking_query_count: int
+    diagnostic_policy_version: str
+    provider_catalog_sha256: str
+
+
+class ComparisonReasonCode(str, Enum):
+    manifest_missing = "manifest_missing"
+    manifest_invalid = "manifest_invalid"
+    manifest_version_mismatch = "manifest_version_mismatch"
+    response_semantics_mismatch = "response_semantics_mismatch"
+    scoring_semantics_mismatch = "scoring_semantics_mismatch"
+    scoring_profile_mismatch = "scoring_profile_mismatch"
+    target_snapshot_mismatch = "target_snapshot_mismatch"
+    protocol_mismatch = "protocol_mismatch"
+    query_plan_mismatch = "query_plan_mismatch"
+    mode_mismatch = "mode_mismatch"
+    runs_mismatch = "runs_mismatch"
+    timeout_mismatch = "timeout_mismatch"
+    diagnostic_policy_mismatch = "diagnostic_policy_mismatch"
+    provider_catalog_mismatch = "provider_catalog_mismatch"
+
+
+class RunComparisonMetrics(BaseModel):
+    median_ms: float | None
+    p95_ms: float | None
+    success_rate: float | None
+    failure_rate: float | None
+    blocking_efficacy: float | None
+    score_total: float | None
+
+
+class RunComparisonDeltas(BaseModel):
+    median_ms: float | None
+    p95_ms: float | None
+    success_rate: float | None
+    failure_rate: float | None
+    blocking_efficacy: float | None
+    score_total: float | None
+    rank: int
+
+
+class RunComparisonRow(BaseModel):
+    resolver: str
+    baseline: RunComparisonMetrics
+    candidate: RunComparisonMetrics
+    baseline_rank: int
+    candidate_rank: int
+    deltas: RunComparisonDeltas
+
+
+class RunComparisonResponse(BaseModel):
+    baseline_id: str
+    candidate_id: str
+    baseline_manifest: RunManifest | None
+    candidate_manifest: RunManifest | None
+    comparable: bool
+    reason_codes: list[ComparisonReasonCode]
+    rows: list[RunComparisonRow]
+    missing_baseline_results: list[str]
+    missing_candidate_results: list[str]

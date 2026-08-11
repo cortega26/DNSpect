@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import platform
@@ -24,9 +25,19 @@ import dns.query
 import dns.rcode
 import dns.resolver
 from platformdirs import user_data_path
+from pydantic import ValidationError
 
 from .detect_dns import detect_system_dns
-from .models import BenchmarkRequest, ProbeRequest
+from .models import (
+    BenchmarkRequest,
+    ComparisonReasonCode,
+    ProbeRequest,
+    RunComparisonDeltas,
+    RunComparisonMetrics,
+    RunComparisonResponse,
+    RunComparisonRow,
+    RunManifest,
+)
 from .providers import (
     build_default_resolvers,
     load_blocking_domains,
@@ -43,6 +54,38 @@ from .stats import (
 )
 
 TERMINAL_STATUSES = {"done", "failed", "cancelled"}
+
+RUN_MANIFEST_VERSION = 1
+RESPONSE_SEMANTICS_VERSION = "dns-response-v1"
+SCORING_SEMANTICS_VERSION = "score-v1"
+NORMAL_QUERY_SCHEDULE_VERSION = "round-robin-v1"
+DIAGNOSTIC_POLICY_VERSION = "random-nxdomain-v1"
+
+COMPARISON_REASON_ORDER: tuple[ComparisonReasonCode, ...] = (
+    ComparisonReasonCode.manifest_missing,
+    ComparisonReasonCode.manifest_invalid,
+    ComparisonReasonCode.manifest_version_mismatch,
+    ComparisonReasonCode.response_semantics_mismatch,
+    ComparisonReasonCode.scoring_semantics_mismatch,
+    ComparisonReasonCode.scoring_profile_mismatch,
+    ComparisonReasonCode.target_snapshot_mismatch,
+    ComparisonReasonCode.protocol_mismatch,
+    ComparisonReasonCode.query_plan_mismatch,
+    ComparisonReasonCode.mode_mismatch,
+    ComparisonReasonCode.runs_mismatch,
+    ComparisonReasonCode.timeout_mismatch,
+    ComparisonReasonCode.diagnostic_policy_mismatch,
+    ComparisonReasonCode.provider_catalog_mismatch,
+)
+
+COMPARISON_METRIC_KEYS = (
+    "median_ms",
+    "p95_ms",
+    "success_rate",
+    "failure_rate",
+    "blocking_efficacy",
+    "score_total",
+)
 
 
 def _resolve_runs_dir() -> Path:
@@ -95,6 +138,160 @@ def _resolver_rank_key(item: dict[str, Any]) -> tuple[float, float, float, str]:
     )
 
 
+def _canonical_json_sha256(payload: Any, *, sort_keys: bool = False) -> str:
+    """Byte-stable sha256 over the canonical JSON form used by run manifests."""
+    serialized = json.dumps(payload, ensure_ascii=False, sort_keys=sort_keys, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+def _build_run_manifest(
+    config: BenchmarkConfig,
+    provider_index: dict[str, dict[str, Any]],
+    blocking_queries: list[str],
+) -> RunManifest:
+    schedule = [config.queries[run_idx % len(config.queries)] for run_idx in range(config.runs)]
+    return RunManifest(
+        run_manifest_version=RUN_MANIFEST_VERSION,
+        response_semantics_version=RESPONSE_SEMANTICS_VERSION,
+        scoring_semantics_version=SCORING_SEMANTICS_VERSION,
+        scoring_profile=config.scoring_profile,
+        target_snapshot=config.target_snapshot,
+        protocol=config.protocol,
+        mode=config.mode,
+        runs=config.runs,
+        timeout_sec=config.timeout_sec,
+        normal_query_schedule_version=NORMAL_QUERY_SCHEDULE_VERSION,
+        normal_query_plan_sha256=_canonical_json_sha256(schedule),
+        normal_query_count=len(schedule),
+        blocking_query_plan_sha256=_canonical_json_sha256(blocking_queries),
+        blocking_query_count=len(blocking_queries),
+        diagnostic_policy_version=DIAGNOSTIC_POLICY_VERSION,
+        provider_catalog_sha256=_canonical_json_sha256(provider_index, sort_keys=True),
+    )
+
+
+def _opt_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _extract_manifest(data: dict[str, Any]) -> tuple[RunManifest | None, ComparisonReasonCode | None]:
+    raw = data.get("manifest")
+    if raw is None:
+        return None, ComparisonReasonCode.manifest_missing
+    try:
+        return RunManifest.model_validate(raw), None
+    except (ValidationError, TypeError, ValueError):
+        return None, ComparisonReasonCode.manifest_invalid
+
+
+def _manifest_mismatch_reason_codes(
+    baseline: RunManifest, candidate: RunManifest
+) -> list[ComparisonReasonCode]:
+    checks: list[tuple[bool, ComparisonReasonCode]] = [
+        (
+            baseline.run_manifest_version != candidate.run_manifest_version,
+            ComparisonReasonCode.manifest_version_mismatch,
+        ),
+        (
+            baseline.response_semantics_version != candidate.response_semantics_version,
+            ComparisonReasonCode.response_semantics_mismatch,
+        ),
+        (
+            baseline.scoring_semantics_version != candidate.scoring_semantics_version,
+            ComparisonReasonCode.scoring_semantics_mismatch,
+        ),
+        (
+            baseline.scoring_profile != candidate.scoring_profile,
+            ComparisonReasonCode.scoring_profile_mismatch,
+        ),
+        (
+            baseline.target_snapshot != candidate.target_snapshot,
+            ComparisonReasonCode.target_snapshot_mismatch,
+        ),
+        (
+            baseline.protocol != candidate.protocol,
+            ComparisonReasonCode.protocol_mismatch,
+        ),
+        (
+            baseline.normal_query_schedule_version != candidate.normal_query_schedule_version
+            or baseline.normal_query_plan_sha256 != candidate.normal_query_plan_sha256
+            or baseline.normal_query_count != candidate.normal_query_count
+            or baseline.blocking_query_plan_sha256 != candidate.blocking_query_plan_sha256
+            or baseline.blocking_query_count != candidate.blocking_query_count,
+            ComparisonReasonCode.query_plan_mismatch,
+        ),
+        (
+            baseline.mode != candidate.mode,
+            ComparisonReasonCode.mode_mismatch,
+        ),
+        (
+            baseline.runs != candidate.runs,
+            ComparisonReasonCode.runs_mismatch,
+        ),
+        (
+            baseline.timeout_sec != candidate.timeout_sec,
+            ComparisonReasonCode.timeout_mismatch,
+        ),
+        (
+            baseline.diagnostic_policy_version != candidate.diagnostic_policy_version,
+            ComparisonReasonCode.diagnostic_policy_mismatch,
+        ),
+        (
+            baseline.provider_catalog_sha256 != candidate.provider_catalog_sha256,
+            ComparisonReasonCode.provider_catalog_mismatch,
+        ),
+    ]
+    return [code for mismatched, code in checks if mismatched]
+
+
+def _comparison_metrics(result: dict[str, Any]) -> RunComparisonMetrics:
+    stats = result.get("stats") or {}
+    return RunComparisonMetrics(
+        median_ms=_opt_float(stats.get("median_ms")),
+        p95_ms=_opt_float(stats.get("p95_ms")),
+        success_rate=_opt_float(stats.get("success_rate")),
+        failure_rate=_opt_float(stats.get("failure_rate")),
+        blocking_efficacy=_opt_float(stats.get("blocking_efficacy")),
+        score_total=_opt_float(stats.get("score_total")),
+    )
+
+
+def _comparison_deltas(
+    baseline_stats: dict[str, Any],
+    candidate_stats: dict[str, Any],
+    *,
+    baseline_rank: int,
+    candidate_rank: int,
+) -> RunComparisonDeltas:
+    deltas: dict[str, float | None] = {}
+    for key in COMPARISON_METRIC_KEYS:
+        baseline_value = _opt_float(baseline_stats.get(key))
+        candidate_value = _opt_float(candidate_stats.get(key))
+        if baseline_value is None or candidate_value is None:
+            deltas[key] = None
+        else:
+            deltas[key] = round(candidate_value - baseline_value, 4)
+    return RunComparisonDeltas(
+        median_ms=deltas["median_ms"],
+        p95_ms=deltas["p95_ms"],
+        success_rate=deltas["success_rate"],
+        failure_rate=deltas["failure_rate"],
+        blocking_efficacy=deltas["blocking_efficacy"],
+        score_total=deltas["score_total"],
+        rank=candidate_rank - baseline_rank,
+    )
+
+
+def _ranked_resolvers(data: dict[str, Any]) -> dict[str, int]:
+    results = sorted(data.get("results") or [], key=_resolver_rank_key)
+    return {str(item.get("resolver", "")): index + 1 for index, item in enumerate(results)}
+
+
 @dataclass
 class BenchmarkState:
     id: str
@@ -118,6 +315,7 @@ class BenchmarkState:
     results: list[dict[str, Any]] | None = None
     run_storage_warning: str | None = None
     target_snapshot: dict[str, object] | None = None
+    manifest: RunManifest | None = None
 
     def as_response(self, include_samples: bool = False) -> dict[str, Any]:
         sanitized_results = _sanitize_results(self.results, include_samples=include_samples)
@@ -151,6 +349,7 @@ class BenchmarkState:
             "recommended_resolver": recommended_resolver,
             "recommendation_warning": recommendation_warning,
             "target_snapshot": self.target_snapshot,
+            "manifest": self.manifest.model_dump() if self.manifest else None,
         }
         return response
 
@@ -234,6 +433,15 @@ def classify_dnspython_exception(exc: Exception) -> str:
     if isinstance(exc, dns.exception.DNSException):
         return classify_failure_from_text(str(exc))
     return "other"
+
+
+def is_generated_run_id(benchmark_id: str) -> bool:
+    """True only for the canonical lowercase UUIDv4 hex form from ``uuid.uuid4().hex``."""
+    try:
+        parsed = uuid.UUID(benchmark_id)
+    except (ValueError, AttributeError, TypeError):
+        return False
+    return parsed.version == 4 and parsed.hex == benchmark_id
 
 
 class BenchmarkManager:
@@ -367,6 +575,7 @@ class BenchmarkManager:
                 f"(máximo: {self.max_estimated_duration_sec} segundos)."
             )
         benchmark_id = uuid.uuid4().hex
+        manifest = _build_run_manifest(config, self.provider_index, self.blocking_test_queries)
         state = BenchmarkState(
             id=benchmark_id,
             status="queued",
@@ -380,6 +589,7 @@ class BenchmarkManager:
             timeout_sec=config.timeout_sec,
             runs=config.runs,
             target_snapshot=config.target_snapshot,
+            manifest=manifest,
         )
         with self._lock:
             self._cleanup_terminal_states_locked()
@@ -468,14 +678,10 @@ class BenchmarkManager:
         without touching the disk; the resolved candidate must also stay
         contained in the runs directory.
         """
-        try:
-            parsed = uuid.UUID(benchmark_id)
-        except (ValueError, AttributeError, TypeError):
-            return None
-        if parsed.version != 4 or parsed.hex != benchmark_id:
+        if not is_generated_run_id(benchmark_id):
             return None
 
-        candidate = self._data_runs_dir / f"{parsed.hex}.json"
+        candidate = self._data_runs_dir / f"{benchmark_id}.json"
         try:
             if not candidate.resolve().is_relative_to(self._data_runs_dir.resolve()):
                 return None
@@ -544,6 +750,91 @@ class BenchmarkManager:
 
         runs.sort(key=_sort_key, reverse=True)
         return {"runs": runs[:50]}
+
+    def compare_runs(self, baseline_id: str, candidate_id: str) -> RunComparisonResponse | None:
+        """Compare two persisted runs under the immutable manifest contract.
+
+        Returns None when either run cannot be read (route maps it to 404) and
+        raises ValueError when a run exists but is not ``done`` (route maps it
+        to 409). Every readable ``done`` pair produces a typed response, even
+        when the pair is not comparable.
+        """
+        baseline = self.get(baseline_id)
+        if baseline is None:
+            return None
+        candidate = self.get(candidate_id)
+        if candidate is None:
+            return None
+        if baseline.get("status") != "done" or candidate.get("status") != "done":
+            raise ValueError("benchmark aún en ejecución")
+        return self._build_comparison(baseline, candidate)
+
+    def _build_comparison(self, baseline: dict[str, Any], candidate: dict[str, Any]) -> RunComparisonResponse:
+        baseline_manifest, baseline_reason = _extract_manifest(baseline)
+        candidate_manifest, candidate_reason = _extract_manifest(candidate)
+
+        reason_codes: list[ComparisonReasonCode] = []
+        if baseline_reason is not None:
+            reason_codes.append(baseline_reason)
+        if candidate_reason is not None:
+            reason_codes.append(candidate_reason)
+
+        if baseline_manifest is not None and candidate_manifest is not None:
+            reason_codes.extend(_manifest_mismatch_reason_codes(baseline_manifest, candidate_manifest))
+
+        reason_codes.sort(key=COMPARISON_REASON_ORDER.index)
+        comparable = baseline_manifest is not None and candidate_manifest is not None and not reason_codes
+
+        if not comparable:
+            return RunComparisonResponse(
+                baseline_id=str(baseline.get("id", "")),
+                candidate_id=str(candidate.get("id", "")),
+                baseline_manifest=baseline_manifest,
+                candidate_manifest=candidate_manifest,
+                comparable=False,
+                reason_codes=reason_codes,
+                rows=[],
+                missing_baseline_results=[],
+                missing_candidate_results=[],
+            )
+
+        baseline_results = {str(item.get("resolver", "")): item for item in (baseline.get("results") or [])}
+        candidate_results = {str(item.get("resolver", "")): item for item in (candidate.get("results") or [])}
+        baseline_ranks = _ranked_resolvers(baseline)
+        candidate_ranks = _ranked_resolvers(candidate)
+
+        common_resolvers = sorted(set(baseline_results) & set(candidate_results))
+        missing_baseline_results = sorted(set(candidate_results) - set(baseline_results))
+        missing_candidate_results = sorted(set(baseline_results) - set(candidate_results))
+
+        rows = [
+            RunComparisonRow(
+                resolver=resolver,
+                baseline=_comparison_metrics(baseline_results[resolver]),
+                candidate=_comparison_metrics(candidate_results[resolver]),
+                baseline_rank=baseline_ranks[resolver],
+                candidate_rank=candidate_ranks[resolver],
+                deltas=_comparison_deltas(
+                    baseline_results[resolver].get("stats") or {},
+                    candidate_results[resolver].get("stats") or {},
+                    baseline_rank=baseline_ranks[resolver],
+                    candidate_rank=candidate_ranks[resolver],
+                ),
+            )
+            for resolver in common_resolvers
+        ]
+
+        return RunComparisonResponse(
+            baseline_id=str(baseline.get("id", "")),
+            candidate_id=str(candidate.get("id", "")),
+            baseline_manifest=baseline_manifest,
+            candidate_manifest=candidate_manifest,
+            comparable=True,
+            reason_codes=[],
+            rows=rows,
+            missing_baseline_results=missing_baseline_results,
+            missing_candidate_results=missing_candidate_results,
+        )
 
     def _cleanup_terminal_states(self) -> None:
         with self._lock:
