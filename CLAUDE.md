@@ -54,10 +54,12 @@ bash scripts/dev.sh
 ### Make targets
 - `make backend-check` — lint, format check, mypy, bandit, pytest
 - `make backend-semgrep` — semgrep SAST scan
+- `make dependency-audit` — pip-audit and npm audit gates
 - `make frontend-check` — lint, typecheck, build
 - `make dev` — run both servers
 - `make smoke` — smoke test script
 - `make flatpak-validate` — flatpak build + lint
+- `make flatpak-deps` / `make flatpak-python-deps` — regenerate Flatpak npm/Python sources
 
 ## Project architecture
 
@@ -77,39 +79,44 @@ bash scripts/dev.sh
 - `packaged_main.py` — PyInstaller entry point stub (imports and runs `app.cli:main`)
 
 ### Frontend layout (`frontend/src/`)
-- `App.tsx` — Main app component: state, polling, orchestration, i18n, theme
-- `components/DashboardControls.tsx` — Mode/goal/region/timeout resolver selection
+- `App.tsx` — Main app component: composition, initialization, i18n, theme
+- `hooks/useBenchmarkSession.ts` — Live benchmark lifecycle: start, polling, saved-run viewing, samples
+- `hooks/useRunHistory.ts` — History rows and refresh lifecycle
+- `hooks/useGuidedVerification.ts` — Guided verification probe lifecycle (cancel/reset)
+- `components/DashboardControls.tsx` — Mode/scoring-profile/region/timeout resolver selection
 - `components/LiveRankingPanel.tsx` — Animated live ranking during benchmark
 - `components/RecommendedResolverPanel.tsx` — Post-benchmark recommendation card
 - `components/ResolverRankingPanel.tsx` — Full ranking table with filters
-- `components/ChartsPanel.tsx` — Lazy-loaded Recharts (median/p95/reliability)
+- `components/ChartsPanel.tsx` — Lazy-loaded Recharts (median/p95/reliability/blocking)
 - `components/GuidedApplyModal.tsx` — Platform-specific DNS apply guide modal
 - `components/ResolverDetailModal.tsx` — Per-resolver detail with time series/histogram
 - `lib/types.ts` — TypeScript types for API responses, providers, benchmark state
 - `lib/api.ts` — API client functions
 - `lib/i18n-translations.ts` — ES/EN/PT translations (ES is source of truth)
-- `lib/utils.ts` — Provider filtering (by goal, region), formatters, reliability score
+- `lib/targetScope.ts` — Normalized target-scope union and snapshot derivation (plan 004)
+- `lib/egress.ts` — Approved automatic egress-scope resolution adapter
+- `lib/utils.ts` — Provider goal filtering, formatters, reliability score
 - `lib/reporting.ts` — Last-run persistence, CSV builder, share summary
 - `lib/runtime.ts` — Polling heuristics, stall detection, small-improvement detection
 - `lib/probe.ts` — Probe response parsing, comparison logic
 - `lib/applyGuide.ts` — DNS clipboard text and guided set builder
 
 ### Data flow
-1. User selects resolvers/goal/mode/timeout in UI → `POST /api/benchmarks`
+1. User selects resolvers, scoring profile, region scope, mode, and timeout in UI → `POST /api/benchmarks`
 2. `BenchmarkManager` validates via Pydantic, queues the job, returns `benchmark_id`
 3. `ThreadPoolExecutor` runs queries per resolver (drill or dnspython)
 4. Frontend polls `GET /api/benchmarks/{id}` for progress and partial results
-5. On completion, backend computes normalized scoring (goal-weighted), ranking, recommendation
+5. On completion, backend computes normalized scoring (profile-weighted), ranking, recommendation
 6. Results are rendered: recommended resolver panel, full ranking, charts, export options
 
 ### Key design constraints
 - **Determinism**: Same inputs → identical ranking (no randomness in scoring)
-- **Goal system**: Goals filter available providers and adjust scoring weights (latency/reliability/stability)
-- **Region filtering**: Optional GeoIP lookup → providers filtered by continent region
-- **Translations**: ES is source of truth (263+ keys), tests enforce completeness for EN and PT
-- **Scoring**: Goal-aware weights normalize latency/reliability/stability into a composite `score_total`
+- **Profiles**: Scoring profiles (ranking policy) and target profiles (resolver selection) are independent. See `docs/PROFILE_MODEL.md`; never conflate them.
+- **Region targeting**: A region choice selects the measured resolver set; auto-detection uses the approved egress flow (`api.ipify.org` + local GeoIP, region only, 5 s timeout, no cache/retry) and manual choices replace the selection. See `docs/REGION_TARGETING.md`; raw country codes are never target scopes.
+- **Translations**: ES is source of truth (~330 keys), tests enforce completeness for EN and PT
+- **Scoring**: Profile-aware weights normalize latency/reliability/stability/blocking into a composite `score_total`
 - **Reliability guardrail**: Resolvers with `failure_rate > 5%` are flagged `is_unreliable` and avoided for recommendations
-- **Flatpak distribution**: Packaged as a Flatpak for Flathub — SEO/social meta tags are irrelevant
+- **Flatpak distribution**: Packaged as a Flatpak for Flathub — SEO/social meta tags are irrelevant. See `docs/distribution/flathub-readiness.md`.
 - **Benchmark capacity**: Configurable max concurrent + queued jobs via env vars (`DNS_SPEED_LAB_MAX_CONCURRENT_JOBS`, `DNS_SPEED_LAB_MAX_QUEUED_JOBS`)
 
 ### API endpoints
@@ -121,6 +128,7 @@ bash scripts/dev.sh
 | `/api/geoip` | GET | GeoIP lookup (optional) |
 | `/api/probe` | POST | Quick probe (small sample) |
 | `/api/benchmarks` | POST | Start benchmark |
+| `/api/benchmarks/history` | GET | Persisted run history |
 | `/api/benchmarks/{id}` | GET | Poll status/results |
 | `/api/benchmarks/{id}/export.csv` | GET | CSV export |
 | `/api/benchmarks/{id}/export.json` | GET | JSON export |
