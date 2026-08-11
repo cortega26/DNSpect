@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import csv
-import io
 import json
 import os
 import sys
@@ -14,6 +12,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 
 from . import __version__
+from .export import build_csv
 from .geoip import geoip_lookup
 from .models import (
     BenchmarkRequest,
@@ -199,80 +198,8 @@ def export_csv(benchmark_id: str) -> StreamingResponse:
     if state["status"] != "done":
         raise HTTPException(status_code=409, detail="benchmark aún en ejecución")
 
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(
-        [
-            "resolver",
-            "provider_id",
-            "provider_name",
-            "engine",
-            "protocol",
-            "avg_ms",
-            "median_ms",
-            "p95_ms",
-            "min_ms",
-            "max_ms",
-            "ok_count",
-            "timeout_count",
-            "success_rate",
-            "timeout_rate",
-            "success_count",
-            "failure_count",
-            "failure_rate",
-            "consistency_ratio",
-            "p95_minus_median_ms",
-            "score_latency",
-            "score_reliability",
-            "score_stability",
-            "score_total",
-            "normalized_latency",
-            "normalized_reliability",
-            "normalized_stability",
-            "reliability_penalty",
-            "max_rel_penalty",
-            "is_unreliable",
-        ]
-    )
-    for item in state.get("results", []):
-        stats = item["stats"]
-        writer.writerow(
-            [
-                item["resolver"],
-                item["provider_id"],
-                item["provider_name"],
-                item["engine"],
-                item.get("protocol", "udp"),
-                stats["avg_ms"],
-                stats["median_ms"],
-                stats["p95_ms"],
-                stats["min_ms"],
-                stats["max_ms"],
-                stats["ok_count"],
-                stats["timeout_count"],
-                stats["success_rate"],
-                stats["timeout_rate"],
-                stats.get("success_count"),
-                stats.get("failure_count"),
-                stats.get("failure_rate"),
-                stats["consistency_ratio"],
-                stats["p95_minus_median_ms"],
-                stats.get("score_latency"),
-                stats.get("score_reliability"),
-                stats.get("score_stability"),
-                stats.get("score_total"),
-                stats.get("normalized_latency"),
-                stats.get("normalized_reliability"),
-                stats.get("normalized_stability"),
-                stats.get("reliability_penalty"),
-                stats.get("max_rel_penalty"),
-                item.get("is_unreliable"),
-            ]
-        )
-
-    output.seek(0)
     headers = {"Content-Disposition": f'attachment; filename="dns-benchmark-{benchmark_id}.csv"'}
-    return StreamingResponse(iter([output.getvalue()]), media_type="text/csv", headers=headers)
+    return StreamingResponse(iter([build_csv(state)]), media_type="text/csv", headers=headers)
 
 
 @app.get("/")
