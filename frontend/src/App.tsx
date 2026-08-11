@@ -9,6 +9,7 @@ import { RecommendedResolverPanel } from '@/components/RecommendedResolverPanel'
 import { ResolverRankingPanel } from '@/components/ResolverRankingPanel'
 import { RunHistoryPanel } from '@/components/RunHistoryPanel'
 import { useBenchmarkSession } from '@/hooks/useBenchmarkSession'
+import { useRunHistory } from '@/hooks/useRunHistory'
 
 const ChartsPanel = lazy(() => import('@/components/ChartsPanel').then((m) => ({ default: m.ChartsPanel })))
 const ResolverDetailModal = lazy(() => import('@/components/ResolverDetailModal').then((m) => ({ default: m.ResolverDetailModal })))
@@ -16,7 +17,7 @@ import { buildDnsClipboardText, buildGuidedDnsSet, detectPlatformGroup } from '@
 import { useI18n } from '@/lib/useI18n'
 import type { Language } from '@/lib/i18n-translations'
 import { computeRunningEtaText, formatEtaRange } from '@/lib/eta'
-import { getBenchmarkHistory, getProviders, getPublicIp, getSystemDns, lookupGeoIp, probeResolvers, type RunHistoryEntry } from '@/lib/api'
+import { getProviders, getPublicIp, getSystemDns, lookupGeoIp, probeResolvers } from '@/lib/api'
 import { compareProbeSummaries, parseProbeResponse, type ProbeOutcome, type ProbeSummary } from '@/lib/probe'
 import {
   buildBenchmarkCsv,
@@ -219,8 +220,7 @@ function App() {
   const [localeMenuOpen, setLocaleMenuOpen] = useState<boolean>(false)
   const [nowMs, setNowMs] = useState<number>(() => Date.now())
   const [isInitializing, setIsInitializing] = useState<boolean>(true)
-  const [history, setHistory] = useState<RunHistoryEntry[]>([])
-  const [historyLoading, setHistoryLoading] = useState(true)
+  const { history, historyLoading } = useRunHistory(status?.id ?? null)
   const rankingPanelRef = useRef<HTMLElement | null>(null)
   const localeMenuRef = useRef<HTMLDivElement>(null)
   const resolverListRef = useRef<HTMLDivElement>(null)
@@ -303,15 +303,6 @@ function App() {
       cancelled = true
     }
   }, [reportError])
-
-  useEffect(() => {
-    let cancelled = false
-    setHistoryLoading(true)
-    getBenchmarkHistory()
-      .then((res) => { if (!cancelled) { setHistory(res.runs); setHistoryLoading(false) } })
-      .catch(() => { if (!cancelled) setHistoryLoading(false) })
-    return () => { cancelled = true }
-  }, [status?.id])
 
   const handleSelectRun = useCallback(
     async (runId: string) => {
