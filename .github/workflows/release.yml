@@ -200,6 +200,11 @@ jobs:
             echo "Skipping lipo validation because artifact is not Mach-O: $artifact"
           fi
 
+      - name: Smoke test packaged Windows artifact
+        if: ${{ matrix.asset_name == 'dnspect-windows-x64.exe' }}
+        shell: pwsh
+        run: ./scripts/smoke_packaged_windows.ps1 -BinaryPath "release-assets/${{ matrix.asset_name }}"
+
       - name: Upload executable artifact
         uses: actions/upload-artifact@v4
         with:
