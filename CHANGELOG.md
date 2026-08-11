@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [1.3.0] - 2026-08-11
+
+### Added
+
+- **Target region scoping**: a region choice now selects the exact measured resolver set (Target Profile constraint) with an approved automatic egress flow (public IP + local GeoIP, region only, 5 s timeout, no cache/retry) and manual override; raw country codes are never target scopes. Decision record: `docs/REGION_TARGETING.md`.
+- **Chromium browser regression suite**: deterministic mocked-network Playwright coverage (cold init, rapid start, polling, history, teardown) enforced in CI.
+- **Lifecycle ownership hooks**: `useBenchmarkSession`, `useRunHistory`, and `useGuidedVerification` extracted from App; stale-response guards for history selection, samples, and guided verification.
+
+### Fixed
+
+- Optional GeoIP failures (missing `maxminddb`, corrupt/unreadable database) degrade to an empty result instead of a server error; `/api/geoip` returns a stable five-field shape.
+- Persisted-run disk lookup accepts only canonical lowercase UUIDv4 hex IDs and verifies containment in the runs directory.
+- Document language now synchronizes from the initial saved/browser locale; skip link lands past header controls; loading, region, chart, ranking, and provider-note copy routes through i18n (EN/PT never show Spanish-only provider notes).
+- Pre-existing mypy gate errors (pydantic validator annotation, history sort key) resolved.
+
+### Build/CI
+
+- Frontend quality gate extended with the Playwright Chromium suite.
+- Flatpak packaging aligned with release: platform/SDK/node24 on 25.08 (Python 3.13), source pinned to the `v1.3.0` tag, generated Python/npm modules regenerated from the final locks, `flatpak-python-deps` target added.
+- Release documentation rewritten around the actual matrix (Linux x64, Windows x64, macOS arm64), the `<version>` placeholder, and the packaged-Windows smoke.
+
 ## [1.2.0] - 2026-05-12
 
 ### Changed
