@@ -8,6 +8,7 @@ import { LiveRankingPanel } from '@/components/LiveRankingPanel'
 import { RecommendedResolverPanel } from '@/components/RecommendedResolverPanel'
 import { ResolverRankingPanel } from '@/components/ResolverRankingPanel'
 import { RunHistoryPanel } from '@/components/RunHistoryPanel'
+import { useBenchmarkSession } from '@/hooks/useBenchmarkSession'
 
 const ChartsPanel = lazy(() => import('@/components/ChartsPanel').then((m) => ({ default: m.ChartsPanel })))
 const ResolverDetailModal = lazy(() => import('@/components/ResolverDetailModal').then((m) => ({ default: m.ResolverDetailModal })))
@@ -15,7 +16,7 @@ import { buildDnsClipboardText, buildGuidedDnsSet, detectPlatformGroup } from '@
 import { useI18n } from '@/lib/useI18n'
 import type { Language } from '@/lib/i18n-translations'
 import { computeRunningEtaText, formatEtaRange } from '@/lib/eta'
-import { getBenchmark, getBenchmarkHistory, getProviders, getPublicIp, getSystemDns, lookupGeoIp, probeResolvers, startBenchmark, type RunHistoryEntry } from '@/lib/api'
+import { getBenchmarkHistory, getProviders, getPublicIp, getSystemDns, lookupGeoIp, probeResolvers, type RunHistoryEntry } from '@/lib/api'
 import { compareProbeSummaries, parseProbeResponse, type ProbeOutcome, type ProbeSummary } from '@/lib/probe'
 import {
   buildBenchmarkCsv,
@@ -29,13 +30,11 @@ import {
 } from '@/lib/reporting'
 import {
   computeStallThresholds,
-  isActivePollSession,
   isSmallImprovement,
   shouldAcceptAsyncResult,
-  shouldPollBenchmark,
 } from '@/lib/runtime'
 import { useTheme } from '@/lib/useTheme'
-import type { BenchmarkMode, BenchmarkProtocol, BenchmarkStatus, Provider, ResolverResult, ScoringProfile, SystemDnsPayload, TargetSnapshot } from '@/lib/types'
+import type { BenchmarkMode, BenchmarkProtocol, Provider, ResolverResult, ScoringProfile, SystemDnsPayload, TargetSnapshot } from '@/lib/types'
 import { API_BASE, detectRegion, fmtMs, providersByGoal, providersByRegion, regionLabel, resolverReliabilityScore } from '@/lib/utils'
 
 const MODE_RUNS: Record<BenchmarkMode, number> = {
@@ -106,7 +105,6 @@ const FALLBACK_PROVIDERS: Provider[] = [
   },
 ]
 
-const POLL_INTERVAL_MS = 1000
 
 interface ResolverCatalogItem {
   resolver: string
@@ -204,11 +202,8 @@ function App() {
   const [regionOverride, setRegionOverride] = useState<string | null>(null)
   const [advancedOpen, setAdvancedOpen] = useState<boolean>(false)
 
-  const [benchmarkId, setBenchmarkId] = useState<string | null>(null)
-  const [status, setStatus] = useState<BenchmarkStatus | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedResult, setSelectedResult] = useState<ResolverResult | null>(null)
-  const [loadingSamples, setLoadingSamples] = useState<boolean>(false)
+  const session = useBenchmarkSession()
+  const { benchmarkId, status, error, selectedResult, loadingSamples, viewingSavedRun, reportError } = session
   const [searchTerm, setSearchTerm] = useState<string>('')
   const [onlyReliable, setOnlyReliable] = useState<boolean>(false)
   const [resolverListOpen, setResolverListOpen] = useState<boolean>(false)
@@ -221,7 +216,6 @@ function App() {
   const [guidedVerification, setGuidedVerification] = useState<VerificationSummary | null>(null)
   const [savedLastRun, setSavedLastRun] = useState<SavedLastRunV1 | null>(null)
   const [savedRunNotice, setSavedRunNotice] = useState<string | null>(null)
-  const [viewingSavedRun, setViewingSavedRun] = useState<boolean>(false)
   const [localeMenuOpen, setLocaleMenuOpen] = useState<boolean>(false)
   const [nowMs, setNowMs] = useState<number>(() => Date.now())
   const [isInitializing, setIsInitializing] = useState<boolean>(true)
@@ -233,36 +227,14 @@ function App() {
   useFocusTrap(resolverListRef, resolverListOpen)
   const localeTriggerRef = useRef<HTMLButtonElement>(null)
   const localeOptionRefs = useRef<Array<HTMLButtonElement | null>>([])
-  const pollTimerRef = useRef<number | null>(null)
-  const pollAbortRef = useRef<AbortController | null>(null)
-  const pollInFlightRef = useRef<boolean>(false)
-  const pollSessionIdRef = useRef<number>(0)
-  const activePollBenchmarkIdRef = useRef<string | null>(null)
-  const startRequestSeqRef = useRef<number>(0)
-  const startInFlightRef = useRef<boolean>(false)
-  const selectRequestSeqRef = useRef<number>(0)
   const verifyRequestSeqRef = useRef<number>(0)
-  const mountedRef = useRef<boolean>(false)
+  const mountedRef = useRef(false)
 
   useEffect(() => {
     mountedRef.current = true
     return () => {
       mountedRef.current = false
     }
-  }, [])
-
-  const stopPolling = useCallback(() => {
-    pollSessionIdRef.current += 1
-    if (pollTimerRef.current !== null) {
-      window.clearTimeout(pollTimerRef.current)
-      pollTimerRef.current = null
-    }
-    if (pollAbortRef.current) {
-      pollAbortRef.current.abort()
-      pollAbortRef.current = null
-    }
-    pollInFlightRef.current = false
-    activePollBenchmarkIdRef.current = null
   }, [])
 
   useEffect(() => {
@@ -304,7 +276,7 @@ function App() {
           } else if (dnsResult.status === 'rejected') {
             reason = dnsResult.reason
           }
-          setError(reason instanceof Error ? reason.message : 'Error al cargar los datos iniciales')
+          reportError(reason instanceof Error ? reason.message : 'Error al cargar los datos iniciales')
         }
 
         // Optional GeoIP lookup to refine detected region
@@ -330,84 +302,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [])
-
-  const startPolling = useCallback(
-    (id: string) => {
-      stopPolling()
-      activePollBenchmarkIdRef.current = id
-      const sessionId = pollSessionIdRef.current
-      let cancelled = false
-
-      const isCurrentSession = () =>
-        !cancelled &&
-        isActivePollSession(sessionId, pollSessionIdRef.current, id, activePollBenchmarkIdRef.current) &&
-        mountedRef.current
-
-      const scheduleNext = (delayMs: number) => {
-        if (!isCurrentSession()) return
-        pollTimerRef.current = window.setTimeout(() => {
-          void pollOnce()
-        }, delayMs)
-      }
-
-      const pollOnce = async () => {
-        if (!isCurrentSession()) return
-        if (pollInFlightRef.current) {
-          scheduleNext(120)
-          return
-        }
-
-        pollInFlightRef.current = true
-        const controller = new AbortController()
-        pollAbortRef.current = controller
-
-        try {
-          const next = await getBenchmark(id, false, controller.signal)
-          if (!isCurrentSession()) return
-          setStatus(next)
-          if (next.status === 'running' || next.status === 'queued') {
-            scheduleNext(POLL_INTERVAL_MS)
-          } else {
-            stopPolling()
-          }
-        } catch (e) {
-          if (controller.signal.aborted || !isCurrentSession()) return
-          setError(e instanceof Error ? e.message : t('error.benchmarkPoll'))
-          stopPolling()
-        } finally {
-          pollInFlightRef.current = false
-          if (pollAbortRef.current === controller) {
-            pollAbortRef.current = null
-          }
-        }
-      }
-
-      void pollOnce()
-
-      return () => {
-        cancelled = true
-        if (isActivePollSession(sessionId, pollSessionIdRef.current, id, activePollBenchmarkIdRef.current)) {
-          stopPolling()
-        }
-      }
-    },
-    [stopPolling, t],
-  )
-
-  useEffect(() => {
-    if (!shouldPollBenchmark(benchmarkId, viewingSavedRun)) {
-      stopPolling()
-      return
-    }
-    return startPolling(benchmarkId)
-  }, [benchmarkId, startPolling, stopPolling, viewingSavedRun])
-
-  useEffect(() => {
-    return () => {
-      stopPolling()
-    }
-  }, [stopPolling])
+  }, [reportError])
 
   useEffect(() => {
     let cancelled = false
@@ -418,25 +313,14 @@ function App() {
     return () => { cancelled = true }
   }, [status?.id])
 
-  const handleSelectRun = useCallback(async (runId: string) => {
-    stopPolling()
-    const requestSeq = selectRequestSeqRef.current + 1
-    selectRequestSeqRef.current = requestSeq
-    try {
-      const pastRun = await getBenchmark(runId)
-      if (!shouldAcceptAsyncResult(requestSeq, selectRequestSeqRef.current, mountedRef.current)) return
-      setStatus(pastRun)
-      setBenchmarkId(runId)
-      setViewingSavedRun(true)
-      setError(null)
-      setSelectedResult(null)
+  const handleSelectRun = useCallback(
+    async (runId: string) => {
       setCopyStatus('idle')
       setSummaryCopyStatus('idle')
-    } catch (e) {
-      if (!shouldAcceptAsyncResult(requestSeq, selectRequestSeqRef.current, mountedRef.current)) return
-      setError(e instanceof Error ? e.message : t('error.benchmarkLoad'))
-    }
-  }, [stopPolling, t])
+      await session.selectRun(runId)
+    },
+    [session],
+  )
 
   useEffect(() => {
     setTimeoutPreset(nearestTimeoutPreset(timeoutSec))
@@ -744,17 +628,9 @@ function App() {
     }
   }
 
-  async function handleStart() {
-    if (startInFlightRef.current) return
-    startInFlightRef.current = true
-
-    const requestSeq = startRequestSeqRef.current + 1
-    startRequestSeqRef.current = requestSeq
-    selectRequestSeqRef.current += 1
+  function handleStart() {
     verifyRequestSeqRef.current += 1
 
-    setError(null)
-    setSelectedResult(null)
     setCopyStatus('idle')
     setSummaryCopyStatus('idle')
     setGuidedApplyOpen(false)
@@ -763,46 +639,33 @@ function App() {
     setGuidedVerifyError(null)
     setIsVerifyingGuided(false)
     setSavedRunNotice(null)
-    setViewingSavedRun(false)
-    stopPolling()
-    setStatus(null)
-    setBenchmarkId(null)
 
-    try {
-      const customQueries = parseQueries(queriesText)
-      const resolverIps = Array.from(selectedResolvers)
-      const providerIds: Record<string, string> = {}
-      for (const ip of resolverIps) {
-        const catalogItem = resolverCatalog.get(ip)
-        if (catalogItem?.providerId && catalogItem.providerId !== 'isp-detectado') {
-          providerIds[ip] = catalogItem.providerId
-        }
+    const customQueries = parseQueries(queriesText)
+    const resolverIps = Array.from(selectedResolvers)
+    const providerIds: Record<string, string> = {}
+    for (const ip of resolverIps) {
+      const catalogItem = resolverCatalog.get(ip)
+      if (catalogItem?.providerId && catalogItem.providerId !== 'isp-detectado') {
+        providerIds[ip] = catalogItem.providerId
       }
-      const targetSnapshot: TargetSnapshot = {
-        resolver_ips: resolverIps,
-        selection_source: resolverIps.length > 0 ? 'manual' : 'catalog',
-        provider_ids: Object.keys(providerIds).length > 0 ? providerIds : null,
-      }
-      const payload = {
-        mode,
-        scoring_profile: scoringProfile,
-        goal: scoringProfile,
-        protocol,
-        runs,
-        timeout_sec: timeoutSec,
-        resolvers: resolverIps,
-        ...(customQueries.length > 0 ? { queries: customQueries } : {}),
-        target_snapshot: targetSnapshot,
-      }
-      const response = await startBenchmark(payload)
-      if (!shouldAcceptAsyncResult(requestSeq, startRequestSeqRef.current, mountedRef.current)) return
-      setBenchmarkId(response.benchmark_id)
-    } catch (e) {
-      if (!shouldAcceptAsyncResult(requestSeq, startRequestSeqRef.current, mountedRef.current)) return
-      setError(e instanceof Error ? e.message : t('error.benchmarkStart'))
-    } finally {
-      startInFlightRef.current = false
     }
+    const targetSnapshot: TargetSnapshot = {
+      resolver_ips: resolverIps,
+      selection_source: resolverIps.length > 0 ? 'manual' : 'catalog',
+      provider_ids: Object.keys(providerIds).length > 0 ? providerIds : null,
+    }
+    const payload = {
+      mode,
+      scoring_profile: scoringProfile,
+      goal: scoringProfile,
+      protocol,
+      runs,
+      timeout_sec: timeoutSec,
+      resolvers: resolverIps,
+      ...(customQueries.length > 0 ? { queries: customQueries } : {}),
+      target_snapshot: targetSnapshot,
+    }
+    void session.start(payload)
   }
 
   function toggleResolver(ip: string) {
@@ -922,15 +785,9 @@ function App() {
 
   function handleViewSavedRun() {
     if (!savedLastRun) return
-    stopPolling()
-    setError(null)
-    setSelectedResult(null)
-    setLoadingSamples(false)
     setCopyStatus('idle')
     setSummaryCopyStatus('idle')
-    setStatus(savedLastRun.payload)
-    setBenchmarkId(savedLastRun.payload.id)
-    setViewingSavedRun(true)
+    session.viewSavedRun(savedLastRun.payload)
   }
 
   function handleClearSavedRun() {
@@ -983,31 +840,11 @@ function App() {
   }
 
   function handleSelectResult(result: ResolverResult) {
-    selectRequestSeqRef.current += 1
-    setSelectedResult(result)
+    session.selectResult(result)
   }
 
   async function handleLoadSamples() {
-    if (!benchmarkId || !selectedResult || selectedResult.samples.length > 0 || loadingSamples) return
-    const requestSeq = selectRequestSeqRef.current + 1
-    selectRequestSeqRef.current = requestSeq
-    const targetResolver = selectedResult.resolver
-    setLoadingSamples(true)
-    try {
-      const full = await getBenchmark(benchmarkId, true)
-      if (!shouldAcceptAsyncResult(requestSeq, selectRequestSeqRef.current, mountedRef.current)) return
-      const resolved = full.results?.find((row) => row.resolver === targetResolver)
-      if (resolved) {
-        setSelectedResult(resolved)
-      }
-    } catch (e) {
-      if (!shouldAcceptAsyncResult(requestSeq, selectRequestSeqRef.current, mountedRef.current)) return
-      setError(e instanceof Error ? e.message : t('error.samples'))
-    } finally {
-      if (requestSeq === selectRequestSeqRef.current) {
-        setLoadingSamples(false)
-      }
-    }
+    await session.loadSamples()
   }
 
   const isCompleted = status?.status === 'done'
@@ -1669,8 +1506,7 @@ function App() {
             void handleLoadSamples()
           }}
           onClose={() => {
-            setSelectedResult(null)
-            setLoadingSamples(false)
+            session.selectResult(null)
           }}
         />
       </Suspense>
