@@ -21,6 +21,7 @@ from typing import Any
 import dns.exception
 import dns.message
 import dns.query
+import dns.rcode
 import dns.resolver
 from platformdirs import user_data_path
 
@@ -167,6 +168,20 @@ def _sanitize_results(
             item["samples"] = []
         sanitized.append(item)
     return sanitized
+
+
+def _rcode_to_failure_kind(rcode_str: str) -> str | None:
+    """Map a DNS RCODE string to failure_kind. Returns None for NOERROR."""
+    upper = rcode_str.upper()
+    if upper == "NOERROR":
+        return None
+    if upper == "NXDOMAIN":
+        return "nxdomain"
+    if upper == "SERVFAIL":
+        return "servfail"
+    if upper == "REFUSED":
+        return "refused"
+    return "other"
 
 
 def classify_failure_from_text(text: str) -> str:
@@ -783,6 +798,19 @@ def run_drill_query(resolver: str, domain: str, timeout_sec: float) -> dict[str,
             "failure_kind": failure_kind,
         }
 
+    rcode_match = DRILL_RCODE_RE.search(proc.stdout)
+    if rcode_match:
+        rcode = rcode_match.group(1)
+        rcode_kind = _rcode_to_failure_kind(rcode)
+        if rcode_kind is not None:
+            return {
+                "ok": False,
+                "ms": None,
+                "query": domain,
+                "error": f"DNS RCODE: {rcode}",
+                "failure_kind": rcode_kind,
+            }
+
     answer_ips = DRILL_ANSWER_RE.findall(proc.stdout)
     return {
         "ok": True,
@@ -829,6 +857,16 @@ def run_dot_query(resolver: str, domain: str, timeout_sec: float, dot_hostname: 
     try:
         response = dns.query.tls(q, resolver, timeout=timeout_sec, server_hostname=hostname)
         elapsed_ms = (perf_counter() - start) * 1000.0
+        rcode = dns.rcode.to_text(response.rcode())
+        failure_kind = _rcode_to_failure_kind(rcode)
+        if failure_kind is not None:
+            return {
+                "ok": False,
+                "ms": None,
+                "query": domain,
+                "error": f"DNS RCODE: {rcode}",
+                "failure_kind": failure_kind,
+            }
         answer_ips = [
             str(rr.address) for ans in response.answer for rr in ans if rr.rdtype == dns.rdatatype.A
         ]
@@ -865,6 +903,16 @@ def run_doh_query(resolver: str, domain: str, timeout_sec: float, doh_url: str |
     try:
         response = dns.query.https(q, doh_url, timeout=timeout_sec)
         elapsed_ms = (perf_counter() - start) * 1000.0
+        rcode = dns.rcode.to_text(response.rcode())
+        failure_kind = _rcode_to_failure_kind(rcode)
+        if failure_kind is not None:
+            return {
+                "ok": False,
+                "ms": None,
+                "query": domain,
+                "error": f"DNS RCODE: {rcode}",
+                "failure_kind": failure_kind,
+            }
         answer_ips = [
             str(rr.address) for ans in response.answer for rr in ans if rr.rdtype == dns.rdatatype.A
         ]
