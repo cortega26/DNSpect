@@ -54,6 +54,7 @@ All scoring/ranking changes require unit tests; determinism and backward compat 
 ## Working Conventions
 
 - Feature work is designed as `plans/NNN-title.md`, then merged to main with `merge: plan NNN — title` commits. Status index: `plans/README.md` (reviewer-maintained; don't edit from an implementation branch).
+- Ad-hoc tasks not backed by a plan: keep a short spec + checklist in the branch, rely on the existing suites (`make backend-check`, `npm test`), and run them after meaningful commits.
 - Version parity: bump `backend/pyproject.toml` and `frontend/package.json` together (both 1.2.0). See `docs/RELEASE_CHECKLIST.md`.
 
 ## Non-Goals
