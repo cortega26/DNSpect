@@ -18,8 +18,8 @@ status once a plan has passed its own done criteria.
 
 ## Status snapshot (2026-08-11)
 
-**17 of 18 plans complete.** Remaining: 018 (deliberately deferred roadmap
-capability per the decision gates below).
+**All 18 plans complete.** The improvement backlog from the deep review is
+fully implemented and merged to main.
 
 ## Recommended execution order
 
@@ -32,7 +32,7 @@ that depends on it.
 | 1 — unblocked hardening | 010, 012, 014 | Browser regression coverage (007 landed), Flatpak release parity (011 landed), backend boundary hardening (005 landed). 012 still requires its release decision gate. |
 | 2 — region decision | 004 | Continent-grouping contradiction is resolved (see decision gates); the egress/public-IP policy must be approved and recorded in `docs/REGION_TARGETING.md` before any code changes. |
 | 3 — dependent contracts | 009, 015, 016 | Apply the accessibility/i18n contract after 004+010; split UI orchestration into hooks after 010; publish only verified product/release facts after 004's decision record. |
-| 4 — roadmap capabilities | 017, 018 | Add only manifest-compatible historical comparisons, then controlled matched UDP/DoT/DoH comparisons. |
+| 4 — roadmap capabilities | 017, 018 | Delivered: manifest-gated historical comparisons, then controlled matched UDP/DoT/DoH comparisons. |
 
 ## Plan status and dependencies
 
@@ -58,7 +58,7 @@ priority describes expected impact, effort is an implementation estimate.
 | [015 — frontend orchestration refactor](archive/015-frontend-orchestration-refactor.md) | P2 / L | 005, 007, 010 | **Complete** — `6b2896d` |
 | [016 — documentation contract](archive/016-documentation-contract.md) | P2 / M | 001, 003, 004, 006, 011, 013 | **Complete** — `8a54401` |
 | [017 — profile-aware history comparison](archive/017-profile-aware-history-comparison.md) | P3 / L | 009, 010, 014, 015, 016 | **Complete** — `80248ce` |
-| [018 — controlled protocol comparison](018-controlled-protocol-comparison.md) | P3 / L | 009, 010, 012, 014, 015, 016, 017 | Planned — deferred roadmap |
+| [018 — controlled protocol comparison](archive/018-controlled-protocol-comparison.md) | P3 / L | 009, 010, 012, 014, 015, 016, 017 | **Complete** — `ba24025` |
 
 ## Required decision gates
 
@@ -77,9 +77,6 @@ priority describes expected impact, effort is an implementation estimate.
   changed. Native validation does not certify the other architecture.
 - **Plan 016:** Documentation follows completed code and the approved profile /
   region decision records; it must never be used to decide those policies.
-- **Plan 018:** This is deliberately deferred roadmap work. It starts only
-  after the immutable-run, bounded-work, endpoint-invariant, browser ownership,
-  and manifest-comparison prerequisites are complete.
 
 ## Deliberately excluded work
 
