@@ -70,6 +70,17 @@ DRILL_RCODE_RE = re.compile(r"rcode:\s*([A-Z]+)", re.IGNORECASE)
 DRILL_ANSWER_RE = re.compile(r"^[a-zA-Z0-9._-]+\s+\d+\s+IN\s+A\s+([\d.]+)", re.MULTILINE)
 RELIABILITY_FAILURE_KINDS = {"timeout", "servfail", "refused", "noanswer", "other"}
 
+FIXED_DIAGNOSTIC_ATTEMPTS = 2
+
+
+@dataclass
+class BenchmarkWorkEstimate:
+    normal_attempts_per_resolver: int
+    blocking_attempts_per_resolver: int
+    diagnostic_attempts_per_resolver: int
+    total_attempts: int
+    estimated_duration_sec: float
+
 
 def _resolver_rank_key(item: dict[str, Any]) -> tuple[float, float, float, str]:
     stats = item.get("stats", {})
@@ -249,6 +260,10 @@ class BenchmarkManager:
         self.max_retained_states = max_retained_states or _to_positive_int(
             os.getenv("DNS_SPEED_LAB_MAX_RETAINED_STATES"), 256
         )
+        self.max_query_attempts = _to_positive_int(os.getenv("DNS_SPEED_LAB_MAX_QUERY_ATTEMPTS"), 10000)
+        self.max_estimated_duration_sec = _to_positive_int(
+            os.getenv("DNS_SPEED_LAB_MAX_ESTIMATED_DURATION_SEC"), 14400
+        )
         self._data_runs_dir = data_runs_dir or DATA_RUNS
         self._executor = ThreadPoolExecutor(
             max_workers=self.max_concurrent_jobs,
@@ -272,6 +287,28 @@ class BenchmarkManager:
         payload = detect_system_dns()
         payload["detected_provider_id"] = "isp-detectado"
         return payload
+
+    def _estimate_benchmark_work(
+        self,
+        *,
+        resolver_count: int,
+        runs: int,
+        timeout_sec: float,
+        protocol_count: int = 1,
+    ) -> BenchmarkWorkEstimate:
+        blocking = len(self.blocking_test_queries)
+        normal_per_resolver = runs
+        diag_per_resolver = FIXED_DIAGNOSTIC_ATTEMPTS
+        total = (normal_per_resolver + blocking + diag_per_resolver) * resolver_count * protocol_count
+        drill_allowance = timeout_sec + 0.6
+        est_duration = total * drill_allowance
+        return BenchmarkWorkEstimate(
+            normal_attempts_per_resolver=normal_per_resolver,
+            blocking_attempts_per_resolver=blocking,
+            diagnostic_attempts_per_resolver=diag_per_resolver,
+            total_attempts=total,
+            estimated_duration_sec=est_duration,
+        )
 
     def _build_config(self, req: BenchmarkRequest) -> BenchmarkConfig:
         runs = req.effective_runs()
@@ -312,14 +349,30 @@ class BenchmarkManager:
 
     def start(self, req: BenchmarkRequest) -> str:
         config = self._build_config(req)
+        work = self._estimate_benchmark_work(
+            resolver_count=len(config.resolvers),
+            runs=config.runs,
+            timeout_sec=config.timeout_sec,
+        )
+        if work.total_attempts > self.max_query_attempts:
+            raise ValueError(
+                "Demasiados intentos de consulta. "
+                f"Reduzca cantidad de resolvers o ejecuciones "
+                f"(máximo: {self.max_query_attempts} intentos)."
+            )
+        if work.estimated_duration_sec > self.max_estimated_duration_sec:
+            raise ValueError(
+                "Duración estimada excede el límite. "
+                f"Reduzca tiempo de espera, resolvers o ejecuciones "
+                f"(máximo: {self.max_estimated_duration_sec} segundos)."
+            )
         benchmark_id = uuid.uuid4().hex
-        blocking_total = len(config.resolvers) * len(self.blocking_test_queries)
         state = BenchmarkState(
             id=benchmark_id,
             status="queued",
             started_at=datetime.now(UTC).isoformat(),
             last_sample_at=int(datetime.now(UTC).timestamp() * 1000),
-            progress_total=len(config.resolvers) * config.runs + blocking_total,
+            progress_total=work.total_attempts,
             mode=config.mode,
             goal=config.goal,
             scoring_profile=config.scoring_profile,
@@ -745,6 +798,11 @@ class BenchmarkManager:
                 elif hijack_sample.get("failure_kind") == "nxdomain":
                     hijack_detected = False
                 stats["nxdomain_hijack_detected"] = hijack_detected
+                self._update_progress(
+                    benchmark_id,
+                    increment=1,
+                    resolver=resolver,
+                )
 
                 # DNSSEC validation check
                 dnssec_domain = "badsig.go.dnscheck.tools"
@@ -762,6 +820,11 @@ class BenchmarkManager:
                     # Got an answer when should have failed → not validating
                     dnssec_validating = False
                 stats["dnssec_validating"] = dnssec_validating
+                self._update_progress(
+                    benchmark_id,
+                    increment=1,
+                    resolver=resolver,
+                )
 
             self._set_done(benchmark_id, engine=engine, results=results)
         except Exception as exc:  # noqa: BLE001
