@@ -153,6 +153,14 @@ function deserializeSavedLastRunWithReason(raw: string): LoadSavedLastRunResult 
       return { saved: null, invalidationReason: 'malformed_payload' }
     }
 
+    const payload = parsed.payload as Record<string, unknown>
+    if (typeof payload.id !== 'string' || !payload.id) {
+      return { saved: null, invalidationReason: 'malformed_payload' }
+    }
+    if (typeof payload.status !== 'string' || !payload.status) {
+      return { saved: null, invalidationReason: 'malformed_payload' }
+    }
+
     const timestamp = parsed.metadata.timestamp
     if (typeof timestamp !== 'string' || !timestamp) {
       return { saved: null, invalidationReason: 'malformed_payload' }
@@ -160,7 +168,7 @@ function deserializeSavedLastRunWithReason(raw: string): LoadSavedLastRunResult 
 
     return {
       saved: {
-        payload: parsed.payload as unknown as BenchmarkStatus,
+        payload: payload as unknown as BenchmarkStatus,
         metadata: {
           timestamp,
           platform: typeof parsed.metadata.platform === 'string' ? parsed.metadata.platform : null,
