@@ -23,10 +23,9 @@
       "family": "no",
       "doh": "yes",
       "dot": "yes",
-      "doq": "yes",
+      "doq": "no",
       "doh_url": "https://cloudflare-dns.com/dns-query",
-      "dot_hostname": "one.one.one.one",
-      "doq_hostname": "one.one.one.one"
+      "dot_hostname": "one.one.one.one"
     },
     "notes_es": "DNS global rápido y muy usado; buena latencia en la mayoría de regiones."
   },
@@ -52,10 +51,9 @@
       "family": "no",
       "doh": "yes",
       "dot": "yes",
-      "doq": "yes",
+      "doq": "no",
       "doh_url": "https://dns.google/dns-query",
-      "dot_hostname": "dns.google",
-      "doq_hostname": "dns.google"
+      "dot_hostname": "dns.google"
     },
     "notes_es": "Servicio DNS global con amplia infraestructura y alta disponibilidad."
   },
@@ -208,9 +206,9 @@
       "doh": "yes",
       "dot": "yes",
       "doq": "yes",
-      "doh_url": "https://dns.adguard.com/dns-query",
-      "dot_hostname": "dns.adguard.com",
-      "doq_hostname": "dns.adguard.com"
+      "doh_url": "https://dns.adguard-dns.com/dns-query",
+      "dot_hostname": "dns.adguard-dns.com",
+      "doq_hostname": "dns.adguard-dns.com"
     },
     "notes_es": "Bloqueo de publicidad, rastreadores y malware. La opción estándar de AdGuard."
   },
