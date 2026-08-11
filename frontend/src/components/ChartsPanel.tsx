@@ -82,7 +82,7 @@ export function ChartsPanel({ results }: Props) {
 
   const bars = useMemo(() => {
     return limitedResults.map((result) => {
-      let value: number | null = null
+      let value: number | null
       if (chartView === 'median') value = result.stats.median_ms
       else if (chartView === 'p95') value = result.stats.p95_ms
       else value = metricSpec.extractValue(result.stats.success_rate, result.stats.blocking_efficacy)
