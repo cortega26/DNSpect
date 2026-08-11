@@ -60,9 +60,18 @@ try {
     throw "Root page does not contain HTML"
   }
 
-  $startupLog = Get-Content -Raw $logOut
-  if ($startupLog -notmatch "DNSpect server running on http://") {
-    throw "Startup message not found in log"
+  $startupFound = $false
+  while ((Get-Date) -lt $deadline) {
+    $startupLog = Get-Content -Raw $logOut -ErrorAction SilentlyContinue
+    if ($startupLog -match "DNSpect server running on http://") {
+      $startupFound = $true
+      break
+    }
+    Start-Sleep -Milliseconds 250
+  }
+  if (-not $startupFound) {
+    $startupErr = Get-Content -Raw $logErr -ErrorAction SilentlyContinue
+    throw "Startup message not found in log.`nSTDOUT:`n$startupLog`nSTDERR:`n$startupErr"
   }
 
   Write-Host "Packaged Windows artifact smoke test OK"

@@ -101,7 +101,7 @@ def main() -> None:
     if gui == "headless":
         _start_server(host, port)
         _wait_for_server(f"http://{host}:{port}/api/health")
-        print(f"DNSpect server running on http://{host}:{port}. Press Ctrl+C to stop.")
+        print(f"DNSpect server running on http://{host}:{port}. Press Ctrl+C to stop.", flush=True)
         try:
             while True:
                 time.sleep(3600)
