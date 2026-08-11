@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { CLOUDFLARE_RESULT, doneBenchmark, MockApi, QUAD9_RESULT } from './fixtures'
+import { doneBenchmark, MockApi, QUAD9_RESULT } from './fixtures'
 
 const GET_BENCHMARK = 'GET /api/benchmarks/:id'
 const GET_PROVIDERS = 'GET /api/providers'
