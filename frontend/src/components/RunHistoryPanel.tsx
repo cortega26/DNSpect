@@ -70,7 +70,9 @@ export function RunHistoryPanel({ runs, loading, onSelectRun }: Props) {
           <li key={run.id} className="history-item">
             <button type="button" className="history-btn" onClick={() => onSelectRun(run.id)}>
               <div className="history-item-header">
-                <span className={`badge ${goalBadgeClass(run.goal)}`}>{goalLabelText(run.goal, t as (key: string) => string)}</span>
+                <span className={`badge ${goalBadgeClass((run.scoring_profile || run.goal) ?? '')}`}>
+                  {goalLabelText((run.scoring_profile || run.goal) ?? '', t as (key: string) => string)}
+                </span>
                 <span className="history-mode">{run.mode}</span>
               </div>
               <div className="history-item-body">
