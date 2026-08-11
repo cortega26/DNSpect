@@ -41,22 +41,22 @@ priority describes expected impact, effort is an implementation estimate.
 
 | Plan | Priority / effort | Depends on | Status |
 |---|---|---|---|
-| [001 — DNS response semantics](001-dns-response-semantics.md) | P1 / M | — | **Complete** — `f97fe72` |
-| [002 — benchmark work budget](002-benchmark-work-budget.md) | P1 / M | 001 | **Complete** — `6a2dba5` |
-| [003 — profile and target model](003-profile-target-model.md) | P1 / L | — | **Complete** — `3e3c390` |
-| [004 — region targeting and egress](004-region-targeting-and-egress.md) | P1 / L | 003 | **Complete** — `871bc46` |
-| [005 — run-history integrity](005-run-history-integrity.md) | P2 / M | 003 | **Complete** — `ed35ef1` |
-| [006 — provider-data invariants](006-provider-data-invariants.md) | P1 / M | 001 | **Complete** — `64143ad` |
-| [007 — frontend workflow ownership](007-frontend-workflow-ownership.md) | P1 / M | 003 | **Complete** — `37bfbfa` |
-| [008 — results presentation correctness](008-results-presentation-correctness.md) | P1 / M | — | **Complete** — `f58b8b8` |
-| [009 — accessibility and i18n contract](009-accessibility-i18n-contract.md) | P1 / M | 004, 010 | **Complete** — `380a4b2` |
-| [010 — browser regression coverage](010-browser-regression-coverage.md) | P1 / M | 007 | **Complete** — `d992666` |
-| [011 — dependency security remediation](011-dependency-security-remediation.md) | P1 / L | — | **Complete** — `3980105` |
-| [012 — Flatpak release parity](012-flatpak-release-parity.md) | P1 / L | 011 | **Complete** — `ff026c2` |
-| [013 — Windows release verification](013-windows-release-verification.md) | P1 / M | 011 | **Complete** — `45ba4fb` |
-| [014 — backend boundary hardening](014-backend-boundary-hardening.md) | P1 / M | 005 | **Complete** — `3782ab0` |
-| [015 — frontend orchestration refactor](015-frontend-orchestration-refactor.md) | P2 / L | 005, 007, 010 | **Complete** — `6b2896d` |
-| [016 — documentation contract](016-documentation-contract.md) | P2 / M | 001, 003, 004, 006, 011, 013 | **Complete** — `8a54401` |
+| [001 — DNS response semantics](archive/001-dns-response-semantics.md) | P1 / M | — | **Complete** — `f97fe72` |
+| [002 — benchmark work budget](archive/002-benchmark-work-budget.md) | P1 / M | 001 | **Complete** — `6a2dba5` |
+| [003 — profile and target model](archive/003-profile-target-model.md) | P1 / L | — | **Complete** — `3e3c390` |
+| [004 — region targeting and egress](archive/004-region-targeting-and-egress.md) | P1 / L | 003 | **Complete** — `871bc46` |
+| [005 — run-history integrity](archive/005-run-history-integrity.md) | P2 / M | 003 | **Complete** — `ed35ef1` |
+| [006 — provider-data invariants](archive/006-provider-data-invariants.md) | P1 / M | 001 | **Complete** — `64143ad` |
+| [007 — frontend workflow ownership](archive/007-frontend-workflow-ownership.md) | P1 / M | 003 | **Complete** — `37bfbfa` |
+| [008 — results presentation correctness](archive/008-results-presentation-correctness.md) | P1 / M | — | **Complete** — `f58b8b8` |
+| [009 — accessibility and i18n contract](archive/009-accessibility-i18n-contract.md) | P1 / M | 004, 010 | **Complete** — `380a4b2` |
+| [010 — browser regression coverage](archive/010-browser-regression-coverage.md) | P1 / M | 007 | **Complete** — `d992666` |
+| [011 — dependency security remediation](archive/011-dependency-security-remediation.md) | P1 / L | — | **Complete** — `3980105` |
+| [012 — Flatpak release parity](archive/012-flatpak-release-parity.md) | P1 / L | 011 | **Complete** — `ff026c2` |
+| [013 — Windows release verification](archive/013-windows-release-verification.md) | P1 / M | 011 | **Complete** — `45ba4fb` |
+| [014 — backend boundary hardening](archive/014-backend-boundary-hardening.md) | P1 / M | 005 | **Complete** — `3782ab0` |
+| [015 — frontend orchestration refactor](archive/015-frontend-orchestration-refactor.md) | P2 / L | 005, 007, 010 | **Complete** — `6b2896d` |
+| [016 — documentation contract](archive/016-documentation-contract.md) | P2 / M | 001, 003, 004, 006, 011, 013 | **Complete** — `8a54401` |
 | [017 — profile-aware history comparison](017-profile-aware-history-comparison.md) | P3 / L | 009, 010, 014, 015, 016 | Planned — deferred roadmap |
 | [018 — controlled protocol comparison](018-controlled-protocol-comparison.md) | P3 / L | 009, 010, 012, 014, 015, 016, 017 | Planned — deferred roadmap |
 
@@ -98,6 +98,8 @@ with the project contract or would create unsupported claims:
 
 For a completed plan, the coordinator should verify that its declared tests,
 scope review, and done criteria passed; update its row to **Complete** with the
-merge commit; and re-check dependent plans' drift commands before they begin.
+merge commit; run `make plans-archive` to move the file to `plans/archive/` (the
+index links are rewritten automatically; archived plans are immutable); and
+re-check dependent plans' drift commands before they begin.
 If a STOP condition remains unresolved, mark only that plan **Blocked** and
 continue with independent waves where safe.

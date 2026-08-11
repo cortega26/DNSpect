@@ -70,4 +70,7 @@ flatpak-validate: flatpak-build
 flatpak-install:
 	flatpak-builder --user --install --force-clean $(FLATPAK_BUILDDIR)/build $(FLATPAK_MANIFEST)
 
-.PHONY: flatpak-deps flatpak-python-deps flatpak-build flatpak-validate flatpak-install
+plans-archive:
+	python3 scripts/archive_plans.py
+
+.PHONY: flatpak-deps flatpak-python-deps flatpak-build flatpak-validate flatpak-install plans-archive

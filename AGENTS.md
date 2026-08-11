@@ -54,6 +54,7 @@ All scoring/ranking changes require unit tests; determinism and backward compat 
 ## Working Conventions
 
 - Feature work is designed as `plans/NNN-title.md`, then merged to main with `merge: plan NNN — title` commits. Status index: `plans/README.md` (reviewer-maintained; don't edit from an implementation branch).
+- **Plan archiving**: the moment a plan's row is marked `**Complete**` in `plans/README.md`, its file must be moved to `plans/archive/` with `make plans-archive` (idempotent; rewrites the index links). Planned/blocked/deferred plans stay in `plans/`. Archived plans are immutable historical records — their internal prose and cross-references are never rewritten. `plans/README.md` is the only plan file that remains editable.
 - Ad-hoc tasks not backed by a plan: keep a short spec + checklist in the branch, rely on the existing suites (`make backend-check`, `npm test`), and run them after meaningful commits.
 - Version parity: bump `backend/pyproject.toml` and `frontend/package.json` together (both 1.2.0). See `docs/RELEASE_CHECKLIST.md`.
 
