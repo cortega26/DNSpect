@@ -26,6 +26,17 @@ export async function getProviders(): Promise<Provider[]> {
   return res.json()
 }
 
+export interface Capabilities {
+  doq: boolean
+}
+
+export async function getCapabilities(signal?: AbortSignal): Promise<Capabilities> {
+  const res = await fetch(`${API_BASE}/api/health`, { signal })
+  if (!res.ok) throw new Error('No se pudo cargar /api/health')
+  const body = await res.json()
+  return (body.capabilities ?? { doq: false }) as Capabilities
+}
+
 export async function getSystemDns(): Promise<SystemDnsPayload> {
   const res = await fetch(`${API_BASE}/api/dns/system`)
   if (!res.ok) throw new Error('No se pudo cargar /api/dns/system')

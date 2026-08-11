@@ -1,5 +1,5 @@
 import type { BenchmarkMode, BenchmarkProtocol, Goal, Provider, ScoringProfile } from '@/lib/types'
-import { GOALS, PROTOCOLS } from '@/lib/types'
+import { COMPARISON_PROTOCOLS, GOALS, PROTOCOLS } from '@/lib/types'
 import type { ProtocolComparisonPreflight } from '@/lib/types'
 import type { TranslationKey } from '@/lib/i18n-translations'
 import { useI18n } from '@/lib/useI18n'
@@ -70,12 +70,14 @@ interface Props {
   onToggleComparison: () => void
   onToggleComparisonProtocol: (protocol: BenchmarkProtocol) => void
   onStartComparison: () => void
+  doqAvailable?: boolean
 }
 
-const PROTOCOL_LABEL_KEY: Record<BenchmarkProtocol, 'protocol.udp' | 'protocol.dot' | 'protocol.doh'> = {
+const PROTOCOL_LABEL_KEY: Record<BenchmarkProtocol, 'protocol.udp' | 'protocol.dot' | 'protocol.doh' | 'protocol.doq'> = {
   udp: 'protocol.udp',
   dot: 'protocol.dot',
   doh: 'protocol.doh',
+  doq: 'protocol.doq',
 }
 
 const EXCLUSION_LABEL_KEY: Record<string, TranslationKey> = {
@@ -103,7 +105,7 @@ const PRESET_LABEL_KEY: Record<TimeoutPreset, 'controls.timeoutLow' | 'controls.
   high: 'controls.timeoutHigh',
 }
 
-export function DashboardControls(props: Props) {
+export function DashboardControls({ doqAvailable = true, ...props }: Props) {
   const { t } = useI18n()
   const providerIndex = new Map(props.providers.map((p) => [p.id, p]))
   const resolverMap = new Map<string, ResolverOption>()
@@ -186,7 +188,7 @@ export function DashboardControls(props: Props) {
         <div className="controls-protocol-col">
           <p className="label-caption">{t('controls.protocol')}</p>
           <div className="segmented-control" role="radiogroup" aria-label={t('controls.protocol')}>
-            {PROTOCOLS.map((p) => (
+            {PROTOCOLS.filter((p) => p !== 'doq' || doqAvailable).map((p) => (
               <button
                 key={p}
                 type="button"
@@ -196,7 +198,7 @@ export function DashboardControls(props: Props) {
                 onClick={() => props.onProtocolChange(p)}
                 disabled={props.isRunning}
               >
-                {p === 'udp' ? t('protocol.udp') : p === 'dot' ? t('protocol.dot') : t('protocol.doh')}
+                {t(PROTOCOL_LABEL_KEY[p])}
               </button>
             ))}
           </div>
@@ -275,7 +277,7 @@ export function DashboardControls(props: Props) {
           <div id="comparison-section" className="card card-subtle comparison-section">
             <p className="label-caption">{t('comparisonMode.protocols')}</p>
             <div className="mode-grid">
-              {PROTOCOLS.map((protocol) => {
+              {COMPARISON_PROTOCOLS.map((protocol) => {
                 const selected = props.comparisonProtocols.includes(protocol)
                 return (
                   <button

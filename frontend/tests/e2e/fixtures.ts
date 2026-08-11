@@ -1,6 +1,6 @@
 import type { Page, Route } from '@playwright/test'
 import type { RunHistoryEntry } from '../../src/lib/api'
-import type { BenchmarkStatus, ProbeResponse, ProtocolComparisonPreflight, ProtocolComparisonStatus, ProtocolDeltaPair, ProtocolSubrunResult, Provider, ResolverResult, ResolverStats, RunComparisonResponse, RunManifest, SystemDnsPayload } from '../../src/lib/types'
+import type { BenchmarkStatus, BenchmarkProtocol, ProbeResponse, ProtocolComparisonPreflight, ProtocolComparisonStatus, ProtocolDeltaPair, ProtocolSubrunResult, Provider, ResolverResult, ResolverStats, RunComparisonResponse, RunManifest, SystemDnsPayload } from '../../src/lib/types'
 
 export const APP_ORIGIN = 'http://127.0.0.1:5173'
 
@@ -406,7 +406,7 @@ const COMPARISON_TARGET = {
   provider_ids: { '1.1.1.1': 'cloudflare', '9.9.9.9': 'quad9' },
 }
 
-function protocolComparisonManifest(comparisonId: string, protocols: Array<'udp' | 'dot' | 'doh'>): ProtocolComparisonStatus['manifest'] {
+function protocolComparisonManifest(comparisonId: string, protocols: BenchmarkProtocol[]): ProtocolComparisonStatus['manifest'] {
   return {
     manifest_version: 1,
     scoring_profile: 'speed',

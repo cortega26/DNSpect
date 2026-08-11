@@ -11,6 +11,7 @@ interface Props {
   provider?: Provider
   canLoadSamples: boolean
   isLoadingSamples: boolean
+  doqAvailable: boolean
   onLoadSamples: () => void
   onClose: () => void
 }
@@ -35,7 +36,7 @@ function makeHistogram(samples: number[]): Array<{ bucket: string; count: number
 
 const FAILURE_KINDS = ['timeout', 'nxdomain', 'servfail', 'refused', 'noanswer', 'other'] as const
 
-export function ResolverDetailModal({ result, provider, canLoadSamples, isLoadingSamples, onLoadSamples, onClose }: Props) {
+export function ResolverDetailModal({ result, provider, canLoadSamples, isLoadingSamples, doqAvailable, onLoadSamples, onClose }: Props) {
   const { language, t } = useI18n()
   const modalRef = useRef<HTMLDivElement>(null)
   useFocusTrap(modalRef, true)
@@ -73,7 +74,7 @@ export function ResolverDetailModal({ result, provider, canLoadSamples, isLoadin
               <span className="badge" title="UDP">UDP</span>
               {provider.features.doh === 'yes' ? <span className="badge badge-success" title={provider.features.doh_url || 'DNS-over-HTTPS'}>{t('protocol.doh')}</span> : null}
               {provider.features.dot === 'yes' ? <span className="badge badge-success" title={provider.features.dot_hostname || 'DNS-over-TLS'}>{t('protocol.dot')}</span> : null}
-              {provider.features.doq === 'yes' ? <span className="badge badge-success" title={provider.features.doq_hostname || 'DNS-over-QUIC'}>{t('protocol.doq')}</span> : null}
+              {provider.features.doq === 'yes' && doqAvailable ? <span className="badge badge-success" title={provider.features.doq_hostname || 'DNS-over-QUIC'}>{t('protocol.doq')}</span> : null}
             </div>
           </div>
         ) : null}
