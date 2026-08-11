@@ -139,4 +139,34 @@ describe('i18n copy contract gate', () => {
       ['exports.jsonSamplesPurpose', 'Ideal para análise profunda e depuração de valores atípicos.'],
     ])
   })
+
+  it('protects accessibility, region-scope, chart, and ranking copy (ES/PT)', () => {
+    assertCopyContract('es', [
+      ['accessibility.loading', 'Cargando'],
+      ['region.auto', 'Auto'],
+      ['region.global', 'Global'],
+      ['region.europe', 'Europa'],
+      ['region.southAmerica', 'Sudamérica'],
+      ['region.northAmerica', 'Norteamérica'],
+      ['region.asia', 'Asia'],
+      ['charts.failureRate', 'Tasa de fallos: {{value}}%'],
+      ['ranking.score', 'Puntuación {{value}}'],
+      ['ranking.blocking', 'Bloqueo {{value}}%'],
+      ['modal.descriptionSpanishOnly', 'La descripción de este proveedor solo está disponible en español.'],
+    ])
+
+    assertCopyContract('pt', [
+      ['accessibility.loading', 'Carregando'],
+      ['region.auto', 'Automático'],
+      ['region.global', 'Global'],
+      ['region.europe', 'Europa'],
+      ['region.southAmerica', 'América do Sul'],
+      ['region.northAmerica', 'América do Norte'],
+      ['region.asia', 'Ásia'],
+      ['charts.failureRate', 'Taxa de falhas: {{value}}%'],
+      ['ranking.score', 'Pontuação {{value}}'],
+      ['ranking.blocking', 'Bloqueio {{value}}%'],
+      ['modal.descriptionSpanishOnly', 'A descrição deste provedor está disponível apenas em espanhol.'],
+    ])
+  })
 })

@@ -15,6 +15,7 @@ const esTranslations = {
   'header.themeToggleToDark': 'Cambiar a oscuro',
   'header.language': 'Idioma',
   'accessibility.skipToContent': 'Saltar al contenido principal',
+  'accessibility.loading': 'Cargando',
 
   'controls.title': 'Flujo guiado',
   'controls.subtitle': 'Inicia rápido y abre opciones avanzadas solo cuando las necesites.',
@@ -65,6 +66,12 @@ const esTranslations = {
 
   'region.title': 'Región',
   'region.all': 'Todas',
+  'region.auto': 'Auto',
+  'region.global': 'Global',
+  'region.europe': 'Europa',
+  'region.southAmerica': 'Sudamérica',
+  'region.northAmerica': 'Norteamérica',
+  'region.asia': 'Asia',
   'region.help': 'Mostrando proveedores internacionales y de {{region}}',
   'region.helpAll': 'Mostrando proveedores de todas las regiones',
 
@@ -166,6 +173,8 @@ const esTranslations = {
   'history.loading': 'Cargando historial...',
   'history.count': '{{count}} benchmarks guardados',
   'ranking.title': 'Ranking de resolvers',
+  'ranking.score': 'Puntuación {{value}}',
+  'ranking.blocking': 'Bloqueo {{value}}%',
   'ranking.collapseLabel': 'Ver ranking completo ({{count}})',
   'lastRun.title': 'Último benchmark guardado',
   'lastRun.savedAt': 'Guardado: {{timestamp}}',
@@ -294,6 +303,7 @@ const esTranslations = {
   'charts.blockingView': 'Bloqueo',
   'charts.p95ByResolver': 'p95 por resolver',
   'charts.reliabilityByResolver': 'Confiabilidad por resolver',
+  'charts.failureRate': 'Tasa de fallos: {{value}}%',
 
   'exports.title': 'Exportar',
   'exports.csv': 'Descargar CSV',
@@ -321,6 +331,7 @@ const esTranslations = {
   'modal.close': 'Cerrar',
   'modal.provider': 'Proveedor',
   'modal.noDescription': 'Sin descripción.',
+  'modal.descriptionSpanishOnly': 'La descripción de este proveedor solo está disponible en español.',
   'modal.supportedProtocols': 'Protocolos soportados',
   'protocol.doh': 'DoH',
   'protocol.dot': 'DoT',
@@ -343,6 +354,29 @@ const esTranslations = {
 } as const
 
 export type TranslationKey = keyof typeof esTranslations
+
+export const LANGUAGE_STORAGE_KEY = 'dnspect-language'
+
+export interface DocumentLanguageRoot {
+  documentElement: { lang: string }
+}
+
+export function resolveInitialLanguage(
+  storage: Pick<Storage, 'getItem'> | null,
+  navigatorLanguage: string,
+): Language {
+  const stored = storage?.getItem(LANGUAGE_STORAGE_KEY)
+  if (stored === 'es' || stored === 'en' || stored === 'pt') return stored
+  const candidate = navigatorLanguage.slice(0, 2).toLowerCase()
+  if (candidate === 'en' || candidate === 'pt') return candidate
+  return 'es'
+}
+
+export function applyDocumentLanguage(root: DocumentLanguageRoot | null, language: Language): void {
+  if (root) {
+    root.documentElement.lang = language
+  }
+}
 
 export type TranslationParams = Record<string, number | string>
 type TranslationDict = Partial<Record<TranslationKey, string>>
@@ -398,6 +432,12 @@ export const translations: { es: Record<TranslationKey, string>; en: Translation
     'goal.familyHelp': 'Providers with family filters',
     'region.title': 'Region',
     'region.all': 'All',
+    'region.auto': 'Auto',
+    'region.global': 'Global',
+    'region.europe': 'Europe',
+    'region.southAmerica': 'South America',
+    'region.northAmerica': 'North America',
+    'region.asia': 'Asia',
     'region.help': 'Showing international and {{region}} providers',
     'region.helpAll': 'Showing providers from all regions',
     'systemDns.title': 'System-detected DNS',
@@ -467,6 +507,7 @@ export const translations: { es: Record<TranslationKey, string>; en: Translation
     'header.themeToggleToDark': 'Switch to dark',
     'header.language': 'Language',
     'accessibility.skipToContent': 'Skip to main content',
+    'accessibility.loading': 'Loading',
     'controls.openAdvanced': 'Show advanced options',
     'controls.closeAdvanced': 'Hide advanced options',
     'controls.workloadSummary': 'Scope: {{resolvers}} resolvers × {{runs}} runs · Timeout: {{timeout}}s · Est: {{eta}}',
@@ -503,6 +544,8 @@ export const translations: { es: Record<TranslationKey, string>; en: Translation
     'history.loading': 'Loading history...',
     'history.count': '{{count}} saved benchmarks',
     'ranking.title': 'Resolver ranking',
+    'ranking.score': 'Score {{value}}',
+    'ranking.blocking': 'Blocking {{value}}%',
     'ranking.collapseLabel': 'View full ranking ({{count}})',
     'lastRun.title': 'Saved last benchmark',
     'lastRun.savedAt': 'Saved: {{timestamp}}',
@@ -626,6 +669,7 @@ export const translations: { es: Record<TranslationKey, string>; en: Translation
     'charts.blockingView': 'Blocking',
     'charts.p95ByResolver': 'p95 by resolver',
     'charts.reliabilityByResolver': 'Reliability by resolver',
+    'charts.failureRate': 'Failure rate: {{value}}%',
     'exports.title': 'Export',
     'exports.csv': 'Download CSV',
     'exports.csvPurpose': 'Best for spreadsheets and reporting.',
@@ -650,6 +694,7 @@ export const translations: { es: Record<TranslationKey, string>; en: Translation
     'modal.close': 'Close',
     'modal.provider': 'Provider',
     'modal.noDescription': 'No description.',
+    'modal.descriptionSpanishOnly': 'This provider description is only available in Spanish.',
     'modal.supportedProtocols': 'Supported protocols',
     'protocol.doh': 'DoH',
     'protocol.dot': 'DoT',
@@ -719,6 +764,12 @@ export const translations: { es: Record<TranslationKey, string>; en: Translation
     'goal.familyHelp': 'Provedores com filtros familiares',
     'region.title': 'Região',
     'region.all': 'Todas',
+    'region.auto': 'Automático',
+    'region.global': 'Global',
+    'region.europe': 'Europa',
+    'region.southAmerica': 'América do Sul',
+    'region.northAmerica': 'América do Norte',
+    'region.asia': 'Ásia',
     'region.help': 'Mostrando provedores internacionais e da {{region}}',
     'region.helpAll': 'Mostrando provedores de todas as regiões',
     'systemDns.title': 'DNS detectado do sistema',
@@ -788,6 +839,7 @@ export const translations: { es: Record<TranslationKey, string>; en: Translation
     'header.themeToggleToDark': 'Mudar para escuro',
     'header.language': 'Idioma',
     'accessibility.skipToContent': 'Pular para o conteúdo principal',
+    'accessibility.loading': 'Carregando',
     'controls.openAdvanced': 'Mostrar opções avançadas',
     'controls.closeAdvanced': 'Ocultar opções avançadas',
     'controls.workloadSummary':
@@ -824,7 +876,9 @@ export const translations: { es: Record<TranslationKey, string>; en: Translation
     'history.empty': 'Nenhum benchmark anterior.',
     'history.loading': 'Carregando histórico...',
     'history.count': '{{count}} benchmarks salvos',
-    'ranking.title': 'Ranking de resolvers',
+  'ranking.title': 'Ranking de resolvers',
+  'ranking.score': 'Pontuação {{value}}',
+  'ranking.blocking': 'Bloqueio {{value}}%',
     'ranking.collapseLabel': 'Ver ranking completo ({{count}})',
     'lastRun.title': 'Último benchmark salvo',
     'lastRun.savedAt': 'Salvo: {{timestamp}}',
@@ -949,6 +1003,7 @@ export const translations: { es: Record<TranslationKey, string>; en: Translation
     'charts.blockingView': 'Bloqueio',
     'charts.p95ByResolver': 'p95 por resolver',
     'charts.reliabilityByResolver': 'Confiabilidade por resolver',
+    'charts.failureRate': 'Taxa de falhas: {{value}}%',
     'exports.title': 'Exportar',
     'exports.csv': 'Baixar CSV',
     'exports.csvPurpose': 'Ideal para planilhas e relatórios.',
@@ -973,6 +1028,7 @@ export const translations: { es: Record<TranslationKey, string>; en: Translation
     'modal.close': 'Fechar',
     'modal.provider': 'Provedor',
     'modal.noDescription': 'Sem descrição.',
+    'modal.descriptionSpanishOnly': 'A descrição deste provedor está disponível apenas em espanhol.',
     'modal.supportedProtocols': 'Protocolos suportados',
     'protocol.doh': 'DoH',
     'protocol.dot': 'DoT',
