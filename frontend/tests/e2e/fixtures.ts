@@ -1,0 +1,460 @@
+import type { Page, Route } from '@playwright/test'
+import type { RunHistoryEntry } from '../../src/lib/api'
+import type { BenchmarkStatus, ProbeResponse, Provider, ResolverResult, ResolverStats, SystemDnsPayload } from '../../src/lib/types'
+
+export const APP_ORIGIN = 'http://127.0.0.1:5173'
+
+export const PUBLIC_IP_HOST = 'api.ipify.org'
+
+export const JSON_TYPE = 'application/json'
+
+export interface JsonResponse {
+  status?: number
+  contentType?: string
+  body: unknown
+}
+
+export interface Deferred<T> {
+  promise: Promise<T>
+  resolve: (value: T) => void
+  reject: (reason?: unknown) => void
+}
+
+export function createDeferred<T>(): Deferred<T> {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
+export interface RouteDeferred extends Deferred<JsonResponse> {
+  routeKey: string
+  meta: Record<string, string>
+}
+
+function isDeferred(value: JsonResponse | Deferred<JsonResponse>): value is Deferred<JsonResponse> {
+  return typeof (value as Deferred<JsonResponse>).promise === 'object'
+}
+
+function json(body: unknown): JsonResponse {
+  return { status: 200, contentType: JSON_TYPE, body }
+}
+
+function csv(body: string): JsonResponse {
+  return { status: 200, contentType: 'text/csv', body }
+}
+
+// ---- Deterministic API fixtures -------------------------------------------------
+
+export const providersFixture: Provider[] = [
+  {
+    id: 'cloudflare',
+    name: 'Cloudflare',
+    dns: ['1.1.1.1', '1.0.0.1'],
+    tags: ['global', 'anycast', 'privacidad'],
+    region: 'global',
+    country: null,
+    goals: ['speed', 'privacy'],
+    features: { filtering: 'no', malware_protection: 'no', family: 'no', doh: 'yes', dot: 'yes' },
+    notes_es: 'DNS global rápido y muy usado.',
+  },
+  {
+    id: 'google',
+    name: 'Google Public DNS',
+    dns: ['8.8.8.8', '8.8.4.4'],
+    tags: ['global', 'anycast'],
+    region: 'global',
+    country: null,
+    goals: ['speed'],
+    features: { filtering: 'no', malware_protection: 'no', family: 'no', doh: 'yes', dot: 'yes' },
+    notes_es: 'Servicio DNS global con amplia infraestructura.',
+  },
+  {
+    id: 'quad9',
+    name: 'Quad9',
+    dns: ['9.9.9.9', '149.112.112.112'],
+    tags: ['global', 'privacidad', 'seguridad'],
+    region: 'global',
+    country: null,
+    goals: ['security', 'privacy', 'speed'],
+    features: { filtering: 'yes', malware_protection: 'yes', family: 'no', doh: 'yes', dot: 'yes' },
+    notes_es: 'Prioriza bloqueo de dominios maliciosos.',
+  },
+]
+
+export const systemDnsFixture: SystemDnsPayload = {
+  resolvers: ['192.168.1.1'],
+  method: 'systemd-resolve',
+  platform: 'Linux (Test)',
+  error_detail: null,
+  detected_provider_id: 'isp-detectado',
+}
+
+export const geoIpFixture = {
+  country_code: 'CO',
+  country_name: 'Colombia',
+  region: null,
+  city: null,
+  source: 'GeoIP database',
+}
+
+export const publicIpFixture = { ip: '200.100.50.1' }
+
+export function makeStats(avgMs: number): ResolverStats {
+  return {
+    avg_ms: avgMs,
+    median_ms: avgMs,
+    p95_ms: avgMs * 1.4,
+    min_ms: avgMs * 0.7,
+    max_ms: avgMs * 1.8,
+    ok_count: 30,
+    timeout_count: 0,
+    success_rate: 1,
+    timeout_rate: 0,
+    success_count: 30,
+    failure_count: 0,
+    failure_rate: 0,
+    consistency_ratio: 0.9,
+    p95_minus_median_ms: avgMs * 0.4,
+    score_latency: avgMs,
+    score_reliability: 1,
+    score_stability: 0.9,
+    score_total: 0.97,
+    normalized_latency: 0.9,
+    normalized_reliability: 1,
+    normalized_stability: 0.9,
+    reliability_penalty: 0,
+    max_rel_penalty: 0,
+    blocking_efficacy: null,
+    blocked_count: 0,
+    blocking_test_count: 0,
+    score_blocking: null,
+    normalized_blocking: null,
+    nxdomain_hijack_detected: null,
+    dnssec_validating: null,
+  }
+}
+
+export function makeResult(resolver: string, providerId: string, providerName: string, avgMs: number): ResolverResult {
+  return {
+    resolver,
+    provider_id: providerId,
+    provider_name: providerName,
+    engine: 'drill',
+    protocol: 'udp',
+    stats: makeStats(avgMs),
+    samples: [],
+    sample_count: 30,
+    is_unreliable: false,
+  }
+}
+
+export const CLOUDFLARE_RESULT = makeResult('1.1.1.1', 'cloudflare', 'Cloudflare', 12.3)
+const GOOGLE_RESULT = makeResult('8.8.8.8', 'google', 'Google Public DNS', 18.9)
+export const QUAD9_RESULT = makeResult('9.9.9.9', 'quad9', 'Quad9', 26.4)
+
+export function doneBenchmark(id: string, topResult: ResolverResult): BenchmarkStatus {
+  const now = new Date()
+  const startedAt = new Date(now.getTime() - 120_000).toISOString()
+  const finishedAt = new Date(now.getTime() - 5_000).toISOString()
+  const results = [topResult, GOOGLE_RESULT]
+  return {
+    id,
+    status: 'done',
+    progress: { current: 30, total: 30, current_resolver: null, last_sample_at: now.getTime(), avg_latency_ms: 15.5 },
+    started_at: startedAt,
+    finished_at: finishedAt,
+    mode: 'standard',
+    goal: 'speed',
+    scoring_profile: 'speed',
+    protocol: 'udp',
+    timeout_sec: 2,
+    runs: 30,
+    engine: 'drill',
+    error: null,
+    run_storage_warning: null,
+    results,
+    recommended_resolver: topResult.resolver,
+    recommendation_warning: null,
+    target_snapshot: {
+      resolver_ips: results.map((row) => row.resolver),
+      selection_source: 'manual',
+      provider_ids: { [topResult.resolver]: topResult.provider_id },
+    },
+  }
+}
+
+export function runningBenchmark(id: string): BenchmarkStatus {
+  return {
+    id,
+    status: 'running',
+    progress: { current: 12, total: 30, current_resolver: '1.1.1.1', last_sample_at: Date.now(), avg_latency_ms: 14.2 },
+    started_at: new Date(Date.now() - 10_000).toISOString(),
+    finished_at: null,
+    mode: 'standard',
+    goal: 'speed',
+    scoring_profile: 'speed',
+    protocol: 'udp',
+    timeout_sec: 2,
+    runs: 30,
+    engine: 'drill',
+    error: null,
+    run_storage_warning: null,
+    results: [CLOUDFLARE_RESULT],
+    recommended_resolver: null,
+    recommendation_warning: null,
+    target_snapshot: { resolver_ips: ['1.1.1.1', '8.8.8.8'], selection_source: 'manual', provider_ids: null },
+  }
+}
+
+export function queuedBenchmark(id: string): BenchmarkStatus {
+  return {
+    id,
+    status: 'queued',
+    progress: { current: 0, total: 30, current_resolver: null, last_sample_at: Date.now(), avg_latency_ms: null },
+    started_at: new Date(Date.now() - 1_000).toISOString(),
+    finished_at: null,
+    mode: 'standard',
+    goal: 'speed',
+    scoring_profile: 'speed',
+    protocol: 'udp',
+    timeout_sec: 2,
+    runs: 30,
+    engine: null,
+    error: null,
+    run_storage_warning: null,
+    results: [],
+    recommended_resolver: null,
+    recommendation_warning: null,
+    target_snapshot: { resolver_ips: ['1.1.1.1', '8.8.8.8'], selection_source: 'manual', provider_ids: null },
+  }
+}
+
+export function historyEntry(id: string, topResolver: string, topProvider: string, startedAt: string): RunHistoryEntry {
+  return {
+    id,
+    mode: 'standard',
+    goal: 'speed',
+    scoring_profile: 'speed',
+    protocol: 'udp',
+    started_at: startedAt,
+    finished_at: null,
+    status: 'done',
+    results_summary: [{ provider_name: topProvider, resolver: topResolver }],
+    target_snapshot: null,
+  }
+}
+
+export function probeFixture(recommendedMedianMs = 12.0): ProbeResponse {
+  const now = new Date().toISOString()
+  return {
+    engine: 'drill',
+    timeout_sec: 1.5,
+    runs_per_resolver: 4,
+    queried_at: now,
+    results: [
+      {
+        resolver: '9.9.9.9',
+        provider_id: 'quad9',
+        provider_name: 'Quad9',
+        engine: 'drill',
+        stats: makeStats(recommendedMedianMs),
+        samples: [],
+      },
+      {
+        resolver: '1.1.1.1',
+        provider_id: 'cloudflare',
+        provider_name: 'Cloudflare',
+        engine: 'drill',
+        stats: makeStats(12.0),
+        samples: [],
+      },
+      {
+        resolver: '192.168.1.1',
+        provider_id: 'isp-detectado',
+        provider_name: 'ISP (Detectado)',
+        engine: 'drill',
+        stats: makeStats(42.0),
+        samples: [],
+      },
+    ],
+  }
+}
+
+// ---- Request dispatcher ----------------------------------------------------------
+
+type Handler = (params: Record<string, string>) => JsonResponse | Deferred<JsonResponse>
+
+let benchSeq = 0
+
+const newBenchmarkId = (): string => {
+  benchSeq += 1
+  return `cafebabe${benchSeq.toString(16).padStart(24, '0')}`
+}
+
+export class MockApi {
+  readonly page: Page
+  readonly unhandledRequests: string[] = []
+  private readonly handlers = new Map<string, Handler>()
+  private readonly counters = new Map<string, number>()
+  private readonly deferredList = new Map<string, RouteDeferred[]>()
+  private readonly routeDeferreds: RouteDeferred[] = []
+
+  constructor(page: Page) {
+    this.page = page
+    this.setDefaults()
+  }
+
+  private setDefaults(): void {
+    this.handlers.set('GET /api/providers', () => json(providersFixture))
+    this.handlers.set('GET /api/dns/system', () => json(systemDnsFixture))
+    this.handlers.set('GET /api/benchmarks/history', () => json({ runs: [this.historyRunA(), this.historyRunB()] }))
+    this.handlers.set('POST /api/benchmarks', () => json({ benchmark_id: newBenchmarkId() }))
+    this.handlers.set('GET /api/benchmarks/:id', (params) => json(runningBenchmark(params.id)))
+    this.handlers.set('GET /api/benchmarks/:id/export.csv', () => csv('resolver,provider_name,score_total\n1.1.1.1,Cloudflare,0.97\n'))
+    this.handlers.set('POST /api/probe', () => json(probeFixture()))
+    this.handlers.set('GET /api/geoip', () => json(geoIpFixture))
+    this.handlers.set('GET https://api.ipify.org/', () => json(publicIpFixture))
+    this.handlers.set('GET https://fonts.googleapis.com/css', () => ({
+      status: 200,
+      contentType: 'text/css',
+      body: '',
+    }))
+    this.handlers.set('GET https://fonts.gstatic.com/font', () => ({
+      status: 404,
+      contentType: 'text/plain',
+      body: 'font mocked off',
+    }))
+  }
+
+  private historyRunA(): RunHistoryEntry {
+    return historyEntry('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', '1.1.1.1', 'Cloudflare', new Date(Date.now() - 3600_000).toISOString())
+  }
+
+  private historyRunB(): RunHistoryEntry {
+    return historyEntry('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', '9.9.9.9', 'Quad9', new Date(Date.now() - 7200_000).toISOString())
+  }
+
+  async install(): Promise<void> {
+    await this.page.route('**/*', (route) => this.dispatch(route))
+  }
+
+  on(routeKey: string, handler: Handler): void {
+    this.handlers.set(routeKey, handler)
+  }
+
+  /** Create a controlled deferred response for a route; resolved by the test. */
+  deferredFor(routeKey: string, meta: Record<string, string> = {}): RouteDeferred {
+    const deferred = Object.assign(createDeferred<JsonResponse>(), { routeKey, meta })
+    const list = this.deferredList.get(routeKey) ?? []
+    list.push(deferred)
+    this.deferredList.set(routeKey, list)
+    this.routeDeferreds.push(deferred)
+    return deferred
+  }
+
+  deferredsFor(routeKey: string): RouteDeferred[] {
+    return this.deferredList.get(routeKey) ?? []
+  }
+
+  countOf(routeKey: string): number {
+    return this.counters.get(routeKey) ?? 0
+  }
+
+  get allDeferreds(): RouteDeferred[] {
+    return this.routeDeferreds
+  }
+
+  private count(routeKey: string): void {
+    this.counters.set(routeKey, (this.counters.get(routeKey) ?? 0) + 1)
+  }
+
+  private async dispatch(route: Route): Promise<void> {
+    const request = route.request()
+    const url = new URL(request.url())
+    const method = request.method()
+
+    if (url.hostname === PUBLIC_IP_HOST) {
+      await this.fulfillOrFail(route, 'GET https://api.ipify.org/', url.pathname, method, {})
+      return
+    }
+
+    if (url.hostname === 'fonts.googleapis.com') {
+      await this.fulfillOrFail(route, 'GET https://fonts.googleapis.com/css', url.pathname, method, {})
+      return
+    }
+
+    if (url.hostname === 'fonts.gstatic.com') {
+      await this.fulfillOrFail(route, 'GET https://fonts.gstatic.com/font', url.pathname, method, {})
+      return
+    }
+
+    if (!url.pathname.startsWith('/api/')) {
+      if (url.origin === APP_ORIGIN) {
+        await route.continue()
+      } else {
+        this.unhandledRequests.push(`${method} ${url.href}`)
+        await route.fulfill({ status: 500, contentType: JSON_TYPE, body: JSON.stringify({ error: 'unhandled-external-request' }) })
+      }
+      return
+    }
+
+    const matched = this.resolveKey(method, url.pathname)
+    if (!matched) {
+      this.unhandledRequests.push(`${method} ${url.pathname}`)
+      await route.fulfill({ status: 500, contentType: JSON_TYPE, body: JSON.stringify({ error: 'unhandled-request' }) })
+      return
+    }
+    await this.fulfillOrFail(route, matched.key, url.pathname, method, matched.params)
+  }
+
+  private async fulfillOrFail(
+    route: Route,
+    routeKey: string,
+    pathname: string,
+    method: string,
+    params: Record<string, string>,
+  ): Promise<void> {
+    const handler = this.handlers.get(routeKey)
+    if (!handler) {
+      this.unhandledRequests.push(`${method} ${pathname}`)
+      await route.fulfill({ status: 500, contentType: JSON_TYPE, body: JSON.stringify({ error: 'unhandled-request' }) })
+      return
+    }
+    this.count(routeKey)
+    const result = handler(params)
+    const response = isDeferred(result) ? await result.promise : result
+    const status = response.status ?? 200
+    const contentType = response.contentType ?? JSON_TYPE
+    const body = typeof response.body === 'string' ? response.body : JSON.stringify(response.body)
+    await route.fulfill({ status, contentType, body })
+  }
+
+  private resolveKey(method: string, pathname: string): { key: string; params: Record<string, string> } | null {
+    const exact = `${method} ${pathname}`
+    if (this.handlers.has(exact)) return { key: exact, params: {} }
+    for (const key of this.handlers.keys()) {
+      if (!key.startsWith(`${method} `)) continue
+      const pattern = key.slice(method.length + 1)
+      const patternSegments = pattern.split('/')
+      const pathSegments = pathname.split('/')
+      if (patternSegments.length !== pathSegments.length) continue
+      const params: Record<string, string> = {}
+      let matches = true
+      for (let i = 0; i < patternSegments.length; i += 1) {
+        const segment = patternSegments[i]
+        if (segment.startsWith(':')) {
+          params[segment.slice(1)] = decodeURIComponent(pathSegments[i])
+        } else if (segment !== pathSegments[i]) {
+          matches = false
+          break
+        }
+      }
+      if (matches) return { key, params }
+    }
+    return null
+  }
+}
