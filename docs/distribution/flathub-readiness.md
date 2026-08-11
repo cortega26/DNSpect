@@ -35,7 +35,7 @@ Strategy details:
 Why this is the current path:
 
 - The Flatpak platform/SDK and node24 extension use branch `25.08`, whose SDK runs Python 3.13 (`flatpak run --user --command=python3 org.freedesktop.Sdk/x86_64/25.08 --version` reports `Python 3.13.12`), matching the repository contract `requires-python = ">=3.13"`.
-- The manifest builds from the immutable release tag `v1.3.0` (commit `871bc46adee22347b466a0df96b30dd3213a93ca`), which contains the exact backend and frontend dependency inputs being packaged.
+- The manifest builds from the immutable release tag `v1.3.0` (commit `69187bcbe6f7f210a0399629cfc94c3926a6f142`), which contains the exact backend and frontend dependency inputs being packaged.
 - Both generated Flatpak inputs are mechanically regenerable (see below); neither is safe to hand-edit.
 
 ## Generated release inputs
