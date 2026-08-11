@@ -132,7 +132,10 @@ def test_doq_eligibility_codes(monkeypatch) -> None:
 
 def test_run_doq_query_success(monkeypatch) -> None:
     monkeypatch.setattr("app.runner.dns_quic_available", lambda: True)
-    monkeypatch.setattr("dns.query.quic", lambda q, where, timeout, port, server_hostname: _fake_quic_response())
+    monkeypatch.setattr(
+        "dns.query.quic",
+        lambda q, where, timeout, port, server_hostname: _fake_quic_response(),
+    )
     result = run_doq_query("1.1.1.1", "example.com", 2.0, "dns.quad9.net")
     assert result["ok"] is True
     assert result["ms"] is not None

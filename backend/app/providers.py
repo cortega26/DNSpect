@@ -71,22 +71,20 @@ def _validate_providers(providers: list[dict[str, Any]]) -> None:
         if not isinstance(features, dict):
             continue
         doh_flag = features.get("doh")
-        if doh_flag != "yes":
-            continue
-        doh_url = features.get("doh_url", "")
-        if not isinstance(doh_url, str) or not doh_url.strip():
-            raise ValueError(f"Provider '{pid}' declara doh=yes sin doh_url configurable")
-        parsed = urlparse(doh_url)
-        if parsed.scheme != "https" or not parsed.hostname:
-            raise ValueError(f"Provider '{pid}' tiene doh_url inválido: {doh_url}")
+        if doh_flag == "yes":
+            doh_url = features.get("doh_url", "")
+            if not isinstance(doh_url, str) or not doh_url.strip():
+                raise ValueError(f"Provider '{pid}' declara doh=yes sin doh_url configurable")
+            parsed = urlparse(doh_url)
+            if parsed.scheme != "https" or not parsed.hostname:
+                raise ValueError(f"Provider '{pid}' tiene doh_url inválido: {doh_url}")
         doq_flag = features.get("doq")
-        if doq_flag != "yes":
-            continue
-        doq_hostname = features.get("doq_hostname")
-        if not isinstance(doq_hostname, str) or not doq_hostname.strip():
-            raise ValueError(f"Provider '{pid}' declara doq=yes sin doq_hostname configurable")
-        if not is_valid_dns_hostname(doq_hostname):
-            raise ValueError(f"Provider '{pid}' tiene doq_hostname inválido: {doq_hostname}")
+        if doq_flag == "yes":
+            doq_hostname = features.get("doq_hostname")
+            if not isinstance(doq_hostname, str) or not doq_hostname.strip():
+                raise ValueError(f"Provider '{pid}' declara doq=yes sin doq_hostname configurable")
+            if not is_valid_dns_hostname(doq_hostname):
+                raise ValueError(f"Provider '{pid}' tiene doq_hostname inválido: {doq_hostname}")
 
 
 def load_default_queries() -> list[str]:

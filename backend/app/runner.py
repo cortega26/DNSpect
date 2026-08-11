@@ -133,6 +133,7 @@ RELIABILITY_FAILURE_KINDS = {"timeout", "servfail", "refused", "noanswer", "othe
 def dns_quic_available() -> bool:
     return dns.quic.have_quic
 
+
 FIXED_DIAGNOSTIC_ATTEMPTS = 2
 
 
