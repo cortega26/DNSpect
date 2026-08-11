@@ -32,7 +32,7 @@ jobs:
       - name: Install backend deps
         run: |
           python -m pip install --upgrade pip
-          pip install -c constraints.txt -e .[dev]
+          pip install -r constraints.txt -e .[dev]
 
       - name: Ruff lint
         run: ruff check .
@@ -101,6 +101,41 @@ jobs:
 
       - name: Frontend tests (vitest)
         run: npm test
+
+  dependency-audit:
+    name: dependency-audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            backend/pyproject.toml
+            backend/constraints.txt
+
+      - name: Install pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit==2.10.1 -c backend/constraints.txt
+
+      - name: Python lock audit
+        run: pip-audit -r backend/constraints.txt --no-deps --progress-spinner off
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: npm lock audit
+        run: npm audit --package-lock-only
+        working-directory: frontend
 
   packaged-linux-smoke:
     name: packaged-linux-smoke

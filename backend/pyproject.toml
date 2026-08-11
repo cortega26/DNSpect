@@ -10,15 +10,16 @@ requires-python = ">=3.13"
 license = "MIT"
 authors = [{ name = "DNSpect contributors" }]
 dependencies = [
-  "fastapi==0.129.2",
-  "starlette==0.49.3",
+  "fastapi==0.141.1",
+  "starlette==1.6.0",
   "uvicorn[standard]==0.35.0",
   "pydantic==2.11.7",
   "dnspython==2.7.0",
   "httpx==0.28.1",
   "backports.tarfile==1.2.0",
-  "python-multipart>=0.0.28,<1",
-  "platformdirs==4.4.0"
+  "python-multipart==0.0.32",
+  "platformdirs==4.4.0",
+  "idna==3.18"
 ]
 
 [project.optional-dependencies]
@@ -29,6 +30,7 @@ dev = [
   "mypy==1.17.1",
   "bandit==1.9.3",
   "httpx==0.28.1",
+  "pip-audit==2.10.1",
   "types-PyYAML==6.0.12.20250822"
 ]
 geoip = ["maxminddb==2.7.0"]

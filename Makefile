@@ -1,7 +1,7 @@
-.PHONY: backend-install backend-dev backend-check backend-semgrep frontend-install frontend-dev frontend-check dev smoke
+.PHONY: backend-install backend-dev backend-check backend-semgrep frontend-install frontend-dev frontend-check dev smoke dependency-audit
 
 backend-install:
-	cd backend && python3 -m venv .venv && . .venv/bin/activate && pip install -c constraints.txt -e .[dev]
+	cd backend && python3 -m venv .venv && . .venv/bin/activate && pip install -r constraints.txt -e .[dev]
 
 backend-dev:
 	cd backend && . .venv/bin/activate && uvicorn app.main:app --reload
@@ -32,6 +32,10 @@ dev:
 
 smoke:
 	bash scripts/smoke_test.sh
+
+dependency-audit:
+	cd backend && . .venv/bin/activate && pip-audit -r constraints.txt --no-deps --progress-spinner off
+	cd frontend && npm audit --package-lock-only
 
 # Flatpak
 FLATPAK_MANIFEST := io.github.cortega26.DNSpect.yaml
