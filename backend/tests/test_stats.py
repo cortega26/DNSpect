@@ -1,6 +1,7 @@
 from app.stats import (
     GOAL_WEIGHTS,
     RECOMMENDATION_WARNING_ALL_UNRELIABLE,
+    RECOMMENDATION_WARNING_NO_USABLE_RESULTS,
     RELIABILITY_REFERENCE_PENALTY,
     apply_normalized_scoring,
     compute_blocking_efficacy,
@@ -152,6 +153,45 @@ def test_all_unreliable_resolvers_emit_warning_and_deterministic_fallback() -> N
     assert ranked[1]["is_unreliable"] is True
     recommended, warning = select_recommended_resolver(ranked)
     assert recommended == ranked[0]["resolver"]
+    assert warning == RECOMMENDATION_WARNING_ALL_UNRELIABLE
+
+
+def test_recommendation_requires_usable_stats() -> None:
+    r1 = compute_stats([], total_runs=4, timeout_count=0, failure_count=0)
+    ranked = _ranked([{"resolver": "1.1.1.1", "stats": r1}])
+
+    recommended, warning = select_recommended_resolver(ranked)
+    assert recommended is None
+    assert warning == RECOMMENDATION_WARNING_NO_USABLE_RESULTS
+
+
+def test_no_usable_results_with_non_empty_list_returns_warning() -> None:
+    r1 = compute_stats([], total_runs=4, timeout_count=0, failure_count=0)
+    r2 = compute_stats([], total_runs=4, timeout_count=0, failure_count=0)
+    ranked = _ranked(
+        [
+            {"resolver": "1.1.1.1", "stats": r1},
+            {"resolver": "8.8.8.8", "stats": r2},
+        ]
+    )
+
+    recommended, warning = select_recommended_resolver(ranked)
+    assert recommended is None
+    assert warning == RECOMMENDATION_WARNING_NO_USABLE_RESULTS
+
+
+def test_all_unreliable_with_usable_stats_still_falls_back() -> None:
+    r1 = compute_stats([10.0] * 90, total_runs=100, timeout_count=0, failure_count=10)
+    r2 = compute_stats([11.0] * 90, total_runs=100, timeout_count=0, failure_count=10)
+    ranked = _ranked(
+        [
+            {"resolver": "1.1.1.1", "stats": r1},
+            {"resolver": "8.8.8.8", "stats": r2},
+        ]
+    )
+
+    recommended, warning = select_recommended_resolver(ranked)
+    assert recommended == "1.1.1.1"
     assert warning == RECOMMENDATION_WARNING_ALL_UNRELIABLE
 
 

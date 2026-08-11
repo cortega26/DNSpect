@@ -3,6 +3,7 @@ from __future__ import annotations
 from time import sleep
 from typing import Any
 
+import dns.rcode
 import pytest
 
 from app.models import BenchmarkRequest
@@ -60,6 +61,9 @@ def test_run_dot_query_success(monkeypatch) -> None:
             def __init__(self):
                 self.answer = [[FakeRR()]]
 
+            def rcode(self):
+                return dns.rcode.NOERROR
+
         return FakeAnswer()
 
     monkeypatch.setattr("dns.query.tls", fake_tls)
@@ -81,6 +85,75 @@ def test_run_dot_query_failure(monkeypatch) -> None:
     assert result["failure_kind"] is not None
 
 
+def _make_fake_dns_response(rcode_value: int) -> Any:
+    class FakeRR:
+        rdtype = 1
+        address = "93.184.216.34"
+
+    class FakeAnswer:
+        def __init__(self):
+            self.answer = [[FakeRR()]]
+
+        def rcode(self):
+            return rcode_value
+
+    return FakeAnswer()
+
+
+def test_run_dot_query_nxdomain(monkeypatch) -> None:
+    response = _make_fake_dns_response(dns.rcode.NXDOMAIN)
+    monkeypatch.setattr("dns.query.tls", lambda q, where, timeout, server_hostname: response)
+    result = run_dot_query("1.1.1.1", "example.com", 2.0, "one.one.one.one")
+    assert result["ok"] is False
+    assert result["ms"] is None
+    assert result["failure_kind"] == "nxdomain"
+
+
+def test_run_dot_query_servfail(monkeypatch) -> None:
+    response = _make_fake_dns_response(dns.rcode.SERVFAIL)
+    monkeypatch.setattr("dns.query.tls", lambda q, where, timeout, server_hostname: response)
+    result = run_dot_query("1.1.1.1", "example.com", 2.0, "one.one.one.one")
+    assert result["ok"] is False
+    assert result["ms"] is None
+    assert result["failure_kind"] == "servfail"
+
+
+def test_run_dot_query_refused(monkeypatch) -> None:
+    response = _make_fake_dns_response(dns.rcode.REFUSED)
+    monkeypatch.setattr("dns.query.tls", lambda q, where, timeout, server_hostname: response)
+    result = run_dot_query("1.1.1.1", "example.com", 2.0, "one.one.one.one")
+    assert result["ok"] is False
+    assert result["ms"] is None
+    assert result["failure_kind"] == "refused"
+
+
+def test_run_dot_query_noerror(monkeypatch) -> None:
+    response = _make_fake_dns_response(dns.rcode.NOERROR)
+    monkeypatch.setattr("dns.query.tls", lambda q, where, timeout, server_hostname: response)
+    result = run_dot_query("1.1.1.1", "example.com", 2.0, "one.one.one.one")
+    assert result["ok"] is True
+    assert result["ms"] is not None
+    assert result["failure_kind"] is None
+
+
+def test_run_doh_query_nxdomain(monkeypatch) -> None:
+    response = _make_fake_dns_response(dns.rcode.NXDOMAIN)
+    monkeypatch.setattr("dns.query.https", lambda q, url, timeout: response)
+    result = run_doh_query("1.1.1.1", "example.com", 2.0, "https://dns.example/dns-query")
+    assert result["ok"] is False
+    assert result["ms"] is None
+    assert result["failure_kind"] == "nxdomain"
+
+
+def test_run_doh_query_servfail(monkeypatch) -> None:
+    response = _make_fake_dns_response(dns.rcode.SERVFAIL)
+    monkeypatch.setattr("dns.query.https", lambda q, url, timeout: response)
+    result = run_doh_query("1.1.1.1", "example.com", 2.0, "https://dns.example/dns-query")
+    assert result["ok"] is False
+    assert result["ms"] is None
+    assert result["failure_kind"] == "servfail"
+
+
 def test_run_doh_query_success(monkeypatch) -> None:
     """DoH query returns a valid response."""
 
@@ -97,6 +170,9 @@ def test_run_doh_query_success(monkeypatch) -> None:
 
             def __init__(self):
                 self.answer = [[FakeRR()]]
+
+            def rcode(self):
+                return dns.rcode.NOERROR
 
         return FakeAnswer()
 

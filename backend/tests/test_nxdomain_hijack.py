@@ -172,3 +172,54 @@ def test_nxdomain_hijack_timeout(monkeypatch, tmp_path) -> None:
 
     result = state["results"][0]
     assert result["stats"]["nxdomain_hijack_detected"] is None
+
+
+def test_all_nxdomain_normal_queries_yields_no_recommendation(monkeypatch, tmp_path) -> None:
+    """All normal queries return NXDOMAIN → no usable latency samples, no recommendation."""
+
+    def fake_measure_query(*, resolver: str, domain: str, timeout_sec: float, engine: str) -> dict:
+        del timeout_sec, engine
+        if domain.startswith("nxdomain-check-") and domain.endswith(".invalid"):
+            return {
+                "ok": False,
+                "ms": None,
+                "query": domain,
+                "error": "nxdomain",
+                "failure_kind": "nxdomain",
+                "resolver": resolver,
+            }
+        return {
+            "ok": False,
+            "ms": None,
+            "query": domain,
+            "error": "nxdomain",
+            "failure_kind": "nxdomain",
+            "resolver": resolver,
+        }
+
+    monkeypatch.setattr("app.runner.measure_query", fake_measure_query)
+    monkeypatch.setattr("app.runner.select_engine", lambda: "dnspython")
+
+    manager = BenchmarkManager(
+        max_concurrent_jobs=1,
+        max_queued_jobs=1,
+        data_runs_dir=tmp_path / "runs",
+    )
+    manager.blocking_test_queries = []
+
+    benchmark_id = manager.start(
+        BenchmarkRequest(
+            runs=4,
+            timeout_sec=1.0,
+            resolvers=["1.1.1.1"],
+            queries=["example.com"],
+        ),
+    )
+    state = _wait_terminal(manager, benchmark_id)
+    assert state["status"] == "done"
+
+    result = state["results"][0]
+    assert result["stats"]["success_count"] == 0
+    assert result["stats"]["score_total"] is None
+    assert state["recommended_resolver"] is None
+    assert state["recommendation_warning"] is not None

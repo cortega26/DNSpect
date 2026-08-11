@@ -12,6 +12,9 @@ RELIABILITY_REFERENCE_PENALTY = -math.log(1.0 - RELIABILITY_GUARDRAIL_THRESHOLD)
 RECOMMENDATION_WARNING_ALL_UNRELIABLE = (
     "All resolvers exceed reliability threshold; recommendation may be unstable."
 )
+RECOMMENDATION_WARNING_NO_USABLE_RESULTS = (
+    "No resolver produced usable latency samples; recommendation is unavailable."
+)
 
 # Goal-aware scoring weights: latency, reliability, stability, blocking
 GOAL_WEIGHTS: dict[str, tuple[float, float, float, float]] = {
@@ -200,17 +203,33 @@ def apply_normalized_scoring(results: list[dict[str, Any]], goal: str | None = N
         stats["score_total"] = round(score_total, 6)
 
 
+def _has_usable_stats(item: dict[str, Any]) -> bool:
+    stats = item.get("stats")
+    if not isinstance(stats, dict):
+        return False
+    success_count = stats.get("success_count")
+    if success_count is None or success_count == 0:
+        return False
+    if stats.get("avg_ms") is None:
+        return False
+    return stats.get("score_total") is not None
+
+
 def select_recommended_resolver(results: list[dict[str, Any]]) -> tuple[str | None, str | None]:
     if not results:
         return None, None
 
     for item in results:
-        if not bool(item.get("is_unreliable")):
+        if not bool(item.get("is_unreliable")) and _has_usable_stats(item):
             resolver = item.get("resolver")
             return str(resolver) if resolver is not None else None, None
 
-    fallback = results[0].get("resolver")
-    return (str(fallback) if fallback is not None else None), RECOMMENDATION_WARNING_ALL_UNRELIABLE
+    usable_items = [item for item in results if _has_usable_stats(item)]
+    if usable_items:
+        fallback = usable_items[0].get("resolver")
+        return (str(fallback) if fallback is not None else None), RECOMMENDATION_WARNING_ALL_UNRELIABLE
+
+    return None, RECOMMENDATION_WARNING_NO_USABLE_RESULTS
 
 
 def compute_stats(
