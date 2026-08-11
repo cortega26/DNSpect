@@ -170,16 +170,16 @@ export function LiveRankingPanel({
   }, [currentResolver, expectedSamples, ranking])
 
   useLayoutEffect(() => {
+    if (!allowReorderAnimation) {
+      previousTopRef.current.clear()
+      return
+    }
+
     const nextTopMap = new Map<string, number>()
     for (const row of ranking) {
       const node = rowElementRef.current.get(row.ip)
       if (!node) continue
       nextTopMap.set(row.ip, node.getBoundingClientRect().top)
-    }
-
-    if (!allowReorderAnimation) {
-      previousTopRef.current = nextTopMap
-      return
     }
 
     const previousTopMap = previousTopRef.current
