@@ -4,8 +4,8 @@ This project uses pinned toolchain and dependency inputs for CI/release builds.
 
 ## Toolchain Pins
 
-- Node.js: `22.14.0` (see `.github/workflows/ci.yml` and `.github/workflows/release.yml`)
-- Python: `3.11` for release packaging, `3.11` and `3.12` for backend CI
+- Node.js: `24.x` (see `.github/workflows/ci.yml` and `.github/workflows/release.yml`)
+- Python: `3.13` for CI and release packaging
 
 ## Python Dependency Lock Strategy
 
@@ -15,9 +15,12 @@ This project uses pinned toolchain and dependency inputs for CI/release builds.
 
 ```bash
 cd backend
-python -m pip install pip-tools
-pip-compile pyproject.toml --extra dev --extra pack --output-file constraints.txt
+python -m pip install "pip-tools==7.6.0"
+pip-compile --extra=dev --extra=pack --output-file=constraints.txt pyproject.toml
 ```
+
+`constraints.txt` covers both `dev` and `pack` extras so CI and release
+install the same pinned transitive set.
 
 ## Required Install Commands
 
@@ -25,14 +28,26 @@ pip-compile pyproject.toml --extra dev --extra pack --output-file constraints.tx
 
 ```bash
 cd backend
-python -m pip install -c constraints.txt -e .[dev]
+python -m pip install -r constraints.txt -e .[dev]
 ```
 
 - Release packaging:
 
 ```bash
-python -m pip install -c backend/constraints.txt -e "./backend[pack]"
+python -m pip install -r backend/constraints.txt -e "./backend[pack]"
 ```
+
+## Audit Gate
+
+Run the lock-only audit target before any dependency change:
+
+```bash
+make dependency-audit
+```
+
+This executes `pip-audit` against `backend/constraints.txt` and `npm audit
+--package-lock-only` against the frontend lock. Both CI and release workflows
+enforce the same checks.
 
 ## Frontend Reproducibility
 
