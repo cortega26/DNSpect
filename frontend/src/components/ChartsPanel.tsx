@@ -36,6 +36,7 @@ interface BarEntry {
 }
 
 function CustomTooltip({ active, payload, label }: TooltipProps<number, string>) {
+  const { t } = useI18n()
   if (!active || !payload?.length) return null
   const entry = payload[0]?.payload as BarEntry | undefined
   if (!entry) return null
@@ -61,7 +62,7 @@ function CustomTooltip({ active, payload, label }: TooltipProps<number, string>)
       </span>
       {entry.failureRate > 0 && (
         <span style={{ color: 'var(--danger)', fontSize: '0.82rem' }}>
-          Failure rate: {(entry.failureRate * 100).toFixed(1)}%
+          {t('charts.failureRate', { value: (entry.failureRate * 100).toFixed(1) })}
         </span>
       )}
     </div>
