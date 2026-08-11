@@ -1,4 +1,4 @@
-import type { BenchmarkMode, BenchmarkProtocol, Goal, Provider } from '@/lib/types'
+import type { BenchmarkMode, BenchmarkProtocol, Goal, Provider, ScoringProfile } from '@/lib/types'
 import { GOALS, PROTOCOLS } from '@/lib/types'
 import { useI18n } from '@/lib/useI18n'
 import { resolverGroup } from '@/lib/utils'
@@ -33,7 +33,7 @@ interface Props {
   selected: Set<string>
   mode: BenchmarkMode
   protocol: BenchmarkProtocol
-  goal: Goal
+  scoringProfile: ScoringProfile
   detectedRegion: string | null
   effectiveRegion: string | null
   regionLabel: (r: string | null) => string
@@ -49,7 +49,7 @@ interface Props {
   onToggleResolver: (ip: string) => void
   onModeChange: (mode: BenchmarkMode) => void
   onProtocolChange: (protocol: BenchmarkProtocol) => void
-  onGoalChange: (goal: Goal) => void
+  onScoringProfileChange: (profile: ScoringProfile) => void
   onRegionChange: (region: string | null) => void
   onRunsChange: (value: number) => void
   onTimeoutChange: (value: number) => void
@@ -175,20 +175,20 @@ export function DashboardControls(props: Props) {
 
       <div className="goal-selector">
         <p className="label-caption">{t('goal.title')}</p>
-        <div className="mode-grid">
-          {GOALS.map((g) => (
-            <button
-              key={g}
-              type="button"
-              className={`chip-compact ${props.goal === g ? 'chip-active' : ''}`}
-              onClick={() => props.onGoalChange(g)}
-              disabled={props.isRunning}
-            >
-              {t(GOAL_LABEL_KEY[g])}
-            </button>
-          ))}
-        </div>
-        <p className="helper-text">{t(GOAL_HELP_KEY[props.goal])}</p>
+          <div className="mode-grid">
+            {GOALS.map((g) => (
+              <button
+                key={g}
+                type="button"
+                className={`chip-compact ${props.scoringProfile === g ? 'chip-active' : ''}`}
+                onClick={() => props.onScoringProfileChange(g)}
+                disabled={props.isRunning}
+              >
+                {t(GOAL_LABEL_KEY[g])}
+              </button>
+            ))}
+          </div>
+          <p className="helper-text">{t(GOAL_HELP_KEY[props.scoringProfile])}</p>
       </div>
 
       <div className="region-selector">

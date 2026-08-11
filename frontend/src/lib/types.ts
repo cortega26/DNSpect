@@ -2,6 +2,16 @@ export type BenchmarkMode = 'quick' | 'standard' | 'exhaustive'
 
 export type Goal = 'speed' | 'security' | 'privacy' | 'ad-blocking' | 'family'
 
+export type ScoringProfile = Goal
+
+export type SelectionSource = 'manual' | 'catalog' | 'system'
+
+export interface TargetSnapshot {
+  resolver_ips: string[]
+  selection_source: SelectionSource
+  provider_ids?: Record<string, string> | null
+}
+
 export type BenchmarkProtocol = 'udp' | 'dot' | 'doh'
 
 export const GOALS: Goal[] = ['speed', 'security', 'privacy', 'ad-blocking', 'family']
@@ -108,6 +118,8 @@ export interface BenchmarkStatus {
   started_at: string
   finished_at: string | null
   mode: BenchmarkMode
+  goal?: string
+  scoring_profile?: string
   protocol: BenchmarkProtocol
   timeout_sec: number
   runs: number
@@ -117,6 +129,7 @@ export interface BenchmarkStatus {
   results: ResolverResult[] | null
   recommended_resolver?: string | null
   recommendation_warning?: string | null
+  target_snapshot?: TargetSnapshot | null
 }
 
 export interface ProbeResult {

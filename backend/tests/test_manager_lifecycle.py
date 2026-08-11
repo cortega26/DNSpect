@@ -119,3 +119,41 @@ def test_terminal_ttl_cleanup_removes_old_states(tmp_path) -> None:
     manager._cleanup_terminal_states()
     assert manager.get_state("old") is None
     assert manager.get_state("fresh") is not None
+
+
+def test_scoring_profile_and_target_snapshot_in_live_response(monkeypatch, tmp_path) -> None:
+    manager = BenchmarkManager(max_concurrent_jobs=1, max_queued_jobs=1, data_runs_dir=tmp_path / "runs")
+
+    def fake_measure_query(*, resolver: str, domain: str, timeout_sec: float, engine: str) -> dict:
+        del timeout_sec, engine
+        return {
+            "ok": True,
+            "ms": 15.0,
+            "query": domain,
+            "error": None,
+            "failure_kind": None,
+            "resolver": resolver,
+        }
+
+    monkeypatch.setattr("app.runner.measure_query", fake_measure_query)
+    monkeypatch.setattr("app.runner.select_engine", lambda: "dnspython")
+    manager.blocking_test_queries = []
+
+    benchmark_id = manager.start(
+        BenchmarkRequest(
+            runs=2,
+            timeout_sec=1.0,
+            resolvers=["1.1.1.1"],
+            queries=["example.com"],
+            scoring_profile="security",
+        )
+    )
+
+    state = _wait_terminal(manager, benchmark_id)
+    assert state["scoring_profile"] == "security"
+    assert state["goal"] == "security"
+    assert state["target_snapshot"] is None
+
+    queued_state = manager.get(benchmark_id)
+    if queued_state:
+        assert "scoring_profile" in queued_state

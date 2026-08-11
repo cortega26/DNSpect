@@ -1,14 +1,16 @@
-import type { BenchmarkMode, BenchmarkProtocol, BenchmarkStatus, Goal, ProbeResponse, Provider, SystemDnsPayload } from './types'
+import type { BenchmarkMode, BenchmarkProtocol, BenchmarkStatus, Goal, ProbeResponse, Provider, ScoringProfile, SystemDnsPayload, TargetSnapshot } from './types'
 import { API_BASE } from './utils'
 
 interface StartBenchmarkPayload {
   mode: BenchmarkMode
   goal?: Goal
+  scoring_profile?: ScoringProfile
   protocol?: BenchmarkProtocol
   runs?: number
   timeout_sec: number
   resolvers: string[]
   queries?: string[]
+  target_snapshot?: TargetSnapshot | null
 }
 
 interface ProbePayload {
@@ -58,13 +60,15 @@ export async function getPublicIp(): Promise<string | null> {
 export async function startBenchmark(payload: StartBenchmarkPayload): Promise<{ benchmark_id: string }> {
   const body: Record<string, unknown> = {
     mode: payload.mode,
-    goal: payload.goal ?? 'speed',
+    scoring_profile: payload.scoring_profile ?? payload.goal ?? 'speed',
+    goal: payload.scoring_profile ?? payload.goal ?? 'speed',
     protocol: payload.protocol ?? 'udp',
     timeout_sec: payload.timeout_sec,
     resolvers: payload.resolvers,
   }
   if (payload.runs !== undefined) body.runs = payload.runs
   if (payload.queries && payload.queries.length > 0) body.queries = payload.queries
+  if (payload.target_snapshot) body.target_snapshot = payload.target_snapshot
 
   const res = await fetch(`${API_BASE}/api/benchmarks`, {
     method: 'POST',

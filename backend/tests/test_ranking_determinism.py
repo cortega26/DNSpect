@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from time import sleep
 
-from app.models import BenchmarkRequest
+from app.models import BenchmarkGoal, BenchmarkRequest
 from app.runner import BenchmarkManager
 
 
@@ -77,3 +77,73 @@ def test_benchmark_ranking_is_independent_from_resolver_input_order(monkeypatch)
     ranking_b = [item["resolver"] for item in state_b["results"]]
     assert ranking_a == ranking_b
     assert state_a["recommended_resolver"] == state_b["recommended_resolver"]
+
+
+def test_same_samples_same_profile_same_target_deterministic(monkeypatch) -> None:
+    resolver_a = "1.1.1.1"
+    resolver_b = "8.8.8.8"
+    queries = ["a.com", "b.com", "c.com"]
+    latency_map = {
+        (resolver_a, "a.com"): 20.0,
+        (resolver_a, "b.com"): 25.0,
+        (resolver_a, "c.com"): 22.0,
+        (resolver_b, "a.com"): 10.0,
+        (resolver_b, "b.com"): 12.0,
+        (resolver_b, "c.com"): 11.0,
+    }
+
+    def fake_measure_query(*, resolver: str, domain: str, timeout_sec: float, engine: str) -> dict:
+        del timeout_sec, engine
+        key = (resolver, domain)
+        if key in latency_map:
+            return {
+                "ok": True,
+                "ms": latency_map[key],
+                "query": domain,
+                "error": None,
+                "failure_kind": None,
+                "resolver": resolver,
+                "answer_ips": [],
+            }
+        return {
+            "ok": False,
+            "ms": None,
+            "query": domain,
+            "error": "blocked",
+            "failure_kind": "nxdomain",
+            "resolver": resolver,
+            "answer_ips": [],
+        }
+
+    monkeypatch.setattr("app.runner.measure_query", fake_measure_query)
+    monkeypatch.setattr("app.runner.select_engine", lambda: "dnspython")
+
+    manager = BenchmarkManager(max_concurrent_jobs=2, max_queued_jobs=2, terminal_ttl_sec=600)
+
+    req_a = BenchmarkRequest(
+        runs=8,
+        timeout_sec=1.0,
+        resolvers=[resolver_a, resolver_b],
+        queries=queries,
+        scoring_profile=BenchmarkGoal.security,
+    )
+    req_b = BenchmarkRequest(
+        runs=8,
+        timeout_sec=1.0,
+        resolvers=[resolver_a, resolver_b],
+        queries=queries,
+        scoring_profile=BenchmarkGoal.security,
+    )
+
+    benchmark_a = manager.start(req_a)
+    benchmark_b = manager.start(req_b)
+
+    state_a = _wait_terminal(manager, benchmark_a)
+    state_b = _wait_terminal(manager, benchmark_b)
+
+    ranking_a = [item["resolver"] for item in state_a["results"]]
+    ranking_b = [item["resolver"] for item in state_b["results"]]
+    assert ranking_a == ranking_b
+    assert state_a["recommended_resolver"] == state_b["recommended_resolver"]
+    assert state_a["scoring_profile"] == "security"
+    assert state_b["scoring_profile"] == "security"
