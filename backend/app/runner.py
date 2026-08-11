@@ -486,33 +486,41 @@ class BenchmarkManager:
         runs: list[dict[str, Any]] = []
         if not self._data_runs_dir.exists():
             return {"runs": runs}
-        run_files = sorted(self._data_runs_dir.glob("[!.]*.json"), reverse=True)
-        for path in run_files:
+        for path in sorted(self._data_runs_dir.glob("[!.]*.json")):
             if path.name.endswith(".samples.json"):
                 continue
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
                 results = data.get("results") or []
-                runs.append(
-                    {
-                        "id": path.stem,
-                        "mode": data.get("mode"),
-                        "goal": data.get("goal"),
-                        "protocol": data.get("protocol"),
-                        "started_at": data.get("started_at"),
-                        "finished_at": data.get("finished_at"),
-                        "status": data.get("status"),
-                        "results_summary": [
-                            {"provider_name": r.get("provider_name"), "resolver": r.get("resolver")}
-                            for r in results[:3]
-                        ],
-                    }
-                )
+                entry = {
+                    "id": path.stem,
+                    "mode": data.get("mode"),
+                    "goal": data.get("goal") or data.get("scoring_profile"),
+                    "scoring_profile": data.get("scoring_profile") or data.get("goal"),
+                    "protocol": data.get("protocol"),
+                    "started_at": data.get("started_at"),
+                    "finished_at": data.get("finished_at"),
+                    "status": data.get("status"),
+                    "target_snapshot": data.get("target_snapshot"),
+                    "results_summary": [
+                        {"provider_name": r.get("provider_name"), "resolver": r.get("resolver")}
+                        for r in results[:3]
+                    ],
+                }
+                runs.append(entry)
             except (json.JSONDecodeError, OSError):
                 continue
-            if len(runs) >= 50:
-                break
-        return {"runs": runs}
+
+        def _sort_key(entry: dict[str, Any]) -> tuple[int, str, str]:
+            started_raw = entry.get("started_at")
+            try:
+                parsed = datetime.fromisoformat(str(started_raw))
+                return (parsed.timestamp(), 0, str(entry.get("id", "")))
+            except (ValueError, TypeError):
+                return (0, 1, str(entry.get("id", "")))
+
+        runs.sort(key=_sort_key, reverse=True)
+        return {"runs": runs[:50]}
 
     def _cleanup_terminal_states(self) -> None:
         with self._lock:
@@ -595,7 +603,7 @@ class BenchmarkManager:
             state.results = ranked_results
             state.engine = engine
             state.current_resolver = None
-        self._persist_run(benchmark_id)
+            self._persist_run(benchmark_id)
 
     def _append_partial_result(self, benchmark_id: str, result: dict[str, Any]) -> None:
         with self._lock:
@@ -613,7 +621,7 @@ class BenchmarkManager:
             state.error = message
             state.finished_at = datetime.now(UTC).isoformat()
             state.current_resolver = None
-        self._persist_run(benchmark_id)
+            self._persist_run(benchmark_id)
 
     def _format_storage_warning(self, exc: OSError) -> str:
         detail = str(exc).strip()

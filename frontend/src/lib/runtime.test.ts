@@ -6,6 +6,7 @@ import {
   isSmallImprovement,
   shouldAcceptAsyncResult,
   shouldPollBenchmark,
+  terminalRefreshKey,
 } from './runtime'
 
 describe('small improvement heuristic', () => {
@@ -55,5 +56,36 @@ describe('async request sequencing', () => {
     expect(shouldAcceptAsyncResult(1, 2, true)).toBe(false)
     expect(shouldAcceptAsyncResult(2, 2, true)).toBe(true)
     expect(shouldAcceptAsyncResult(2, 2, false)).toBe(false)
+  })
+})
+
+describe('terminal refresh key', () => {
+  it('returns key when run first transitions to done', () => {
+    expect(terminalRefreshKey({ id: 'abc', status: 'done' }, null)).toBe('abc:done')
+  })
+
+  it('returns null for same terminal key already refreshed', () => {
+    expect(terminalRefreshKey({ id: 'abc', status: 'done' }, 'abc:done')).toBeNull()
+  })
+
+  it('returns null for running status', () => {
+    expect(terminalRefreshKey({ id: 'abc', status: 'running' }, null)).toBeNull()
+  })
+
+  it('returns null for queued status', () => {
+    expect(terminalRefreshKey({ id: 'abc', status: 'queued' }, null)).toBeNull()
+  })
+
+  it('returns null for missing id', () => {
+    expect(terminalRefreshKey({ status: 'done' }, null)).toBeNull()
+    expect(terminalRefreshKey(null, null)).toBeNull()
+  })
+
+  it('returns null for same terminal run with same status', () => {
+    expect(terminalRefreshKey({ id: 'abc', status: 'done' }, 'abc:done')).toBeNull()
+  })
+
+  it('returns new key for failed after done refresh', () => {
+    expect(terminalRefreshKey({ id: 'abc', status: 'failed' }, 'abc:done')).toBe('abc:failed')
   })
 })

@@ -45,3 +45,14 @@ export function isActivePollSession(
 ): boolean {
   return sessionId === activeSessionId && benchmarkId === activeBenchmarkId
 }
+
+export function terminalRefreshKey(
+  status: { id?: string; status?: string } | null | undefined,
+  lastRefreshedKey: string | null,
+): string | null {
+  if (!status?.id || !status?.status) return null
+  if (status.status !== 'done' && status.status !== 'failed' && status.status !== 'cancelled') return null
+  const key = `${status.id}:${status.status}`
+  if (key === lastRefreshedKey) return null
+  return key
+}

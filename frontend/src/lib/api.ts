@@ -85,20 +85,22 @@ export async function startBenchmark(payload: StartBenchmarkPayload): Promise<{ 
 export interface RunHistoryEntry {
   id: string
   mode: string
-  goal: string
+  goal?: string | null
+  scoring_profile?: string | null
   protocol: string | null
   started_at: string
   finished_at: string | null
   status: string
   results_summary: Array<{ provider_name: string; resolver: string }>
+  target_snapshot?: TargetSnapshot | null
 }
 
 export interface RunHistoryResponse {
   runs: RunHistoryEntry[]
 }
 
-export async function getBenchmarkHistory(): Promise<RunHistoryResponse> {
-  const res = await fetch(`${API_BASE}/api/benchmarks/history`)
+export async function getBenchmarkHistory(signal?: AbortSignal): Promise<RunHistoryResponse> {
+  const res = await fetch(`${API_BASE}/api/benchmarks/history`, { signal })
   if (!res.ok) throw new Error('No se pudo cargar historial')
   return res.json()
 }
