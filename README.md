@@ -113,6 +113,9 @@ Most "DNS speed test" pages run from a remote browser context or cloud vantage p
 - Throttling layer: bounded worker pool plus queue limits.
   - `DNS_SPEED_LAB_MAX_CONCURRENT_JOBS`
   - `DNS_SPEED_LAB_MAX_QUEUED_JOBS`
+  - `DNS_SPEED_LAB_MAX_QUERY_ATTEMPTS` — aggregate query attempt limit (default: 10000)
+  - `DNS_SPEED_LAB_MAX_ESTIMATED_DURATION_SEC` — aggregate estimated duration limit (default: 14400, 4 hours)
+- Aggregate admission is deterministic based on resolver count × (runs + blocking probes + 2 diagnostics). Rejected jobs raise a descriptive `ValueError` before state or persistence is created.
 - No OS sandboxing/isolation layer is implemented; process runs with current user privileges.
 - Subprocess calls avoid `shell=True`, reducing command injection surface.
 

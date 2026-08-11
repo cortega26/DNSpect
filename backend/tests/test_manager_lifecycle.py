@@ -157,3 +157,102 @@ def test_scoring_profile_and_target_snapshot_in_live_response(monkeypatch, tmp_p
     queued_state = manager.get(benchmark_id)
     if queued_state:
         assert "scoring_profile" in queued_state
+
+
+def test_max_query_attempts_rejects_over_budget(monkeypatch, tmp_path) -> None:
+    manager = BenchmarkManager(max_concurrent_jobs=1, max_queued_jobs=1, data_runs_dir=tmp_path / "runs")
+    manager.blocking_test_queries = ["blocked.test"]
+    manager.max_query_attempts = 5
+
+    with pytest.raises(ValueError, match="Demasiados intentos"):
+        manager.start(
+            BenchmarkRequest(
+                runs=10,
+                timeout_sec=1.0,
+                resolvers=["1.1.1.1"],
+                queries=["example.com"],
+            )
+        )
+
+
+def test_max_query_attempts_accepts_at_limit(monkeypatch, tmp_path) -> None:
+    manager = BenchmarkManager(max_concurrent_jobs=1, max_queued_jobs=1, data_runs_dir=tmp_path / "runs")
+    manager.blocking_test_queries = ["blocked.test"]
+    manager.max_query_attempts = 13
+
+    def fake_measure_query(*, resolver, domain, timeout_sec, engine):
+        del timeout_sec, engine
+        return {
+            "ok": True,
+            "ms": 5.0,
+            "query": domain,
+            "error": None,
+            "failure_kind": None,
+            "resolver": resolver,
+        }
+
+    monkeypatch.setattr("app.runner.measure_query", fake_measure_query)
+    monkeypatch.setattr("app.runner.select_engine", lambda: "dnspython")
+
+    benchmark_id = manager.start(
+        BenchmarkRequest(
+            runs=10,
+            timeout_sec=1.0,
+            resolvers=["1.1.1.1"],
+            queries=["example.com"],
+        )
+    )
+    state = _wait_terminal(manager, benchmark_id)
+    assert state["status"] == "done"
+
+
+def test_estimated_duration_rejects_over_budget(monkeypatch, tmp_path) -> None:
+    manager = BenchmarkManager(max_concurrent_jobs=1, max_queued_jobs=1, data_runs_dir=tmp_path / "runs")
+    manager.blocking_test_queries = ["blocked.test"]
+    manager.max_query_attempts = 100000
+    manager.max_estimated_duration_sec = 30
+
+    with pytest.raises(ValueError, match="Duración estimada"):
+        manager.start(
+            BenchmarkRequest(
+                runs=10,
+                timeout_sec=5.0,
+                resolvers=["1.1.1.1"],
+                queries=["example.com"],
+            )
+        )
+
+
+def test_completed_run_progress_includes_diagnostics(monkeypatch, tmp_path) -> None:
+    manager = BenchmarkManager(max_concurrent_jobs=1, max_queued_jobs=1, data_runs_dir=tmp_path / "runs")
+    manager.blocking_test_queries = ["blocked.test"]
+
+    measurements: list[tuple[str, str]] = []
+
+    def fake_measure_query(*, resolver, domain, timeout_sec, engine):
+        del timeout_sec, engine
+        measurements.append((resolver, domain))
+        return {
+            "ok": True,
+            "ms": 5.0,
+            "query": domain,
+            "error": None,
+            "failure_kind": None,
+            "resolver": resolver,
+        }
+
+    monkeypatch.setattr("app.runner.measure_query", fake_measure_query)
+    monkeypatch.setattr("app.runner.select_engine", lambda: "dnspython")
+
+    benchmark_id = manager.start(
+        BenchmarkRequest(
+            runs=2,
+            timeout_sec=1.0,
+            resolvers=["1.1.1.1"],
+            queries=["example.com"],
+        )
+    )
+    state = _wait_terminal(manager, benchmark_id)
+    assert state["status"] == "done"
+    assert state["progress"]["current"] == state["progress"]["total"]
+    assert len(measurements) == 5
