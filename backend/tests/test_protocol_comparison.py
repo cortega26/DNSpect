@@ -749,3 +749,40 @@ def test_comparison_terminal_cleanup_bounds_in_memory_states(monkeypatch, tmp_pa
     manager._cleanup_protocol_comparison_states_locked()
     assert manager.get_protocol_comparison("old") is None
     assert manager.get_protocol_comparison("fresh") is not None
+
+
+@pytest.mark.parametrize(
+    ("index_features", "resolver", "protocol", "expected"),
+    [
+        # udp: always supported, provider or not
+        (None, "9.9.9.9", "udp", True),
+        ({"dot_hostname": "dns.quad9.net"}, "9.9.9.9", "udp", True),
+        # dot: gated on dot_hostname
+        ({"dot_hostname": "dns.quad9.net"}, "9.9.9.9", "dot", True),
+        ({"doh_url": "https://dns.quad9.net/dns-query"}, "9.9.9.9", "dot", False),
+        (None, "9.9.9.9", "dot", False),
+        # doh: gated on doh_url
+        ({"doh_url": "https://dns.quad9.net/dns-query"}, "9.9.9.9", "doh", True),
+        ({"dot_hostname": "dns.quad9.net"}, "9.9.9.9", "doh", False),
+        (None, "9.9.9.9", "doh", False),
+        # doq: requires flag + hostname (flag-only and hostname-only are False)
+        ({"doq": "yes", "doq_hostname": "dns.quad9.net"}, "9.9.9.9", "doq", True),
+        ({"doq": "yes"}, "9.9.9.9", "doq", False),
+        ({"doq_hostname": "dns.quad9.net"}, "9.9.9.9", "doq", False),
+        (None, "9.9.9.9", "doq", False),
+    ],
+)
+def test_resolver_supports_protocol_matrix(
+    tmp_path,
+    index_features: dict | None,
+    resolver: str,
+    protocol: str,
+    expected: bool,
+) -> None:
+    """4-protocol x feature-presence matrix for _resolver_supports_protocol."""
+    manager = _make_manager(tmp_path)
+    if index_features is None:
+        manager.provider_index = {}
+    else:
+        manager.provider_index = {resolver: {"id": "quad9", "features": index_features}}
+    assert manager._resolver_supports_protocol(resolver, protocol) is expected

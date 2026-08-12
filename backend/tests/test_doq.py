@@ -194,11 +194,21 @@ def test_build_config_rejects_doq_without_quic(monkeypatch, tmp_path) -> None:
 
 
 def test_benchmark_run_doq_protocol(monkeypatch, tmp_path) -> None:
-    """Full benchmark run with DoQ protocol succeeds and records protocol+engine."""
+    """Full benchmark run with DoQ protocol executes the real dispatch branch.
+
+    Only the transport (`run_doq_query`) is patched; the doq branch of
+    `_measure_with_protocol` (features lookup + hostname from the provider
+    index) and `_resolver_supports_protocol`'s doq gating run for real.
+    """
     manager = BenchmarkManager(max_concurrent_jobs=1, max_queued_jobs=1, data_runs_dir=tmp_path / "runs")
 
-    def fake_measure(self, *, resolver, domain, config, engine):
-        del self, config, engine
+    captured: dict[str, Any] = {}
+
+    def fake_run_doq_query(resolver: str, domain: str, timeout_sec: float, doq_hostname: str | None) -> dict:
+        captured["resolver"] = resolver
+        captured.setdefault("domains", []).append(domain)
+        captured["timeout_sec"] = timeout_sec
+        captured["doq_hostname"] = doq_hostname
         return {
             "ok": True,
             "ms": 19.0,
@@ -206,11 +216,10 @@ def test_benchmark_run_doq_protocol(monkeypatch, tmp_path) -> None:
             "error": None,
             "failure_kind": None,
             "answer_ips": ["93.184.216.34"],
-            "resolver": resolver,
         }
 
     monkeypatch.setattr("app.runner.dns_quic_available", lambda: True)
-    monkeypatch.setattr(BenchmarkManager, "_measure_with_protocol", fake_measure)
+    monkeypatch.setattr("app.runner.run_doq_query", fake_run_doq_query)
     monkeypatch.setattr("app.runner.select_engine", lambda: "dnspython")
     manager.blocking_test_queries = []
 
@@ -230,6 +239,10 @@ def test_benchmark_run_doq_protocol(monkeypatch, tmp_path) -> None:
     for result in state["results"]:
         assert result["protocol"] == "doq"
         assert result["engine"] == "dnspython"
+    assert captured["resolver"] == "9.9.9.9"
+    assert "example.com" in captured["domains"]
+    assert captured["timeout_sec"] == 2.0
+    assert captured["doq_hostname"] == "dns.quad9.net"
 
 
 def test_health_reports_capabilities() -> None:
