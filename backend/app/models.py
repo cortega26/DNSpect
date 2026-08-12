@@ -37,6 +37,10 @@ class SelectionSource(str, Enum):
     system = "system"
 
 
+class WatchOrigin(str, Enum):
+    watch = "watch"
+
+
 class TargetSnapshot(BaseModel):
     resolver_ips: list[str] = Field(min_length=1)
     selection_source: SelectionSource
@@ -109,6 +113,7 @@ class BenchmarkRequest(BaseModel):
     )
     protocol: BenchmarkProtocol = BenchmarkProtocol.udp
     target_snapshot: TargetSnapshot | None = None
+    origin: WatchOrigin | None = None
 
     @field_validator("resolvers")
     @classmethod
@@ -398,3 +403,53 @@ class ProtocolComparisonStatusResponse(BaseModel):
     exclusions: list[ProtocolExclusion]
     subruns: list[ProtocolSubrunResult]
     delta_pairs: list[ProtocolDeltaPair]
+
+
+WATCH_METRIC_KEYS = (
+    "median_ms",
+    "p95_ms",
+    "success_rate",
+    "failure_rate",
+    "blocking_efficacy",
+    "score_total",
+)
+
+DEFAULT_WATCH_THRESHOLDS = {
+    "median_ms": 25.0,
+    "failure_rate": 5.0,
+    "success_rate": 5.0,
+}
+
+
+class WatchConfigRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    target_snapshot: TargetSnapshot
+    protocol: BenchmarkProtocol = BenchmarkProtocol.udp
+    scoring_profile: BenchmarkGoal = BenchmarkGoal.speed
+    mode: BenchmarkMode = BenchmarkMode.quick
+    runs: int | None = Field(default=None, ge=1, le=300)
+    timeout_sec: float = Field(default=2.0, gt=0.1, le=10.0)
+    interval_min: int = Field(default=30, ge=1)
+    thresholds: dict[str, float] = Field(default_factory=dict, validate_default=True)
+    queries: list[str] | None = None
+
+    @field_validator("thresholds")
+    @classmethod
+    def validate_thresholds(cls, value: dict[str, float]) -> dict[str, float]:
+        unknown = set(value) - set(WATCH_METRIC_KEYS)
+        if unknown:
+            raise ValueError(f"Thresholds desconocidos: {sorted(unknown)}")
+        if any(v < 0 for v in value.values()):
+            raise ValueError("Los thresholds deben ser >= 0")
+        return value or dict(DEFAULT_WATCH_THRESHOLDS)
+
+    @field_validator("queries")
+    @classmethod
+    def validate_queries(cls, values: list[str] | None) -> list[str] | None:
+        return _normalize_queries(values, max_items=256)
+
+    def effective_runs(self) -> int:
+        if self.runs is not None:
+            return min(max(self.runs, 1), 300)
+        return MODE_DEFAULT_RUNS[self.mode]
