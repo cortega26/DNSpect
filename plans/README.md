@@ -85,13 +85,13 @@ execution order: 031 → 033 → 032 → 034 → 035 → 036 → 037, with 038 l
 
 | Plan | Priority / effort | Depends on | Status |
 |---|---|---|---|
-| [031 — watch measures the configured snapshot](031-watch-measures-snapshot.md) | P1 / S | — | TODO |
-| [032 — watch UI alive](032-watch-ui-alive.md) | P1 / S-M | — | TODO |
-| [033 — watch scheduler reliability](033-watch-reliability.md) | P1 / M | — | TODO |
-| [034 — session and egress hardening](034-session-egress-hardening.md) | P2 / S | — | TODO |
+| [031 — watch measures the configured snapshot](031-watch-measures-snapshot.md) | P1 / S | — | **DONE** — worktree `/tmp/opencode/dnspect-031` (branch `plan/031-watch-measures-snapshot`, commits `c3a227a`, `a0bcf3b`); gates re-verified by reviewer; **merge pending user decision** |
+| [032 — watch UI alive](032-watch-ui-alive.md) | P1 / S-M | — | **DONE** — worktree `/tmp/opencode/dnspect-032` (branch `plan/032-watch-ui-alive`, commits `2aabea1`, `3372419`, `047cabc`); e2e 26/26 re-verified by reviewer against the worktree build (port-shifted config; documented `APP_ORIGIN` env-override in fixtures); **merge pending user decision** |
+| [033 — watch scheduler reliability](033-watch-reliability.md) | P1 / M | — | **DONE** — worktree `/tmp/opencode/dnspect-033` (branch `plan/033-watch-reliability`, 7 commits, tip `019f740`); one revision round (first-ever watches now fire immediately — the stagger caused up-to-29-min silent waits); gates re-verified; **merge pending user decision** |
+| [034 — session and egress hardening](034-session-egress-hardening.md) | P2 / S | — | **DONE** — worktree `/tmp/opencode/dnspect-034` (branch `plan/034-session-egress-hardening`, commits `28f537e`, `be48568`, `038f627`); gates re-verified by reviewer; **merge pending user decision** |
 | [035 — security and consistency hardening](035-security-consistency.md) | P1 / S-M | 031 (snapshot validation half) | TODO |
 | [036 — test depth and history filtering](036-test-depth.md) | P2 / M | 035 (unified gates) | TODO |
-| [037 — docs and release readiness](037-docs-release-readiness.md) | P2 / M | — | TODO |
+| [037 — docs and release readiness](037-docs-release-readiness.md) | P2 / M | — | **DONE** — worktree `/tmp/opencode/dnspect-037` (branch `plan/037-docs-release-readiness`, 7 commits, tip `620f8c6`); gates re-verified by reviewer; flatpak `generated-sources.json` regen deferred (tooling unavailable — release-checklist item); **merge pending user decision** |
 | [038 — frontend structure](038-frontend-structure.md) | P2 / M | 032, 034 | TODO |
 
 ## Deep reaudit — considered and rejected (2026-08-13)
