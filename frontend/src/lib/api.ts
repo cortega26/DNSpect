@@ -1,4 +1,4 @@
-import type { BenchmarkMode, BenchmarkProtocol, BenchmarkStatus, Goal, ProbeResponse, Provider, ProtocolComparisonPreflight, ProtocolComparisonStartPayload, ProtocolComparisonStatus, RunComparisonResponse, ScoringProfile, SystemDnsPayload, TargetSnapshot } from './types'
+import type { BenchmarkMode, BenchmarkProtocol, BenchmarkStatus, Goal, ProbeResponse, Provider, ProtocolComparisonPreflight, ProtocolComparisonStartPayload, ProtocolComparisonStatus, RunComparisonResponse, ScoringProfile, SystemDnsPayload, TargetSnapshot, WatchConfigPayload, WatchListResponse, WatchStatus } from './types'
 import { API_BASE } from './utils'
 
 interface StartBenchmarkPayload {
@@ -106,6 +106,7 @@ export interface RunHistoryEntry {
   status: string
   results_summary: Array<{ provider_name: string; resolver: string }>
   target_snapshot?: TargetSnapshot | null
+  origin?: 'watch' | null
 }
 
 export interface RunHistoryResponse {
@@ -195,6 +196,39 @@ export async function probeResolvers(payload: ProbePayload, signal?: AbortSignal
     const detail = await safeError(res)
     throw new Error(detail)
   }
+  return res.json()
+}
+
+export async function getWatches(signal?: AbortSignal): Promise<WatchListResponse> {
+  const res = await fetch(`${API_BASE}/api/watch`, { signal })
+  if (!res.ok) throw new Error('No se pudo cargar los watches')
+  return res.json()
+}
+
+export async function createWatch(payload: WatchConfigPayload): Promise<{ watch_id: string }> {
+  const res = await fetch(`${API_BASE}/api/watch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const detail = await safeError(res)
+    throw new Error(detail)
+  }
+  return res.json()
+}
+
+export async function deleteWatch(watchId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/watch/${watchId}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const detail = await safeError(res)
+    throw new Error(detail)
+  }
+}
+
+export async function getWatchStatus(watchId: string, signal?: AbortSignal): Promise<WatchStatus> {
+  const res = await fetch(`${API_BASE}/api/watch/${watchId}/status`, { signal })
+  if (!res.ok) throw new Error('No se pudo consultar el watch')
   return res.json()
 }
 
