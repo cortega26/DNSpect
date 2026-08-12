@@ -985,7 +985,7 @@ class BenchmarkManager:
             self._cleanup_terminal_states_locked()
             return self._states.get(benchmark_id)
 
-    def list_history(self) -> dict[str, list[dict[str, Any]]]:
+    def list_history(self, *, include_watch_runs: bool = True) -> dict[str, list[dict[str, Any]]]:
         runs: list[dict[str, Any]] = []
         if not self._data_runs_dir.exists():
             return {"runs": runs}
@@ -1037,7 +1037,8 @@ class BenchmarkManager:
                 return (0, 1, str(entry.get("id", "")))
 
         runs.sort(key=_sort_key, reverse=True)
-        return {"runs": runs[:50]}
+        filtered = [r for r in runs if include_watch_runs or r.get("origin") != "watch"]
+        return {"runs": filtered[:50]}
 
     def create_watch(self, request: WatchConfigRequest) -> str:
         return self._watch_scheduler.create(request)

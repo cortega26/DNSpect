@@ -120,8 +120,8 @@ def start_benchmark(request: BenchmarkRequest) -> dict:
 
 
 @app.get("/api/benchmarks/history")
-def benchmark_history() -> dict:
-    return manager.list_history()
+def benchmark_history(include_watch_runs: bool = Query(default=False)) -> dict:
+    return manager.list_history(include_watch_runs=include_watch_runs)
 
 
 @app.get("/api/benchmarks/compare", response_model=RunComparisonResponse)
