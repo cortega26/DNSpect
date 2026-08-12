@@ -60,6 +60,15 @@ function formatDelta(key: keyof ProtocolMetrics, value: number | null): string {
   return `${sign}${(value * 100).toFixed(1)}%`
 }
 
+function DeltaValue({ label, value, tone }: { label: string; value: string; tone: { label: string; color: string } }) {
+  return (
+    <span aria-label={`${label} ${value}${tone.label.trim()}`}>
+      {value}
+      {tone.label}
+    </span>
+  )
+}
+
 function DeltaPairTable({ pair }: { pair: ProtocolDeltaPair }) {
   const { t } = useI18n()
 
@@ -108,8 +117,7 @@ function DeltaPairTable({ pair }: { pair: ProtocolDeltaPair }) {
                     <td style={{ padding: 'var(--space-1) var(--space-2)' }}>{formatMetric(key, baseline)}</td>
                     <td style={{ padding: 'var(--space-1) var(--space-2)' }}>{formatMetric(key, candidate)}</td>
                     <td style={{ padding: 'var(--space-1) var(--space-2)', color: tone.color }}>
-                      {formatDelta(key, delta)}
-                      {tone.label}
+                      <DeltaValue label={t(labelKey)} value={formatDelta(key, delta)} tone={tone} />
                     </td>
                   </tr>
                 )
