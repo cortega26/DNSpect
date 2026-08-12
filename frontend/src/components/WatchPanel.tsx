@@ -10,15 +10,13 @@ import type {
   WatchConfigPayload,
   WatchEntry,
 } from '@/lib/types'
-import { fmtMs } from '@/lib/utils'
+import { fmtMs, WATCH_RATE_METRICS } from '@/lib/utils'
 
 const DEFAULT_WATCH_THRESHOLDS: Record<string, number> = {
   median_ms: 25.0,
   failure_rate: 5.0,
   success_rate: 5.0,
 }
-
-const RATE_METRICS = new Set(['success_rate', 'failure_rate'])
 
 export interface WatchSessionConfig {
   target_snapshot: TargetSnapshot
@@ -45,13 +43,14 @@ function statusOf(entry: WatchEntry): 'idle' | 'running' | 'evaluating' {
 
 function formatMetricValue(metric: string, value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) return 'NA'
-  if (RATE_METRICS.has(metric)) return `${(value * 100).toFixed(1)}%`
+  if (WATCH_RATE_METRICS.has(metric)) return `${(value * 100).toFixed(1)}%`
   if (metric === 'median_ms' || metric === 'p95_ms') return fmtMs(value)
   return value.toFixed(2)
 }
 
 function formatMetricDelta(metric: string, delta: number | null | undefined): string {
   if (delta === null || delta === undefined || Number.isNaN(delta)) return 'NA'
+  if (WATCH_RATE_METRICS.has(metric)) return `${(delta * 100).toFixed(1)}%`
   return `${delta.toFixed(1)}%`
 }
 
@@ -61,7 +60,7 @@ function shortId(id: string): string {
 
 export function WatchPanel({ doqAvailable, running, currentSession, onCompare }: Props) {
   const { t } = useI18n()
-  const { watches, watchesLoading, create, remove } = useWatch()
+  const { watches, watchesLoading, watchesError, create, remove } = useWatch()
   const [intervalMin, setIntervalMin] = useState(30)
   const [createError, setCreateError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -101,7 +100,7 @@ export function WatchPanel({ doqAvailable, running, currentSession, onCompare }:
   }
 
   const thresholdLabel = Object.entries(DEFAULT_WATCH_THRESHOLDS)
-    .map(([key, value]) => `${key} ${RATE_METRICS.has(key) ? `±${value} pts` : `±${value}%`}`)
+    .map(([key, value]) => `${key} ${WATCH_RATE_METRICS.has(key) ? `±${value} pts` : `±${value}%`}`)
     .join(' · ')
 
   return (
@@ -156,6 +155,10 @@ export function WatchPanel({ doqAvailable, running, currentSession, onCompare }:
 
       {watchesLoading ? (
         <p className="muted">{t('history.loading')}</p>
+      ) : watchesError ? (
+        <p className="muted" role="alert">
+          {t('watch.error.load')}
+        </p>
       ) : watches.length === 0 ? (
         <p className="muted">{t('watch.empty')}</p>
       ) : (

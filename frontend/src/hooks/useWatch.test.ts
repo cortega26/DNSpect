@@ -56,6 +56,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  vi.useRealTimers()
 })
 
 describe('useWatch', () => {
@@ -138,5 +139,76 @@ describe('useWatch', () => {
 
     expect(result.current.refresh).toBe(firstRefresh)
     expect(mockGetWatches).toHaveBeenCalledTimes(1)
+  })
+
+  it('polls every 10s while visible and stops on unmount', async () => {
+    vi.useFakeTimers()
+    mockGetWatches.mockResolvedValue(listResponse([]))
+
+    const { unmount } = renderHook(() => useWatch())
+    await act(async () => {})
+    expect(mockGetWatches).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      vi.advanceTimersByTime(10_000)
+    })
+    await act(async () => {})
+    expect(mockGetWatches).toHaveBeenCalledTimes(2)
+
+    act(() => {
+      vi.advanceTimersByTime(10_000)
+    })
+    await act(async () => {})
+    expect(mockGetWatches).toHaveBeenCalledTimes(3)
+
+    unmount()
+    act(() => {
+      vi.advanceTimersByTime(30_000)
+    })
+    await act(async () => {})
+    expect(mockGetWatches).toHaveBeenCalledTimes(3)
+  })
+
+  it('skips polls while the tab is hidden and refreshes on visibilitychange to visible', async () => {
+    vi.useFakeTimers()
+    mockGetWatches.mockResolvedValue(listResponse([]))
+
+    const { result } = renderHook(() => useWatch())
+    await act(async () => {})
+    expect(mockGetWatches).toHaveBeenCalledTimes(1)
+
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
+    act(() => {
+      vi.advanceTimersByTime(30_000)
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    await act(async () => {})
+    expect(mockGetWatches).toHaveBeenCalledTimes(1)
+
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    await act(async () => {})
+    expect(mockGetWatches).toHaveBeenCalledTimes(2)
+
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+    expect(result.current.watches).toEqual([])
+  })
+
+  it('sets an error on fetch failure and clears it on success', async () => {
+    mockGetWatches.mockRejectedValueOnce(new Error('boom'))
+
+    const { result } = renderHook(() => useWatch())
+    await waitFor(() => expect(result.current.watchesError).toBe('boom'))
+    expect(result.current.watchesLoading).toBe(false)
+
+    mockGetWatches.mockResolvedValue(listResponse([watchEntry('w1')]))
+    await act(async () => {
+      await result.current.refresh()
+    })
+
+    expect(result.current.watchesError).toBeNull()
+    expect(result.current.watches).toEqual([watchEntry('w1')])
   })
 })

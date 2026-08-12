@@ -4,6 +4,7 @@ import {
   MockApi,
   QUAD9_RESULT,
   doneBenchmark,
+  makeWatchEntry,
   probeFixture,
   runningBenchmark,
 } from './fixtures'
@@ -264,6 +265,27 @@ test.describe('workflow regression floor (Chromium, mocked network)', () => {
 
     await expect(guidedModal.locator('.guided-verification')).toContainText('99.00')
     await expect(guidedModal.locator('.guided-verification')).not.toContainText('12.00')
+    expect(api.unhandledRequests).toEqual([])
+  })
+
+  test('watch alert drill-down opens the run comparison panel', async ({ page }) => {
+    const api = new MockApi(page)
+    api.setWatches([makeWatchEntry()])
+    await api.install()
+    await page.goto('/')
+
+    const alertBanner = page.locator('.watch-alert-banner')
+    await expect(alertBanner).toBeVisible()
+    await expect(alertBanner).toContainText('success_rate')
+    await expect(alertBanner).toContainText('99.0% → 93.0% (6.0%)')
+
+    await alertBanner.getByRole('button', { name: 'Run comparison' }).click()
+
+    const comparisonPanel = page.locator('.comparison-panel')
+    await expect(comparisonPanel).toBeVisible()
+    await expect(comparisonPanel).toContainText('Comparable')
+    await expect(comparisonPanel).toContainText('Baseline: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa · Candidate: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb')
+    await expect(comparisonPanel).toContainText('12.30 ms')
     expect(api.unhandledRequests).toEqual([])
   })
 })

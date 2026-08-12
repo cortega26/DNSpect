@@ -1,8 +1,11 @@
 import type { Page, Route } from '@playwright/test'
 import type { RunHistoryEntry } from '../../src/lib/api'
-import type { BenchmarkStatus, BenchmarkProtocol, ProbeResponse, ProtocolComparisonPreflight, ProtocolComparisonStatus, ProtocolDeltaPair, ProtocolSubrunResult, Provider, ResolverResult, ResolverStats, RunComparisonResponse, RunManifest, SystemDnsPayload } from '../../src/lib/types'
+import type { BenchmarkStatus, BenchmarkProtocol, ProbeResponse, ProtocolComparisonPreflight, ProtocolComparisonStatus, ProtocolDeltaPair, ProtocolSubrunResult, Provider, ResolverResult, ResolverStats, RunComparisonResponse, RunManifest, SystemDnsPayload, WatchEntry } from '../../src/lib/types'
 
-export const APP_ORIGIN = 'http://127.0.0.1:5173'
+const envOrigin = (globalThis as unknown as { process?: { env?: Record<string, string | undefined> } }).process?.env
+  ?.DNSPECT_E2E_ORIGIN
+
+export const APP_ORIGIN = envOrigin ?? 'http://127.0.0.1:5173'
 
 export const PUBLIC_IP_HOST = 'api.ipify.org'
 
@@ -245,6 +248,38 @@ export function historyEntry(id: string, topResolver: string, topProvider: strin
     status: 'done',
     results_summary: [{ provider_name: topProvider, resolver: topResolver }],
     target_snapshot: null,
+  }
+}
+
+export function makeWatchEntry(overrides: Partial<WatchEntry> = {}): WatchEntry {
+  return {
+    watch_id: 'watch-001',
+    config: {
+      target_snapshot: { resolver_ips: ['1.1.1.1'], selection_source: 'manual' },
+      protocol: 'udp',
+      mode: 'standard',
+      interval_min: 30,
+    },
+    runtime: {
+      active_run_id: null,
+      last_run_id: CANDIDATE_RUN_ID,
+      last_evaluated_at: new Date().toISOString(),
+      last_alert_at: new Date().toISOString(),
+      alert_events: [
+        {
+          type: 'threshold_alert',
+          baseline_id: BASELINE_RUN_ID,
+          run_id: CANDIDATE_RUN_ID,
+          resolver: '1.1.1.1',
+          metric: 'success_rate',
+          baseline_value: 0.99,
+          candidate_value: 0.93,
+          delta: 0.06,
+          threshold: 5.0,
+        },
+      ],
+    },
+    ...overrides,
   }
 }
 
@@ -577,6 +612,8 @@ const newComparisonId = (): string => {
   return `deadbeef${comparisonSeq.toString(16).padStart(24, '0')}`
 }
 
+let watchListFixture: WatchEntry[] = []
+
 export class MockApi {
   readonly page: Page
   readonly unhandledRequests: string[] = []
@@ -588,6 +625,11 @@ export class MockApi {
   constructor(page: Page) {
     this.page = page
     this.setDefaults()
+  }
+
+  /** Seed the watch list fixture that the GET /api/watch handler serves. */
+  setWatches(watches: WatchEntry[]): void {
+    watchListFixture = watches
   }
 
   private setDefaults(): void {
@@ -604,7 +646,7 @@ export class MockApi {
     this.handlers.set('POST /api/probe', () => json(probeFixture()))
     this.handlers.set('GET /api/geoip', () => json(geoIpFixture))
     this.handlers.set('GET /api/health', () => json({ status: 'ok', version: '1.3.0', backend_time_utc: '2026-08-11T00:00:00Z', capabilities: { doq: false } }))
-    this.handlers.set('GET /api/watch', () => json({ watches: [] }))
+    this.handlers.set('GET /api/watch', () => json({ watches: watchListFixture }))
     this.handlers.set('GET https://api.ipify.org/', () => json(publicIpFixture))
     this.handlers.set('GET https://fonts.googleapis.com/css', () => ({
       status: 200,
