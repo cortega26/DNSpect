@@ -3,6 +3,19 @@ import { normalizeScopeFromRegion, type TargetScope } from './targetScope'
 
 export const EGRESS_TIMEOUT_MS = 5000
 
+/**
+ * Whether an in-flight egress resolution may still write back: the scope
+ * source is still automatic AND the resolver set was not edited since the
+ * resolution started. Manual edits win over the stale egress result.
+ */
+export function isEgressWriteBackCurrent(
+  scopeSource: 'auto' | 'manual',
+  selectionVersionAtStart: number,
+  selectionVersionNow: number,
+): boolean {
+  return scopeSource === 'auto' && selectionVersionNow === selectionVersionAtStart
+}
+
 export interface EgressResolutionOptions {
   signal?: AbortSignal
   /** Must stay true for the result to be applied (manual-override guard). */

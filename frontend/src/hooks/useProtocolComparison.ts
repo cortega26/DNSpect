@@ -38,6 +38,7 @@ export function useProtocolComparison(): ProtocolComparisonState {
   const pollAbortRef = useRef<AbortController | null>(null)
   const pollInFlightRef = useRef(false)
   const consecutiveErrorsRef = useRef(0)
+  const pollFailedRef = useRef(false)
   const mountedRef = useRef(false)
 
   useEffect(() => {
@@ -128,6 +129,10 @@ export function useProtocolComparison(): ProtocolComparisonState {
           setComparison(next)
           setComparisonLoading(false)
           consecutiveErrorsRef.current = 0
+          if (pollFailedRef.current) {
+            pollFailedRef.current = false
+            setComparisonError(null)
+          }
           if (next.status === 'running' || next.status === 'queued') {
             scheduleNext(POLL_INTERVAL_MS)
           } else {
@@ -136,6 +141,7 @@ export function useProtocolComparison(): ProtocolComparisonState {
         } catch (e) {
           if (controller.signal.aborted || !isCurrent()) return
           consecutiveErrorsRef.current += 1
+          pollFailedRef.current = true
           setComparisonError(e instanceof Error ? e.message : t('error.protocolComparePoll'))
           setComparisonLoading(false)
           if (consecutiveErrorsRef.current >= 5) {
@@ -184,6 +190,7 @@ export function useProtocolComparison(): ProtocolComparisonState {
   const start = useCallback(
     async (payload: ProtocolComparisonStartPayload) => {
       stopPolling()
+      consecutiveErrorsRef.current = 0
       const requestSeq = startRequestSeqRef.current + 1
       startRequestSeqRef.current = requestSeq
       setComparisonError(null)
@@ -204,6 +211,7 @@ export function useProtocolComparison(): ProtocolComparisonState {
   )
 
   const clear = useCallback(() => {
+    consecutiveErrorsRef.current = 0
     preflightSeqRef.current += 1
     startRequestSeqRef.current += 1
     preflightAbortRef.current?.abort()
