@@ -37,6 +37,7 @@ import {
 import {
   computeStallThresholds,
   isSmallImprovement,
+  terminalRefreshKey,
 } from '@/lib/runtime'
 import { useTheme } from '@/lib/useTheme'
 import type { BenchmarkMode, BenchmarkProtocol, Provider, ResolverResult, ScoringProfile, SystemDnsPayload } from '@/lib/types'
@@ -223,7 +224,14 @@ function App() {
   const [localeMenuOpen, setLocaleMenuOpen] = useState<boolean>(false)
   const [nowMs, setNowMs] = useState<number>(() => Date.now())
   const [isInitializing, setIsInitializing] = useState<boolean>(true)
-  const { history, historyLoading } = useRunHistory(status?.id ?? null)
+  const { history, historyLoading, refresh: refreshRunHistory } = useRunHistory(status?.id ?? null)
+  const lastTerminalKeyRef = useRef<string | null>(null)
+  const terminalKey = terminalRefreshKey(status, lastTerminalKeyRef.current)
+  useEffect(() => {
+    if (terminalKey === null) return
+    lastTerminalKeyRef.current = terminalKey
+    void refreshRunHistory()
+  }, [terminalKey, refreshRunHistory])
   const comparison = useRunComparison()
   const {
     baselineId: comparisonBaselineId,
