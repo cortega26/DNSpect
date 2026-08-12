@@ -92,11 +92,14 @@ class WatchStore:
 
     def _write_json_file(self, path: Path, payload: str) -> None:
         tmp_path = path.with_suffix(path.suffix + ".tmp")
-        with tmp_path.open("w", encoding="utf-8") as f:
-            f.write(payload)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp_path, path)
+        try:
+            with tmp_path.open("w", encoding="utf-8") as f:
+                f.write(payload)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, path)
+        except OSError as exc:
+            raise ValueError("No se pudo guardar la watch: " + str(exc)) from exc
 
     def list(self) -> list[str]:
         if not self._watch_dir.exists():
@@ -121,7 +124,10 @@ class WatchStore:
         path = self.file_path(watch_id)
         if path is None:
             raise ValueError("watch_id inválido")
-        self._watch_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self._watch_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise ValueError("No se pudo guardar la watch: " + str(exc)) from exc
         self._write_json_file(path, json.dumps(data, ensure_ascii=False, indent=2))
 
     def delete(self, watch_id: str) -> bool:
@@ -130,7 +136,7 @@ class WatchStore:
             return False
         try:
             path.unlink()
-        except FileNotFoundError:
+        except OSError:
             return False
         with suppress(OSError):
             tmp = path.with_suffix(path.suffix + ".tmp")
@@ -430,7 +436,7 @@ class WatchScheduler:
             path = self._store.file_path(watch_id)
             if path is None or not path.exists():
                 return
-            with suppress(OSError):
+            with suppress(OSError, ValueError):
                 self._store.save(watch_id, data)
 
     def _build_request(self, config: dict[str, Any]) -> BenchmarkRequest:
