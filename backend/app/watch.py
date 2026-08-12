@@ -255,9 +255,7 @@ class WatchScheduler:
             if self._thread is not None and self._thread.is_alive():
                 return
             stop_event = threading.Event()
-            thread = threading.Thread(
-                target=self._run_loop, name="dnswatch", daemon=True, args=(stop_event,)
-            )
+            thread = threading.Thread(target=self._run_loop, name="dnswatch", daemon=True, args=(stop_event,))
             thread.start()
             self._stop_event = stop_event
             self._thread = thread
@@ -294,7 +292,7 @@ class WatchScheduler:
             last_tick = self._last_tick_at.get(watch_id)
             if last_tick is None:
                 persisted = (data.get("runtime") or {}).get("last_tick_at")
-                if isinstance(persisted, (int, float)):
+                if isinstance(persisted, int | float):
                     last_tick = float(persisted)
                 else:
                     last_tick = now - interval_sec + self._startup_offset_sec(watch_id, interval_sec)

@@ -5,13 +5,11 @@ import threading
 import time
 import uuid
 
-import pytest
+from test_watch import Facade, FakeClock, _watch_config
 
 from app import watch as watch_module
 from app.models import BenchmarkRequest
 from app.watch import WatchScheduler
-
-from test_watch import Facade, FakeClock, _watch_config
 
 
 class BlockingFacade(Facade):
@@ -161,9 +159,7 @@ def test_bad_config_isolated_from_other_watches(tmp_path) -> None:
     scheduler = WatchScheduler(facade, watch_dir=tmp_path / "watch", clock=FakeClock())
     good_id = scheduler.create(_watch_config(interval_min=1))
     bad_id = uuid.uuid4().hex
-    (tmp_path / "watch" / f"{bad_id}.json").write_text(
-        json.dumps(_bad_watch_payload()), encoding="utf-8"
-    )
+    (tmp_path / "watch" / f"{bad_id}.json").write_text(json.dumps(_bad_watch_payload()), encoding="utf-8")
 
     scheduler.tick_all()
 
