@@ -183,6 +183,7 @@ class WatchScheduler:
         self._clock = clock or SchedulerClock()
         self._lock = threading.Lock()
         self._last_tick_at: dict[str, float] = {}
+        self._due_cache: dict[str, tuple[float, float]] = {}
         self._stop_event: threading.Event | None = None
         self._thread: threading.Thread | None = None
 
@@ -202,11 +203,13 @@ class WatchScheduler:
             },
         }
         self._store.save(watch_id, data)
+        self._due_cache.pop(watch_id, None)
         return watch_id
 
     def delete(self, watch_id: str) -> bool:
         with self._lock:
             self._last_tick_at.pop(watch_id, None)
+            self._due_cache.pop(watch_id, None)
             return self._store.delete(watch_id)
 
     def list_watches(self) -> dict[str, list[dict[str, Any]]]:
@@ -278,9 +281,13 @@ class WatchScheduler:
     def tick_all(self) -> None:
         now = self._clock.now()
         for watch_id in self._store.list():
+            cached = self._due_cache.get(watch_id)
+            if cached is not None and cached[1] > now:
+                continue
             data = self._store.load(watch_id)
             if data is None:
                 self._last_tick_at.pop(watch_id, None)
+                self._due_cache.pop(watch_id, None)
                 continue
             config = data.get("config") or {}
             interval_sec = float(config.get("interval_min", 30)) * 60
@@ -289,11 +296,12 @@ class WatchScheduler:
                 persisted = (data.get("runtime") or {}).get("last_tick_at")
                 if isinstance(persisted, (int, float)):
                     last_tick = float(persisted)
-                    self._last_tick_at[watch_id] = last_tick
                 else:
                     last_tick = now - interval_sec + self._startup_offset_sec(watch_id, interval_sec)
-                    self._last_tick_at[watch_id] = last_tick
-            if now - last_tick < interval_sec:
+                self._last_tick_at[watch_id] = last_tick
+            next_due = last_tick + interval_sec
+            self._due_cache[watch_id] = (interval_sec, next_due)
+            if now < next_due:
                 continue
             self._last_tick_at[watch_id] = now
             data.setdefault("runtime", {})["last_tick_at"] = now
