@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from app.main import app
 from app.models import (
@@ -347,7 +348,27 @@ def test_watch_alert_ring_buffer_capped_at_50(tmp_path) -> None:
     assert events[-1]["run_id"] == "54"
 
 
-def test_watch_run_is_tagged_origin_watch(tmp_path) -> None:
+def test_watch_run_measures_snapshot_resolvers(tmp_path) -> None:
+    facade = Facade()
+    scheduler = WatchScheduler(facade, watch_dir=tmp_path / "watch", clock=FakeClock())
+    snapshot = {"resolver_ips": ["1.1.1.1", "9.9.9.9"], "selection_source": "manual"}
+    scheduler.create(_watch_config(target_snapshot=snapshot))
+
+    scheduler.tick_all()
+
+    assert len(facade.started) == 1
+    request = facade.started[0]
+    assert request.resolvers == ["1.1.1.1", "9.9.9.9"]
+    assert request.target_snapshot.resolver_ips == ["1.1.1.1", "9.9.9.9"]
+    assert request.origin == WatchOrigin.watch
+
+
+def test_watch_config_rejects_non_ip_snapshot() -> None:
+    with pytest.raises(ValidationError):
+        WatchConfigRequest(target_snapshot={"resolver_ips": ["not-an-ip"], "selection_source": "manual"})
+
+
+def test_watch_run_is_tagged_origin_watch(tmp_path, monkeypatch) -> None:
     runs_dir = tmp_path / "runs"
     manager = BenchmarkManager(
         max_concurrent_jobs=1,
@@ -357,6 +378,14 @@ def test_watch_run_is_tagged_origin_watch(tmp_path) -> None:
         watch_dir=tmp_path / "watch",
     )
     manager._executor = NoopExecutor()
+    captured: list[BenchmarkRequest] = []
+    original_start = manager.start
+
+    def recording_start(request: BenchmarkRequest) -> str:
+        captured.append(request)
+        return original_start(request)
+
+    monkeypatch.setattr(manager, "start", recording_start)
     watch_id = manager.create_watch(_watch_config())
 
     data = manager._watch_scheduler._store.load(watch_id)
@@ -368,6 +397,10 @@ def test_watch_run_is_tagged_origin_watch(tmp_path) -> None:
     persisted = json.loads((runs_dir / f"{run_id}.json").read_text(encoding="utf-8"))
     assert persisted.get("origin") == "watch"
     assert "origin" not in (persisted.get("manifest") or {})
+
+    assert len(captured) == 1
+    assert captured[0].resolvers == ["1.1.1.1"]
+    assert captured[0].target_snapshot.resolver_ips == ["1.1.1.1"]
 
     entry = manager.list_history()["runs"][0]
     assert entry.get("origin") == "watch"
