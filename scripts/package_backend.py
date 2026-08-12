@@ -55,8 +55,10 @@ def main() -> None:
         add_data_data,
         str(backend_entry),
     ]
-    for hidden_import in ("backports", "backports.tarfile"):
+    for hidden_import in ("backports", "backports.tarfile", "aioquic", "aioquic.quic"):
         cmd.extend(["--hidden-import", hidden_import])
+    cmd.append("--copy-metadata")
+    cmd.append("aioquic")
 
     subprocess.run(cmd, cwd=root, check=True)
 
