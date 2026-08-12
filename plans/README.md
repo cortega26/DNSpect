@@ -74,6 +74,48 @@ priority describes expected impact, effort is an implementation estimate.
 | [029 — DoQ comparison extension](archive/029-doq-comparison-extension.md) | P2 / M | — | **Complete** — `54ce261` |
 | [030 — history summary sidecars](archive/030-history-summary-sidecar.md) | P2 / M | — | **Complete** — `96ccaed` |
 
+## Deep-reaudit wave (031-038, 2026-08-13)
+
+Plans 031-038 implement the vetted deep-reaudit findings (written against
+`930dfb6`). 031 is P1 (the watch measured the wrong population); 032-033
+complete the watch surface; 034-036 harden sessions, security, and tests;
+037 is release readiness; 038 is the frontend structure pass. Recommended
+execution order: 031 → 033 → 032 → 034 → 035 → 036 → 037, with 038 last
+(after 032/034 so the polling extraction includes their fixes).
+
+| Plan | Priority / effort | Depends on | Status |
+|---|---|---|---|
+| [031 — watch measures the configured snapshot](031-watch-measures-snapshot.md) | P1 / S | — | TODO |
+| [032 — watch UI alive](032-watch-ui-alive.md) | P1 / S-M | — | TODO |
+| [033 — watch scheduler reliability](033-watch-reliability.md) | P1 / M | — | TODO |
+| [034 — session and egress hardening](034-session-egress-hardening.md) | P2 / S | — | TODO |
+| [035 — security and consistency hardening](035-security-consistency.md) | P1 / S-M | 031 (snapshot validation half) | TODO |
+| [036 — test depth and history filtering](036-test-depth.md) | P2 / M | 035 (unified gates) | TODO |
+| [037 — docs and release readiness](037-docs-release-readiness.md) | P2 / M | — | TODO |
+| [038 — frontend structure](038-frontend-structure.md) | P2 / M | 032, 034 | TODO |
+
+## Deep reaudit — considered and rejected (2026-08-13)
+
+- **Runner.py split (TD-03)**: 2,298-line god module with ~10 duplicated
+  blocks. Real, but L/L with a long-lived branch — schedule after v1.4.0
+  with the current test matrix as characterization; the extraction targets
+  (measurement engines, both state machines, persistence helpers) are
+  already documented in the finding.
+- **React 18 → 19 (6-01)**: the 18 line is frozen and both heavy deps
+  (recharts, @testing-library/react) already peer-declare 19. A clean
+  migration, but M/MED right before a release with a fresh test stack —
+  schedule for the post-release window.
+- **Run-file retention/TTL (PERF-04's retention half)**: deleting user data
+  automatically needs explicit product semantics (how long, what survives,
+  CLI/export interplay). Recorded as a product decision; the filtering half
+  (watch runs out of the API history) is in plan 036.
+- **Baseline manifest sidecar (PERF-02)**: plan 030's summary sidecars plus
+  the in-memory TTL already cover the common path; revisit only if watch
+  counts grow.
+- **Watch status `/api/watch/{id}/status` polling (PERF-05's endpoint half)**:
+  plan 032 polls the list endpoint; per-watch status polling is unnecessary
+  at v1 scale.
+
 ## Roadmap wave dependency notes (019-022)
 
 - **020 requires 019**: the CLI's `--format csv` output consumes
@@ -130,20 +172,19 @@ evidence.
   update adguard's `doq_hostname` to `dns.adguard-dns.com` and review its
   `dot_hostname`/`doh_url` (same legacy alias); quad9 + quad9-unsecured stay.
 
-## Reaudit checkpoint (2026-08-11)
+## Reaudit checkpoint (2026-08-13)
 
-The deep audit ran against `e09fd2d`; all 18 plans since merged. A full
-reaudit is intentionally **not** run before this wave — the spikes are the
-investigation, and the build plans are small or test-gated. Instead:
+The full deep reaudit ran 2026-08-13 against `96ccaed` (7 auditors, ~40
+findings, all vetted — top claims re-verified by the reviewer). Findings
+became plans 031-038 below; rejected items are recorded in "Deep reaudit —
+considered and rejected". The pre-release deep reaudit (checkpoint item 2)
+is now satisfied; a fresh `deep` pass before the next major release should
+focus on the plans 031-038 merge outcomes.
 
-1. **Executed 2026-08-11** — targeted `standard` audit of the post-`e09fd2d`
-   churn (protocol-comparison state machine, history/manifest layer, frontend
-   hooks). Findings vetted and presented; selected ones become plans 024+.
-   Remaining for later: the dependency pass (`pip-audit`) once `aioquic` is
-   installed (plan 023 covers the pin; the audit runs at release-prep).
-2. **A full `deep` reaudit** is recommended right before the next release
-   (v1.4.0): monitoring + DoQ would be the largest change since 1.3.0, and
-   the audit then has design docs plus working code to judge.
+Historical notes from the earlier checkpoint (superseded): the targeted
+`standard` audit of the post-`e09fd2d` churn ran 2026-08-11 (findings →
+plans 024-027); the "before the next release" deep reaudit was scheduled
+then and is now executed.
 
 ## Required decision gates
 
