@@ -74,8 +74,8 @@ priority describes expected impact, effort is an implementation estimate.
 | [023 — DNS-over-QUIC standalone benchmark](023-dns-over-quic-standalone.md) | P1 / L | — | **DONE** — worktree `/tmp/opencode/dnspect-023` (branch `plan/023-dns-over-quic-standalone`, 10 commits `c095a6b..9f48204`); criteria + gates re-verified by reviewer; one documented scope deviation (e2e `fixtures.ts` type widening); **merge pending user decision** |
 | [024 — persistence write-path robustness](024-persistence-write-path-robustness.md) | P1 / M | — | **DONE** — worktree `/tmp/opencode/dnspect-024` (branch `plan/024-persistence-write-path-robustness`, commits `fdf998c`, `38b23c6`); criteria + gate re-verified by reviewer; **merge pending user decision** |
 | [025 — manifest target-snapshot synthesis](025-manifest-target-snapshot-synthesis.md) | P1 / M | — | **DONE** — worktree `/tmp/opencode/dnspect-025` (branch `plan/025-manifest-target-snapshot-synthesis`, commits `5fbe3ac`, `7892c97`, `ad85928`); STOPPED once on `test_manager_lifecycle.py:155` (pre-fix contract assertion), resolved by reviewer (contract update, documented deviation), gate re-verified green; **merge pending user decision** |
-| [026 — frontend session fixes](026-frontend-session-fixes.md) | P2 / S-M | — | TODO |
-| [027 — orchestration hook unit tests](027-hook-unit-tests.md) | P2 / M | 026 (recommended) | TODO |
+| [026 — frontend session fixes](026-frontend-session-fixes.md) | P2 / S-M | — | **DONE** — worktree `/tmp/opencode/dnspect-026` (branch `plan/026-frontend-session-fixes`, 5 commits `b069943..edf5e6f`); criteria + gates re-verified by reviewer; **merge pending user decision** |
+| [027 — orchestration hook unit tests](027-hook-unit-tests.md) | P2 / M | 026 (recommended) | **DONE** — worktree `/tmp/opencode/dnspect-027` (branch `plan/027-hook-unit-tests`, branched from 026's tip, commits `8f65c62`, `700d3e2`); 23 tests, gates re-verified by reviewer; **merge pending user decision** |
 
 ## Roadmap wave dependency notes (019-022)
 
