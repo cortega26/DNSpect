@@ -775,12 +775,14 @@ def test_comparison_terminal_cleanup_bounds_in_memory_states(monkeypatch, tmp_pa
 )
 def test_resolver_supports_protocol_matrix(
     tmp_path,
+    monkeypatch,
     index_features: dict | None,
     resolver: str,
     protocol: str,
     expected: bool,
 ) -> None:
     """4-protocol x feature-presence matrix for _resolver_supports_protocol."""
+    monkeypatch.setattr("app.runner.dns_quic_available", lambda: True)
     manager = _make_manager(tmp_path)
     if index_features is None:
         manager.provider_index = {}
