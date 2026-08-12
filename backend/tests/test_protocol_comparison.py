@@ -34,6 +34,7 @@ FEATURED_INDEX = {
         "features": {
             "dot_hostname": "dns.quad9.net",
             "doh_url": "https://dns.quad9.net/dns-query",
+            "doq_hostname": "dns.quad9.net",
         },
     },
     COMODO: {
@@ -128,9 +129,20 @@ def _install_mocks(monkeypatch, *, latency: float = 15.0, fail_protocol: str | N
             raise RuntimeError("doh transport exploded")
         return _sample(resolver, domain, latency * 1.4)
 
+    def fake_doq(resolver: str, domain: str, timeout_sec: float, doq_hostname: str | None) -> dict:
+        del timeout_sec, doq_hostname
+        if domain.endswith(".dnspect.invalid"):
+            return _sample(resolver, domain, 0.0, failure_kind="nxdomain")
+        if domain == "badsig.go.dnscheck.tools":
+            return _sample(resolver, domain, 0.0, failure_kind="servfail")
+        if fail_for("doq", domain):
+            raise RuntimeError("doq transport exploded")
+        return _sample(resolver, domain, latency * 1.7)
+
     monkeypatch.setattr("app.runner.measure_query", fake_measure_query)
     monkeypatch.setattr("app.runner.run_dot_query", fake_dot)
     monkeypatch.setattr("app.runner.run_doh_query", fake_doh)
+    monkeypatch.setattr("app.runner.run_doq_query", fake_doq)
     monkeypatch.setattr("app.runner.select_engine", lambda: "dnspython")
 
 
@@ -185,6 +197,17 @@ def test_protocol_comparison_request_schema_rejects(payload: dict) -> None:
 def test_protocol_comparison_request_accepts_canonical_payload() -> None:
     response = client.post("/api/protocol-comparisons/preflight", json=_request())
     assert response.status_code == 200
+
+
+def test_comparison_canonical_order_with_doq() -> None:
+    request = ProtocolComparisonRequest.model_validate(
+        {
+            "protocols": ["doq", "udp", "doh", "dot"],
+            "target_snapshot": _target().model_dump(),
+            "scoring_profile": "speed",
+        }
+    )
+    assert [protocol.value for protocol in request.protocols] == ["udp", "dot", "doh", "doq"]
 
 
 # ---- Preflight contract --------------------------------------------------------
@@ -264,6 +287,57 @@ def test_preflight_unrequested_transport_endpoint_is_null(monkeypatch, tmp_path)
     identity = payload["endpoint_identities"][0]
     assert identity["dot_hostname"] == "one.one.one.one"
     assert identity["doh_url"] is None
+
+
+def test_comparison_doq_excludes_resolvers_without_endpoint(monkeypatch, tmp_path) -> None:
+    manager = _install_manager(monkeypatch, tmp_path)
+    monkeypatch.setattr("app.runner.dns_quic_available", lambda: True)
+    body = _request(
+        protocols=["udp", "doq"],
+        target_snapshot=_target([QUAD9, COMODO]).model_dump(),
+    )
+
+    response = client.post("/api/protocol-comparisons/preflight", json=body)
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["canonical_protocols"] == ["udp", "doq"]
+    assert payload["common_eligible_target_snapshot"]["resolver_ips"] == [QUAD9]
+    assert payload["common_eligible_target_snapshot"]["provider_ids"] == {QUAD9: "quad9"}
+    assert payload["exclusions"] == [
+        {"resolver": COMODO, "protocol": "doq", "code": "doq_hostname_missing"},
+    ]
+    assert payload["endpoint_identities"] == [
+        {
+            "resolver": QUAD9,
+            "udp_resolver_ip": QUAD9,
+            "dot_hostname": None,
+            "doh_url": None,
+        },
+    ]
+    assert payload["admissible"] is True
+    assert manager._protocol_comparison_states == {}
+
+
+def test_comparison_doq_unavailable_excludes_all(monkeypatch, tmp_path) -> None:
+    manager = _install_manager(monkeypatch, tmp_path)
+    monkeypatch.setattr("app.runner.dns_quic_available", lambda: False)
+    body = _request(
+        protocols=["udp", "doq"],
+        target_snapshot=_target([CLOUDFLARE, QUAD9]).model_dump(),
+    )
+
+    response = client.post("/api/protocol-comparisons/preflight", json=body)
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["common_eligible_target_snapshot"] is None
+    assert payload["endpoint_identities"] == []
+    assert payload["exclusions"] == [
+        {"resolver": CLOUDFLARE, "protocol": "doq", "code": "doq_unavailable"},
+        {"resolver": QUAD9, "protocol": "doq", "code": "doq_unavailable"},
+    ]
+    assert payload["admissible"] is False
+    assert payload["admission_reason_codes"] == ["no_common_targets"]
+    assert manager._protocol_comparison_states == {}
 
 
 def test_preflight_no_common_targets_is_admissible_false(monkeypatch, tmp_path) -> None:
@@ -391,6 +465,61 @@ def test_comparison_runs_canonical_order_and_completes(monkeypatch, tmp_path) ->
     assert cloudflare_row["deltas"]["score_total"] is not None
     assert state.manifest["diagnostic_policy_version"] == "protocol-v1"
     assert state.manifest["canonical_protocols"] == ["udp", "doh"]
+
+
+def test_comparison_full_cycle_with_doq(monkeypatch, tmp_path) -> None:
+    manager = _make_manager(tmp_path)
+    tasks = _sync_executor(manager, monkeypatch)
+    _install_mocks(monkeypatch)
+    monkeypatch.setattr("app.runner.dns_quic_available", lambda: True)
+
+    comparison_id = manager.start_protocol_comparison(
+        ProtocolComparisonRequest.model_validate(
+            _request(protocols=["doq", "udp", "doh", "dot"], target_snapshot=_target([QUAD9]).model_dump())
+        )
+    )
+    assert len(tasks) == 1
+    _run_tasks(tasks)
+    state = manager.get_protocol_comparison(comparison_id)
+    assert state.status == "done"
+    assert state.complete is True
+    assert [subrun["protocol"] for subrun in state.subruns] == ["udp", "dot", "doh", "doq"]
+    assert all(subrun["status"] == "done" for subrun in state.subruns)
+    assert state.manifest["manifest_version"] == 2
+    assert state.manifest["canonical_protocols"] == ["udp", "dot", "doh", "doq"]
+    assert [pair["candidate_protocol"] for pair in state.delta_pairs] == ["dot", "doh", "doq"]
+    udp_doh_pair = state.delta_pairs[1]
+    assert udp_doh_pair["baseline_protocol"] == "udp"
+    assert udp_doh_pair["candidate_protocol"] == "doh"
+    udp_doq_pair = state.delta_pairs[2]
+    assert udp_doq_pair["baseline_protocol"] == "udp"
+    assert udp_doq_pair["candidate_protocol"] == "doq"
+    row = udp_doq_pair["rows"][0]
+    assert row["resolver"] == QUAD9
+    assert row["baseline"] is not None
+    assert row["candidate"] is not None
+    assert row["deltas"]["median_ms"] == round(15.0 * 1.7 - 15.0, 4)
+
+
+def test_manifest_version_bumped_to_2(monkeypatch, tmp_path) -> None:
+    manager = _make_manager(tmp_path)
+    tasks = _sync_executor(manager, monkeypatch)
+    _install_mocks(monkeypatch)
+    monkeypatch.setattr("app.runner.dns_quic_available", lambda: True)
+
+    comparison_id = manager.start_protocol_comparison(
+        ProtocolComparisonRequest.model_validate(
+            _request(protocols=["udp", "doq"], target_snapshot=_target([QUAD9]).model_dump())
+        )
+    )
+    _run_tasks(tasks)
+
+    path = tmp_path / "runs" / "protocol-comparisons" / f"{comparison_id}.json"
+    assert path.exists()
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    assert raw["manifest"]["manifest_version"] == 2
+    assert raw["manifest"]["canonical_protocols"] == ["udp", "doq"]
+    assert [subrun["protocol"] for subrun in raw["subruns"]] == ["udp", "doq"]
 
 
 def test_comparison_uses_fixed_diagnostic_domain_across_subruns(monkeypatch, tmp_path) -> None:
