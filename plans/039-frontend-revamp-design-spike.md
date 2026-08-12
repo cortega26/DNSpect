@@ -1,4 +1,4 @@
-# Plan 039: Frontend revamp — design spike ("the instrument" + two-mode UX)
+# Plan 039: Frontend revamp — design spike ("The Instrument" + two-mode UX)
 
 > **Executor instructions**: Follow this plan step by step. Run every
 > verification command and confirm the expected result before moving to the
@@ -7,134 +7,185 @@
 > in `plans/README.md` — unless a reviewer dispatched you and told you they
 > maintain the index.
 >
-> **Drift check (run first)**: `git diff --stat b70ca05..HEAD -- frontend/src/styles.css frontend/src/App.tsx frontend/index.html frontend/src/lib/types.ts frontend/src/components/*.tsx frontend/src/lib/i18n-translations.ts frontend/src/lib/theme-context.ts frontend/src/lib/theme.tsx frontend/tests/e2e/*.spec.ts docs/DESIGN_SYSTEM.md`
+> **Drift check (run first)**: `git diff --stat 02ed0e9..HEAD -- frontend/src/styles.css frontend/src/App.tsx frontend/index.html frontend/src/lib/types.ts frontend/src/components/*.tsx frontend/src/lib/i18n-translations.ts frontend/src/lib/theme-context.ts frontend/src/lib/theme.tsx frontend/tests/e2e/*.spec.ts docs/DESIGN_SYSTEM.md`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
 
 ## Status
 
-- **Priority**: P1 (product direction — the user's explicit request)
-- **Effort**: L (design spike: audit, design language, prototype, decisions — no production code merged)
-- **Risk**: LOW (spike; the build plans that follow carry the real risk)
+- **Priority**: P1 (product direction — user-requested revamp, direction approved)
+- **Effort**: L (design spike: design doc + prototype; no production code merged)
+- **Risk**: LOW (spike; build plans 040+ carry the real risk)
 - **Depends on**: none
-- **Category**: direction (frontend revamp: intention, style, intuitiveness, two-mode UX, anti-slop)
-- **Planned at**: commit `b70ca05`, 2026-08-12
+- **Category**: direction (frontend revamp: "The Instrument" + Quick/Lab two-mode UX)
+- **Planned at**: commit `02ed0e9`, 2026-08-12
+- **Decisions**: the design direction, palette, typography, IA, and the five
+  gates were presented to the operator as a full recommendation and
+  **approved** ("I like it, go ahead"). The executor treats the spec below
+  as binding; only implementation-level surprises are reportable.
 
 ## Why this matters
 
-The user asked for a full front-end revamp: intention, style, intuitiveness
-(a possible non-technical vs. savvy two-tab split), and elimination of the
-"clear AI slop" aesthetics. The audit confirms the charge — the current UI
-is the generic generated-dashboard template: **Inter + JetBrains Mono**
-loaded from Google Fonts (`frontend/index.html:13-15`), teal-on-pale-gray
-palette (`styles.css:20-34`), tailwind-classic radii (8/12/16/pill,
-`styles.css:11-14`), 29 chip/segmented elements, centered max-width column
-layout, and a `design-system/MASTER.md` that is itself a generated token
-doc (2026-05-08) enshrining the cliché. The product's identity — "a
-precision DNS performance laboratory" (per the product stance) — deserves a
-visual language that reads as an instrument, not a SaaS dashboard. This
-spike picks the direction with evidence, prototypes it, and leaves the
-maintainer a short decision list; build plans follow.
+The current UI is the generic generated-dashboard template (Inter +
+JetBrains Mono via Google Fonts, teal-on-gray, tailwind radii, 29
+chip/segmented elements). The product is "a precision DNS performance
+laboratory"; the revamp gives it a visual language that reads as an
+instrument: calm, exact, technical, trustworthy. Two audiences get two
+modes (Quick check for non-technical, Lab for savvy) without touching the
+backend, determinism, or the manifest contract.
 
-## Current state (the slop inventory — audit evidence)
+## The approved design spec (binding)
 
-- `frontend/index.html:13-15` — Google Fonts: Inter (UI) + JetBrains Mono (data). Both generic; also an external-font dependency for a local-first Flatpak app (CSP at index.html:29 whitelists fonts.googleapis.com; offline the app falls back to system fonts — invisible branding drift).
-- `frontend/src/styles.css` — 2707 lines; `--font-ui: 'Inter'`, `--font-heading: var(--font-ui)` (styles.css:16-18); light-by-default `--bg:#f4f7fb` teal `--accent:#0D9488` (20-34) with a `[data-theme='dark']` toggle (81-82); radii 8/12/16/pill; standard card grid with `--shadow-md/lg` tails.
-- Components: 15 components + App.tsx (1450 lines) — hero → controls (DashboardControls, 29 chip/segmented elements) → run → dashboard (live ranking, charts, history, watch, comparisons). One long single-screen flow for every user.
-- `frontend/src/lib/theme-context.ts` / `theme.tsx` — light/dark toggle exists; no design tokens beyond the color vars.
-- Test-gated contracts the revamp must respect: `accessibility-i18n.spec.ts` (locale switching, specific copy assertions like 'History'/'Histórico', region chips), `i18n.copy.test.ts` (ES source of truth, key parity), the hook/component suites, e2e 26 specs, WCAG 2.2 contract (focus traps, skip link, keyboard).
-- Recharts (lazy) renders the charts — must be re-skinned to the new palette, not replaced (bundle constraint).
+### Concept
+"The Instrument" — the front panel of precision lab equipment. Dark
+chassis, hairline bezels, tick-marks, mono-forward numeric data, one
+orchestrated motion moment. Restraint: one accent at a time, no decoration
+that isn't functional. NOT a CRT/terminal cliché (no green-on-black,
+no scanlines), NOT glassmorphism, NOT a marketing dashboard.
 
-## The proposed direction — "The Instrument"
+### Typography
+- Display/headings: **Bricolage Grotesque** (OFL), tight tracking — brand,
+  verdict, section titles only.
+- UI/body/data: **Martian Mono** (OFL) — mono-forward instrument voice:
+  labels, buttons, body text, and EVERY numeric value in tabular figures
+  (latency ms, percentages, scores, timestamps).
+- **Self-hosted woff2** under `frontend/public/fonts/` (spike: under
+  `spikes/design-prototype/fonts/`), `font-display: swap`. CSP drops
+  `fonts.googleapis.com`/`fonts.gstatic.com` from the allowlist
+  (index.html:29). Fallbacks: monospace stack; body fallback to
+  `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`.
+- Verify current OFL releases + variable woff2 availability; if a font is
+  unavailable, swap from the shortlist (display: "Instrument Sans" then
+  "Spline Sans Mono"-class alternatives; data: "Fragment Mono") and record
+  the change — do not silently substitute.
 
-**Concept**: DNSpect is a measurement instrument, not a marketing dashboard.
-The UI should read like the front panel of precision lab equipment:
-dark chassis, phosphor accents, hairline grids, tick-marks, and
-mono-forward numeric data — calm, exact, technical. One strong moment:
-the run-in-progress ranking pulses like a live instrument readout.
+### Color (dark-first)
+| Token | Value | Use |
+|---|---|---|
+| `--chassis` | `#0B0E13` | page background (near-black, slight cool cast) |
+| `--panel` | `#12161D` | cards, panels |
+| `--panel-raised` | `#171C25` | hover/active surfaces, modals |
+| `--hairline` | `#232A36` | 1px borders, dividers, grid lines |
+| `--ink` | `#E6EAF1` | primary text |
+| `--ink-muted` | `#98A2B3` | secondary text |
+| `--accent-live` | `#E8A33D` | amber — live/attention (running, alerts) |
+| `--accent-active` | `#5FC9D6` | cyan — active/info (selection, links, progress) |
+| `--ok` | `#5BB98C` | success, healthy readouts |
+| `--bad` | `#E06C5F` | destructive, failure (muted red, not neon) |
+| `--focus` | `#5FC9D6` | keyboard focus rings (contrast-checked) |
 
-**Design language (primary proposal)**:
-- **Theme**: dark-first (the chassis); light mode optional and secondary,
-  decision-gated. Near-black instrument background (`#0B0E13`-class), not
-  blue-gray.
-- **Accents**: a restrained two-tone phosphor set — amber (`#E8A33D`-class)
-  for "live/attention" and a cold cyan (`#5CC8D7`-class) for
-  "active/info"; success/destructive kept semantically distinct. One
-  dominant + sharp accent, never evenly-distributed multi-color.
-- **Typography**: self-hosted woff2 (no Google Fonts — Flatpak offline +
-  egress-aligned): display/UI = **Bricolage Grotesque** (distinctive,
-  industrial-print character, OFL); data/mono = **Martian Mono**
-  (characterful technical mono, OFL). Fallbacks to system mono stack.
-- **Surfaces**: hairline `1px` borders (instrument bezels), flat panels
-  with minimal elevation (no floating-card shadows), tick/scale marks in
-  section headers, a faint noise/grain on the chassis for depth.
-- **Motion**: one orchestrated run-complete reveal + a live-ranking
-  "readout" pulse; everything else restrained. Respect
-  `prefers-reduced-motion` (existing `motion.ts` machinery reused).
-- **Anti-slop rules (enforced)**: no Inter/Roboto/Arial/system-ui for UI;
-  no purple gradients; no tailwind-classic radii/8/12/16 pill as the only
-  shape language (instrument corners: small radii or square + chamfer
-  accents); no floating shadows as the primary depth signal; no generic
-  empty states (each gets an instrument-flavored illustration/iconography).
+Light theme: secondary, re-tokened (paper `#F5F6F8`, ink `#1A212B`,
+hairline `#D9DEE6`, same accent semantics) — implemented in the build
+phase as a `[data-theme='light']` block; dark remains the default. All
+token pairs contrast-checked (WCAG AA; the a11y contract gates).
 
-**Alternative direction (for the decision gate)**: "The Field Manual" —
-ivory paper background, ink typography (e.g. **Fraunces** display +
-**Newsreader**-adjacent body... or a monospaced-accented editorial system),
-red-stamp accents, ruled-line grids. Warmer, more human; distinct from
-every other DNS tool. Two real options, one recommended.
+### Shape and elevation
+- Radii: `2px` (micro, data chips), `4px` (default controls/panels), `8px`
+  (largest surfaces only). Tables and readouts are square-cornered.
+- The ONE distinctive detail: the primary CTA gets a **chamfered corner**
+  (clipped corner via CSS `clip-path`) — a single instrument-flavored
+  signature, used nowhere else.
+- Elevation = hairlines and flat panels, NOT floating shadows. No
+  `box-shadow`-as-primary-depth.
 
-## The two-mode UX (intention)
+### Motion
+- Transitions 120–200ms; states fade/translate 2–4px max.
+- The one orchestrated moment: run-complete verdict reveal — staggered
+  fade+rise of the verdict card elements, values settle with a brief
+  pulse on the key number. `prefers-reduced-motion` → instant (existing
+  `motion.ts` machinery reused).
 
-The current single-flow serves both audiences poorly. Proposed IA:
-- **Quick check (novice tab)**: one primary action — "Check my DNS" — which
-  runs the current system-DNS resolvers against the speed goal with
-  sensible defaults and renders a single verdict card (recommendation +
-  plain-language explanation + apply-DNS guidance). No protocol/region/
-  goal machinery visible; progressive disclosure: one "Advanced" link into
-  Lab. Hides ranking tables by default; shows them behind a toggle.
-- **Lab (savvy tab)**: the full current surface, reorganized — controls
-  always visible, results/dashboard/watch/comparison as a proper sub-nav
-  instead of one long scroll.
-- The mode is presentation/orchestration only: both modes call the same
-  hooks and backend; determinism, manifests, and guardrails untouched.
-- A top-level `ModeSwitcher` (two-tab segmented control with keyboard
-  support per the a11y contract).
+### Two-mode IA
+- **Header**: brand mark (reworked in instrument style), **ModeSwitcher**
+  (two-tab segmented control: Quick check / Lab — keyboard-operable,
+  `role=tablist` per the existing a11y patterns), theme toggle, locale.
+- **Quick check** (default tab): one primary action — "Check my DNS".
+  Flow: single status line (Measuring…) → **verdict card**:
+  1. Big verdict in Bricolage ("Your DNS is good — keep it" / "Switch to
+     Cloudflare — ~34% faster median here");
+  2. Three plain-language reasons in bullet form (faster median, fewer
+     failures, better stability — each backed by a number in mono);
+  3. The numbers row (mono, tabular): median / p95 / failure rate / score;
+  4. Primary action: Apply (opens the existing GuidedApplyModal) +
+     secondary "Open in Lab".
+  Progressive disclosure: everything else behind "Open in Lab". No
+  protocol/region/goal machinery visible.
+- **Lab** (savvy tab): the full surface reorganized with a sub-nav:
+  **Benchmark** (controls), **Results** (ranking + charts), **History**
+  (runs + comparison), **Watch** (monitoring), **Protocol Lab**
+  (comparisons). Persistent context: the current run's status is always
+  visible in the header strip (Idle/Measuring/Complete/Failed + progress
+  + ETA).
+- Both modes are presentation over the existing hooks; determinism,
+  manifests, and guardrails untouched. No backend work expected.
+
+### Component skins (prototype coverage)
+- Buttons: primary (chamfered, amber-on-dark for the one CTA; semantic
+  `--ok`/`--bad` variants), lab/ghost (hairline, mono labels, uppercase
+  small-caps optional). 
+- Chips/segmented: square 2px, hairline, active = `--accent-active` fill
+  with dark text.
+- Ranking rows: resolver identity (name + provider in UI type), numbers
+  in mono with aligned decimals, rank badge (square, not pill),
+  protocol badge, reliability/blocking readouts.
+- Tables: tick-row headers (hairline + tick mark), mono numeric cells
+  right-aligned with tabular figures.
+- Empty states: instrument-flavored (e.g. "No runs yet — start one in the
+  Lab"), not generic illustration.
+- Modals: `--panel-raised`, square corners, focus-trap contract intact.
+- Charts (note for build plan 042): Recharts re-skinned via tokens —
+  mono ticks, hairline grids, series from the token palette, tooltip as
+  instrument readout. Not replaced (bundle constraint).
+
+### Anti-slop rules (enforced in build plans' done criteria)
+No Inter/Roboto/Arial/system-ui for UI; no purple gradients; no
+8/12/16/pill-only radii; no floating-shadow depth; no generic empty
+states; no centered-max-width-only layouts; no scanlines/CRT gimmicks.
+
+## Current state (the slop inventory)
+
+- `frontend/index.html:13-15` — Google Fonts: Inter + JetBrains Mono.
+- `frontend/src/styles.css` — 2707 lines; `--font-ui: 'Inter'`,
+  `--font-heading: var(--font-ui)` (16-18); light-by-default
+  `--bg:#f4f7fb`, teal `--accent:#0D9488` (20-34); radii 8/12/16/pill
+  (11-14); card grid with shadow tokens; `[data-theme='dark']` block (81-82).
+- Components: 15 components + App.tsx (1450 lines); one long single-screen
+  flow; DashboardControls has 29 chip/segmented elements.
+- `design-system/dnspect/MASTER.md` — a generated token doc (2026-05-08)
+  enshrining the generic aesthetic; superseded by `docs/DESIGN_SYSTEM.md`.
+- Test-gated contracts: `accessibility-i18n.spec.ts` (copy assertions,
+  locale switching), `i18n.copy.test.ts`, hook/component suites, e2e 26
+  specs, WCAG 2.2 (focus traps, skip link, keyboard).
 
 ## Commands you will need
 
 | Purpose   | Command                  | Expected on success |
 |-----------|--------------------------|---------------------|
-| Drift check | `git diff --stat b70ca05..HEAD -- <in-scope paths>` | exit 0 (empty or only expected merged-plan context) |
-| Spike tests | `cd frontend && npx vitest run src/lib/utils.test.ts src/hooks/useBenchmarkSession.test.ts` | all pass (prototype must not regress core suites) |
+| Drift check | `git diff --stat 02ed0e9..HEAD -- <in-scope paths>` | exit 0 (empty or only expected merged-plan context) |
+| Spike sanity | `cd frontend && npx vitest run src/lib/utils.test.ts src/hooks/useBenchmarkSession.test.ts` | all pass (production untouched) |
 | Frontend gates | `cd frontend && npm run lint && npm run typecheck && npm run build && npm test` | all exit 0 |
-| e2e (port-shifted) | per the environment note in prior plans (the :5173 operator server) | all pass |
 
 ## Scope
 
 **In scope** (spike artifacts only — no production code merged):
-- `docs/DESIGN_SYSTEM.md` (new) — the design language: tokens (colors,
-  typography with the chosen fonts' rationale, spacing, radii, elevation,
-  motion), component skin specs (buttons, chips, cards, tables, badges,
-  empty states), the two-mode IA diagram, and the anti-slop rules
-- `spikes/design-prototype/` (branch-local, deleted before merge unless
-  kept by the reviewer) — a Vite playground page: the Quick-check verdict
-  card, the Lab sub-nav, re-skinned buttons/chips/tables, the
-  instrument-chassis background, the run-complete reveal, the new font
-  loading (self-hosted woff2 dropped into `frontend/public/fonts/` for the
-  spike; real bundling is a build-plan concern)
-- `frontend/src/styles.css` — ONLY to the extent the spike needs a
-  prototype stylesheet (prefer a separate spike CSS file; do NOT restructure
-  the 2707-line production file in this plan)
-- Font license files (OFL) for the chosen fonts, in the spike dir
+- `docs/DESIGN_SYSTEM.md` (new) — the full spec above, written out:
+  tokens, typography with the self-hosting plan, component skins, the
+  two-mode IA, the anti-slop rules, and the decided gates (recorded as
+  decided, with rationale).
+- `spikes/design-prototype/` (branch-local) — a self-contained Vite
+  playground: the instrument chassis, re-skinned controls, the
+  ModeSwitcher mock, the Quick-check verdict card with the orchestrated
+  reveal, the Lab sub-nav, mono data readouts, one empty state.
+  `fonts/` holds the woff2 + OFL licenses. Screenshots captured into the
+  spike dir and referenced from the doc.
+- `frontend/index.html` — ONLY if the spike needs a scratch HTML file
+  (prefer the spike's own file; do NOT modify the production index.html).
 
-**Out of scope** (explicitly deferred to build plans 040+):
-- Any production component, App.tsx, index.html, i18n, or e2e changes
-- Recharts re-skinning (build plan)
-- The light-theme decision and implementation (decision gate)
-- Quick-mode backend work (none needed — it reuses existing endpoints; a
-  "system DNS quick run" is just `start()` with defaults)
-- i18n keys for new copy (build plan, with the copy-test gate)
+**Out of scope** (deferred to build plans 040+):
+- Production components, App.tsx, styles.css restructure, i18n keys, e2e
+  updates, Recharts re-skin, light-theme implementation, Quick-mode
+  wiring.
 
 ## Git workflow
 
@@ -144,132 +195,86 @@ The current single-flow serves both audiences poorly. Proposed IA:
 
 ## Steps
 
-### Step 1: Inventory the slop (done above; verify against live code)
+### Step 1: Verify the slop inventory and capture the before-state
 
-Re-verify the audit excerpts (fonts, palette, radii, chip count, CSP) and
-record them as the baseline in the design doc's "current state" section,
-with the file:line evidence. Also capture the current screenshots
-(`docs/screenshots/`) as the before-state reference.
+Re-verify the "Current state" excerpts against live files; record them in
+the doc with file:line. Note the current screenshots under
+`docs/screenshots/` as the before-state reference.
 
-**Verify**: the design doc's current-state section contains the exact
-excerpts with file:line.
+**Verify**: the doc's current-state section carries the exact excerpts.
 
 ### Step 2: Write `docs/DESIGN_SYSTEM.md`
 
-Sections:
-1. **Direction** — "The Instrument" concept statement (and the Field
-   Manual alternative summarized), with the product-identity grounding.
-2. **Design tokens** — full token table: chassis/panel/bezel colors,
-   phosphor accent set, semantic colors (ok/warn/destructive, with
-   contrast-checked values for the a11y contract), spacing scale, radii
-   (instrument language: square + small radii + chamfer accents; specify
-   exact token values), elevation (hairlines over shadows), typography
-   (chosen fonts + fallback stacks + usage rules: display for headings,
-   mono for ALL numeric data — latency, percentages, scores, timestamps),
-   motion (durations, the one orchestrated moment, reduced-motion
-   behavior).
-3. **Component skin specs** — buttons (primary/lab/ghost with the new
-   language), chips/segmented (the two-mode switcher), cards/panels
-   (bezel + hairline, no floating shadows), tables (tick-row headers,
-   mono numeric cells), badges, empty states (instrument-flavored),
-   modals (focus-trap contract preserved).
-4. **Two-mode IA** — the Quick/Lab diagram: what each mode shows, how
-   they share hooks/state, the ModeSwitcher behavior (keyboard, ARIA
-   roles per the existing segmented-control pattern), progressive
-   disclosure rules.
-5. **Anti-slop rules** — the checklist (no Inter/Roboto/system-ui, no
-   purple gradients, no 8/12/16-only radii, no floating-shadow depth, no
-   generic empty states, no centered-max-width-only layouts).
-6. **Decision gates** — the maintainer's list (see Step 5).
+Sections (all from the approved spec — write it out completely and
+precisely, it is the contract for build plans 040+):
+1. Concept ("The Instrument")
+2. Design tokens (the full table above + spacing scale + radii + elevation)
+3. Typography (fonts, usage rules, self-hosting plan, fallbacks, OFL)
+4. Component skins (buttons/chips/ranking rows/tables/empty states/modals/charts-notes)
+5. Two-mode IA (Quick anatomy, Lab sub-nav, header, status strip)
+6. Motion (durations, the one moment, reduced-motion)
+7. Anti-slop rules
+8. Decided gates (the five, with the approved answers and rationale)
 
-**Verify**: all six sections present (`grep -c "^## " docs/DESIGN_SYSTEM.md` ≥ 6).
+**Verify**: `grep -c "^## " docs/DESIGN_SYSTEM.md` ≥ 7.
 
-### Step 3: Font selection and self-hosting spike
+### Step 3: Fonts
 
-Pick the primary pair (Bricolage Grotesque + Martian Mono — verify current
-OFL releases and their variable-font woff2 availability; if either is
-unavailable on the chosen platform, swap from a shortlist of equally
-characterful alternatives and record why) and download the woff2 files into
-`spikes/design-prototype/fonts/` with their OFL licenses. Record the
-self-hosting plan for the build phase: files under `frontend/public/fonts/`
-(or a vite-plugin), `@font-face` declarations with `font-display: swap`,
-CSP update (drop fonts.googleapis.com/gstatic from the allowlist,
-index.html:29), and the Flatpak packaging note (fonts ship with the static
-assets — verify the PyInstaller/Flatpak asset bundling already covers
-`frontend/dist`).
+Download the variable woff2 files for Bricolage Grotesque and Martian Mono
+from their official OFL distribution points into
+`spikes/design-prototype/fonts/` with their OFL license texts. If either
+is unavailable, use the shortlist and record the swap. Record the
+self-hosting plan for the build phase (public/fonts + `@font-face` +
+`font-display: swap` + CSP change + Flatpak asset note).
 
-**Verify**: the woff2 files + OFL licenses exist in the spike dir; the doc
-records the fallback stacks and the CSP/packaging plan.
+**Verify**: woff2 + OFL files present; the doc records the CSP/packaging plan.
 
-### Step 4: Prototype — `spikes/design-prototype/`
+### Step 4: Prototype
 
-A standalone Vite playground page (its own `index.html` + `style.css` +
-small TSX-free demo or a minimal React mount — keep it dependency-free of
-the app's components):
-1. The instrument chassis background (grain + hairline grid) with the new
-   token set applied.
-2. Re-skinned controls: primary/lab buttons, chips, a two-tab ModeSwitcher
-   mock (Quick/Lab), a table with mono numeric cells and tick-row headers,
-   badges, an empty state.
-3. The **Quick-check verdict card**: big verdict (recommended resolver +
-   plain-language sentence), latency/score readouts in mono, the
-   "Advanced → Lab" link.
-4. The **run-complete reveal**: the one orchestrated motion moment
-   (staggered verdict + readout pulse), with `prefers-reduced-motion`
-   respected.
-5. Screenshots of the prototype captured to `spikes/design-prototype/`
-   for the review.
+`spikes/design-prototype/` (own index.html + style.css + minimal script;
+no dependency on app components):
+1. Chassis background (grain via subtle SVG noise data-URI + hairline
+   grid), token set applied as CSS custom properties.
+2. Re-skinned controls: primary (chamfered) + lab/ghost buttons, chips,
+   ModeSwitcher mock (Quick check / Lab), a data table with mono tabular
+   cells and tick-row headers, rank badges, one instrument empty state.
+3. **Quick-check verdict card** (the centerpiece): Bricolage verdict
+   line, three plain-language reasons with mono numbers, numbers row
+   (median/p95/failure/score), Apply + "Open in Lab" buttons.
+4. **Run-complete reveal**: staggered fade+rise with the key-number pulse;
+   `prefers-reduced-motion` yields the static variant.
+5. Screenshots (full page + verdict card detail + reduced-motion state)
+   into the spike dir.
 
-**Verify**: the prototype renders in a browser (serve via `npx vite` in
-the spike dir or a static server); screenshots exist; `prefers-reduced-motion`
-check produces the static variant.
+**Verify**: prototype renders (`npx vite` or a static server in the spike
+dir); screenshots exist.
 
-### Step 5: Decision gates (for the maintainer — recorded in the doc)
+### Step 5: Spike hygiene + gates
 
-1. **Direction**: The Instrument (recommended) vs The Field Manual.
-2. **Light theme**: keep a light variant (if so, it is secondary and gets
-   its own token set) or dark-only.
-3. **Font pair**: Bricolage Grotesque + Martian Mono vs the shortlist.
-4. **Quick-mode scope v1**: system-DNS + speed goal + verdict card only
-   (recommended) vs also exposing goal choice in Quick.
-5. **IA restructure depth in Lab**: sub-nav (recommended) vs keep the
-   single-scroll layout in Lab, only re-skinned.
+Run the frontend gates (production untouched — the spike is self-
+contained). Confirm `git status` shows only in-scope files. Unless the
+reviewer asks to keep it, `spikes/design-prototype/` is deleted before
+merge; the screenshots move into the doc or `docs/screenshots/`.
 
-**Verify**: the doc's decision-gate section lists all five with the
-recommendations.
-
-### Step 6: Spike hygiene + gates
-
-The spike must not regress the repo: run the frontend gates (the spike dir
-is excluded from the app build; verify `npm run build` and the vitest
-suites pass untouched) and confirm `git status` shows only the in-scope
-files. Unless the reviewer asks to keep it, `spikes/design-prototype/`
-is deleted before merge (the design doc + screenshots capture the
-findings — screenshots are moved into the doc or `docs/screenshots/`).
-
-**Verify**: `cd frontend && npm run lint && npm run typecheck && npm run build && npm test` → all exit 0; e2e (port-shifted) → all pass.
+**Verify**: `cd frontend && npm run lint && npm run typecheck && npm run build && npm test` → all exit 0; `git status` clean.
 
 ## Test plan
 
-- No new production tests — the spike is prototype + doc.
-- The existing suites must stay green (the spike touches nothing
-  production).
-- The build plans that follow (040+) will carry the test obligations:
-  updated e2e copy assertions if labels change, new component tests for
-  ModeSwitcher/Quick mode, token-level tests (a check that
-  Inter/JetBrains references are gone from the production stylesheet —
-  a grep-gate done criterion), and the i18n copy test for new keys.
+- No new production tests (spike).
+- Existing suites stay green.
+- Build plans 040+ carry the test obligations (e2e copy updates with the
+  precise-locator discipline, new component tests for ModeSwitcher/Quick
+  mode, token-level grep gates: no `Inter`/`JetBrains`/teal leftovers).
 
 ## Done criteria
 
 ALL must hold:
 
-- [ ] `docs/DESIGN_SYSTEM.md` exists with ≥ 6 sections incl. tokens, skins, two-mode IA, anti-slop rules, and the 5 decision gates
-- [ ] The spike prototype renders with screenshots captured under `spikes/design-prototype/`
-- [ ] Font woff2 + OFL licenses present in the spike dir; the self-hosting/CSP/packaging plan recorded in the doc
-- [ ] `cd frontend && npm run lint && npm run typecheck && npm run build && npm test` — all exit 0 (production untouched)
-- [ ] e2e (port-shifted) — all pass
-- [ ] No production files modified: `git status` shows only the in-scope list
+- [ ] `docs/DESIGN_SYSTEM.md` exists with ≥ 7 sections implementing the approved spec verbatim-in-substance
+- [ ] Spike prototype renders with screenshots under `spikes/design-prototype/`
+- [ ] Font woff2 + OFL licenses in the spike dir; the self-hosting/CSP/packaging plan recorded in the doc
+- [ ] `cd frontend && npm run lint && npm run typecheck && npm run build && npm test` — all exit 0
+- [ ] No production files modified (`git status`)
 - [ ] `plans/README.md` status row for 039 updated (SKIPPED if a reviewer dispatched you)
 
 ## STOP conditions
@@ -277,27 +282,19 @@ ALL must hold:
 Stop and report back (do not improvise) if:
 
 - Any "Current state" excerpt is wrong against the live files.
-- A chosen font is not OFL-licensed or its woff2 is unavailable — swap from
-  the shortlist and record the change; if no shortlist font works, STOP
-  and report the licensing question.
-- The prototype requires touching production components/App.tsx to work —
-  STOP (the spike must be self-contained; production changes are build
-  plans).
+- A chosen font is not OFL or its woff2 is unavailable AND the shortlist
+  also fails — report the licensing question.
+- The prototype requires touching production components to work.
 - A step's verification fails twice after a reasonable fix attempt.
 
 ## Maintenance notes
 
-- This spike's decision gates bind the build plans: do not let 040+ reopen
-  them without new evidence.
-- The anti-slop rules are the contract the build plans are graded against;
-  the "no Inter/JetBrains/teal" grep-gate belongs in every build plan's
-  done criteria.
-- Recharts re-skinning (042) must map the new tokens onto Recharts' props,
-  not replace the lazy-loaded dependency (bundle constraint).
-- The e2e copy assertions (`accessibility-i18n.spec.ts`) will need
-  careful updating when labels change in the build phase — the locator
-  discipline from plan 028 (precise roles, not bare text) is the
-  precedent.
-- The Quick mode reuses existing endpoints (`start()` with defaults +
-  system DNS) — no backend work is expected; if a build plan finds a
-  backend gap, it must come back through a plan amendment, not improvise.
+- The spec in this plan is the signed-off contract: build plans 040+
+  (design-system rollout, two-mode IA, charts re-skin) are graded against
+  it, and the anti-slop rules are their done-criteria grep gates.
+- Recharts re-skin (042) maps tokens onto Recharts props — no dependency
+  replacement.
+- e2e copy assertions change in the build phase with precise-locator
+  discipline (plan 028 precedent).
+- Quick mode reuses existing endpoints; no backend work expected — any
+  gap found in the build phase returns via plan amendment.
