@@ -658,6 +658,25 @@ def is_generated_run_id(benchmark_id: str) -> bool:
     return parsed.version == 4 and parsed.hex == benchmark_id
 
 
+def _build_history_summary(snapshot: dict[str, Any]) -> dict[str, Any]:
+    results = snapshot.get("results") or []
+    return {
+        "id": snapshot.get("id"),
+        "mode": snapshot.get("mode"),
+        "goal": snapshot.get("goal") or snapshot.get("scoring_profile"),
+        "scoring_profile": snapshot.get("scoring_profile") or snapshot.get("goal"),
+        "protocol": snapshot.get("protocol"),
+        "started_at": snapshot.get("started_at"),
+        "finished_at": snapshot.get("finished_at"),
+        "status": snapshot.get("status"),
+        "target_snapshot": snapshot.get("target_snapshot"),
+        "results_summary": [
+            {"provider_name": r.get("provider_name"), "resolver": r.get("resolver")} for r in results[:3]
+        ],
+        "origin": snapshot.get("origin"),
+    }
+
+
 class BenchmarkManager:
     def __init__(
         self,
@@ -847,6 +866,8 @@ class BenchmarkManager:
             if persisted is not None:
                 with suppress(OSError):
                     persisted.unlink()
+                with suppress(OSError):
+                    (self._data_runs_dir / f"{benchmark_id}.summary.json").unlink()
             raise ValueError("No se pudo iniciar benchmark en este momento.") from exc
         return benchmark_id
 
@@ -970,6 +991,17 @@ class BenchmarkManager:
             return {"runs": runs}
         for path in sorted(self._data_runs_dir.glob("[!.]*.json")):
             if path.name.endswith(".samples.json"):
+                continue
+            if path.name.endswith(".summary.json"):
+                continue
+            summary_path = self._data_runs_dir / f"{path.stem}.summary.json"
+            try:
+                summary_data = json.loads(summary_path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                summary_data = None
+            if isinstance(summary_data, dict):
+                summary_data.setdefault("id", path.stem)
+                runs.append(summary_data)
                 continue
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
@@ -1814,6 +1846,12 @@ class BenchmarkManager:
             self._write_json_file(
                 metadata_path,
                 json.dumps(state_snapshot, ensure_ascii=False, indent=2),
+            )
+
+            summary_path = self._data_runs_dir / f"{benchmark_id}.summary.json"
+            self._write_json_file(
+                summary_path,
+                json.dumps(_build_history_summary(state_snapshot), ensure_ascii=False, indent=2),
             )
 
             if samples_snapshot is not None:
