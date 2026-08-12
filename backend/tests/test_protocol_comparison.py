@@ -34,6 +34,7 @@ FEATURED_INDEX = {
         "features": {
             "dot_hostname": "dns.quad9.net",
             "doh_url": "https://dns.quad9.net/dns-query",
+            "doq": "yes",
             "doq_hostname": "dns.quad9.net",
         },
     },
@@ -304,7 +305,7 @@ def test_comparison_doq_excludes_resolvers_without_endpoint(monkeypatch, tmp_pat
     assert payload["common_eligible_target_snapshot"]["resolver_ips"] == [QUAD9]
     assert payload["common_eligible_target_snapshot"]["provider_ids"] == {QUAD9: "quad9"}
     assert payload["exclusions"] == [
-        {"resolver": COMODO, "protocol": "doq", "code": "doq_hostname_missing"},
+        {"resolver": COMODO, "protocol": "doq", "code": "doq_unsupported"},
     ]
     assert payload["endpoint_identities"] == [
         {
@@ -332,7 +333,7 @@ def test_comparison_doq_unavailable_excludes_all(monkeypatch, tmp_path) -> None:
     assert payload["common_eligible_target_snapshot"] is None
     assert payload["endpoint_identities"] == []
     assert payload["exclusions"] == [
-        {"resolver": CLOUDFLARE, "protocol": "doq", "code": "doq_unavailable"},
+        {"resolver": CLOUDFLARE, "protocol": "doq", "code": "doq_unsupported"},
         {"resolver": QUAD9, "protocol": "doq", "code": "doq_unavailable"},
     ]
     assert payload["admissible"] is False

@@ -32,7 +32,11 @@ bounded worker, and matched deltas with explicit endpoint caveats.
    DoQ comparisons require the optional `aioquic` extra
    (`dns.quic.have_quic`); when unavailable, eligible resolvers are excluded
    with the `doq_unavailable` code (the existing exclusion machinery). The
-   `manifest_version` was bumped to 2 for this extension.
+   `manifest_version` was bumped to 2 for this extension. Per-protocol
+   eligibility for every transport flows from one unified gate; for DoQ the
+   `doq: "yes"` feature flag is required (resolvers without it are excluded
+   with `doq_unsupported`), and an unknown protocol value is excluded with
+   `invalid_protocol`.
 
 3. **Shared preflight.** One manager-owned preflight serves both routes:
    `POST /api/protocol-comparisons/preflight` returns a typed
