@@ -9,6 +9,7 @@ import { RecommendedResolverPanel } from '@/components/RecommendedResolverPanel'
 import { ResolverRankingPanel } from '@/components/ResolverRankingPanel'
 import { RunComparisonPanel } from '@/components/RunComparisonPanel'
 import { RunHistoryPanel } from '@/components/RunHistoryPanel'
+import { WatchPanel, type WatchSessionConfig } from '@/components/WatchPanel'
 import { useBenchmarkSession } from '@/hooks/useBenchmarkSession'
 import { useGuidedVerification } from '@/hooks/useGuidedVerification'
 import { useProtocolComparison } from '@/hooks/useProtocolComparison'
@@ -410,6 +411,39 @@ function App() {
     comparisonOpen,
     comparisonProtocols,
     mode,
+    providers,
+    queriesText,
+    resolverCatalog,
+    runs,
+    scoringProfile,
+    selectedResolvers,
+    systemDns,
+    targetScope,
+    timeoutSec,
+  ])
+
+  const watchSessionConfig = useMemo<WatchSessionConfig | null>(() => {
+    const resolverIps = Array.from(selectedResolvers)
+    if (resolverIps.length === 0) return null
+    const scopeDerived = deriveTargetResolvers(providers, targetScope, systemDns)
+    const targetSnapshot = buildTargetSnapshot(
+      resolverIps,
+      { get: (ip) => resolverCatalog.get(ip)?.providerId ?? null },
+      selectionSourceFor(resolverIps, scopeDerived),
+    )
+    const customQueries = parseQueries(queriesText)
+    return {
+      target_snapshot: targetSnapshot,
+      protocol,
+      scoring_profile: scoringProfile,
+      mode,
+      runs,
+      timeout_sec: timeoutSec,
+      ...(customQueries.length > 0 ? { queries: customQueries } : {}),
+    }
+  }, [
+    mode,
+    protocol,
     providers,
     queriesText,
     resolverCatalog,
@@ -1178,6 +1212,13 @@ function App() {
           doqAvailable={doqAvailable}
         />
       )}
+
+      <WatchPanel
+        doqAvailable={doqAvailable}
+        running={isRunning}
+        currentSession={watchSessionConfig}
+        onCompare={(baselineId, candidateId) => selectComparisonPair(baselineId, candidateId)}
+      />
 
       {savedLastRunSummary && (
         <section className="card compact last-run-card fade-in-section">
