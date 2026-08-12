@@ -6,6 +6,15 @@ import type { Goal, Provider, ResolverResult } from './types'
 const envApiBase = import.meta.env.VITE_API_BASE
 export const API_BASE = typeof envApiBase === 'string' ? envApiBase : ''
 
+/**
+ * Rate metrics whose watch alert values are emitted by the backend as
+ * absolute 0-1 point values (mirrors `watch.py`'s relative/rate metric
+ * classification and `models.py`'s DEFAULT_WATCH_THRESHOLDS). The
+ * cross-language contract — backend point deltas, frontend ×100 display —
+ * is documented here; the canonical source lives in the backend.
+ */
+export const WATCH_RATE_METRICS: ReadonlySet<string> = new Set(['success_rate', 'failure_rate'])
+
 export function fmtMs(value: number | null): string {
   if (value === null || Number.isNaN(value)) return 'NA'
   return `${value.toFixed(2)} ms`
