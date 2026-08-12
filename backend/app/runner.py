@@ -823,6 +823,10 @@ class BenchmarkManager:
         except RuntimeError as exc:
             with self._lock:
                 self._states.pop(benchmark_id, None)
+            persisted = self._persisted_run_path(benchmark_id)
+            if persisted is not None:
+                with suppress(OSError):
+                    persisted.unlink()
             raise ValueError("No se pudo iniciar benchmark en este momento.") from exc
         return benchmark_id
 
@@ -921,9 +925,19 @@ class BenchmarkManager:
             return None
         try:
             data: dict[str, Any] = json.loads(result_path.read_text(encoding="utf-8"))
-            return data
-        except (json.JSONDecodeError, OSError):
+        except (OSError, ValueError):
             return None
+        if not isinstance(data, dict):
+            return None
+        if include_samples:
+            samples_path = self._data_runs_dir / f"{benchmark_id}.samples.json"
+            try:
+                samples_data = json.loads(samples_path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                samples_data = None
+            if isinstance(samples_data, dict):
+                return samples_data
+        return data
 
     def get_state(self, benchmark_id: str) -> BenchmarkState | None:
         with self._lock:
@@ -939,25 +953,27 @@ class BenchmarkManager:
                 continue
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
-                results = data.get("results") or []
-                entry = {
-                    "id": path.stem,
-                    "mode": data.get("mode"),
-                    "goal": data.get("goal") or data.get("scoring_profile"),
-                    "scoring_profile": data.get("scoring_profile") or data.get("goal"),
-                    "protocol": data.get("protocol"),
-                    "started_at": data.get("started_at"),
-                    "finished_at": data.get("finished_at"),
-                    "status": data.get("status"),
-                    "target_snapshot": data.get("target_snapshot"),
-                    "results_summary": [
-                        {"provider_name": r.get("provider_name"), "resolver": r.get("resolver")}
-                        for r in results[:3]
-                    ],
-                }
-                runs.append(entry)
-            except (json.JSONDecodeError, OSError):
+            except (OSError, ValueError):
                 continue
+            if not isinstance(data, dict):
+                continue
+            results = data.get("results") or []
+            entry = {
+                "id": path.stem,
+                "mode": data.get("mode"),
+                "goal": data.get("goal") or data.get("scoring_profile"),
+                "scoring_profile": data.get("scoring_profile") or data.get("goal"),
+                "protocol": data.get("protocol"),
+                "started_at": data.get("started_at"),
+                "finished_at": data.get("finished_at"),
+                "status": data.get("status"),
+                "target_snapshot": data.get("target_snapshot"),
+                "results_summary": [
+                    {"provider_name": r.get("provider_name"), "resolver": r.get("resolver")}
+                    for r in results[:3]
+                ],
+            }
+            runs.append(entry)
 
         def _sort_key(entry: dict[str, Any]) -> tuple[float, int, str]:
             started_raw = entry.get("started_at")
@@ -1195,7 +1211,9 @@ class BenchmarkManager:
                 return None
         try:
             data: dict[str, Any] = json.loads(result_path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
+        except (OSError, ValueError):
+            return None
+        if not isinstance(data, dict):
             return None
         progress = data.get("progress") or {}
         loaded = ProtocolComparisonState(
@@ -1676,7 +1694,9 @@ class BenchmarkManager:
             state.results = ranked_results
             state.engine = engine
             state.current_resolver = None
-            self._persist_run(benchmark_id)
+            state_snapshot = state.as_response(include_samples=False)
+            samples_snapshot = state.as_response(include_samples=True) if self.persist_samples else None
+        self._persist_run_payload(benchmark_id, state_snapshot, samples_snapshot)
 
     def _append_partial_result(self, benchmark_id: str, result: dict[str, Any]) -> None:
         with self._lock:
@@ -1694,7 +1714,8 @@ class BenchmarkManager:
             state.error = message
             state.finished_at = datetime.now(UTC).isoformat()
             state.current_resolver = None
-            self._persist_run(benchmark_id)
+            state_snapshot = state.as_response(include_samples=False)
+        self._persist_run_payload(benchmark_id, state_snapshot)
 
     def _format_storage_warning(self, exc: OSError) -> str:
         detail = str(exc).strip()
@@ -1718,27 +1739,48 @@ class BenchmarkManager:
             state.run_storage_warning = None
 
     def _write_json_file(self, path: Path, payload: str) -> None:
-        path.write_text(payload, encoding="utf-8")
+        tmp_path = path.with_suffix(path.suffix + ".tmp")
+        with tmp_path.open("w", encoding="utf-8") as f:
+            f.write(payload)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, path)
 
     def _persist_run(self, benchmark_id: str) -> None:
         state = self.get_state(benchmark_id)
         if not state:
             return
+        samples_snapshot = (
+            state.as_response(include_samples=True)
+            if self.persist_samples and state.status == "done"
+            else None
+        )
+        self._persist_run_payload(
+            benchmark_id,
+            state.as_response(include_samples=False),
+            samples_snapshot,
+        )
 
+    def _persist_run_payload(
+        self,
+        benchmark_id: str,
+        state_snapshot: dict[str, Any],
+        samples_snapshot: dict[str, Any] | None = None,
+    ) -> None:
         try:
             self._data_runs_dir.mkdir(parents=True, exist_ok=True)
 
             metadata_path = self._data_runs_dir / f"{benchmark_id}.json"
             self._write_json_file(
                 metadata_path,
-                json.dumps(state.as_response(include_samples=False), ensure_ascii=False, indent=2),
+                json.dumps(state_snapshot, ensure_ascii=False, indent=2),
             )
 
-            if self.persist_samples and state.status == "done":
+            if samples_snapshot is not None:
                 samples_path = self._data_runs_dir / f"{benchmark_id}.samples.json"
                 self._write_json_file(
                     samples_path,
-                    json.dumps(state.as_response(include_samples=True), ensure_ascii=False, indent=2),
+                    json.dumps(samples_snapshot, ensure_ascii=False, indent=2),
                 )
         except OSError as exc:
             self._set_storage_warning(benchmark_id, self._format_storage_warning(exc))
