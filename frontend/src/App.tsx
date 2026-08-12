@@ -24,7 +24,7 @@ import { useI18n } from '@/lib/useI18n'
 import type { Language } from '@/lib/i18n-translations'
 import { computeRunningEtaText, formatEtaRange } from '@/lib/eta'
 import { getCapabilities, getProviders, getSystemDns } from '@/lib/api'
-import { resolveEgressScope } from '@/lib/egress'
+import { isEgressWriteBackCurrent, resolveEgressScope } from '@/lib/egress'
 import {
   buildBenchmarkCsv,
   buildShareSummary,
@@ -208,6 +208,7 @@ function App() {
   const [targetScope, setTargetScope] = useState<TargetScope>('unknown')
   const [scopeSource, setScopeSource] = useState<'auto' | 'manual'>('auto')
   const scopeSourceRef = useRef<'auto' | 'manual'>('auto')
+  const selectionVersionRef = useRef(0)
   const [advancedOpen, setAdvancedOpen] = useState<boolean>(false)
 
   const session = useBenchmarkSession()
@@ -314,6 +315,7 @@ function App() {
 
         setProviders(providersRes)
         setSystemDns(dnsRes)
+        selectionVersionRef.current += 1
         setSelectedResolvers(new Set(deriveTargetResolvers(providersRes, 'unknown', dnsRes)))
 
         if (providersResult.status === 'rejected' || dnsResult.status === 'rejected') {
@@ -330,9 +332,11 @@ function App() {
       }
 
       // Automatic egress scope: best-effort, after the critical init settles.
+      const selectionVersionAtStart = selectionVersionRef.current
       const scope = await resolveEgressScope({
         signal: controller.signal,
-        isCurrent: () => scopeSourceRef.current === 'auto',
+        isCurrent: () =>
+          isEgressWriteBackCurrent(scopeSourceRef.current, selectionVersionAtStart, selectionVersionRef.current),
       })
       if (cancelled || scope === 'unknown') return
       setTargetScope(scope)
@@ -797,6 +801,7 @@ function App() {
   }
 
   function toggleResolver(ip: string) {
+    selectionVersionRef.current += 1
     setSelectedResolvers((prev) => {
       const next = new Set(prev)
       if (next.has(ip)) next.delete(ip)
@@ -817,6 +822,7 @@ function App() {
   function handleScopeSelect(scope: TargetScope) {
     scopeSourceRef.current = 'manual'
     setScopeSource('manual')
+    selectionVersionRef.current += 1
     setTargetScope(scope)
     setSelectedResolvers(new Set(deriveTargetResolvers(providers, scope, systemDns)))
   }
@@ -824,6 +830,7 @@ function App() {
   function handleScopeReset() {
     scopeSourceRef.current = 'auto'
     setScopeSource('auto')
+    selectionVersionRef.current += 1
     setTargetScope('unknown')
     setSelectedResolvers(new Set(deriveTargetResolvers(providers, 'unknown', systemDns)))
   }

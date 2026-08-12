@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { resolveEgressScope } from './egress'
+import { isEgressWriteBackCurrent, resolveEgressScope } from './egress'
 
 const withRegion = (region: string | null) => ({
   country_code: region === null ? null : 'XX',
@@ -89,5 +89,19 @@ describe('resolveEgressScope', () => {
       },
     })
     expect(scope).toBe('unknown')
+  })
+})
+
+describe('isEgressWriteBackCurrent', () => {
+  it('allows the write-back while the scope is automatic and untouched', () => {
+    expect(isEgressWriteBackCurrent('auto', 2, 2)).toBe(true)
+  })
+
+  it('blocks when the resolver set was edited since egress started', () => {
+    expect(isEgressWriteBackCurrent('auto', 2, 3)).toBe(false)
+  })
+
+  it('blocks when the scope source is manual even if the version is unchanged', () => {
+    expect(isEgressWriteBackCurrent('manual', 2, 2)).toBe(false)
   })
 })
