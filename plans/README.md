@@ -74,9 +74,7 @@ priority describes expected impact, effort is an implementation estimate.
 | [029 — DoQ comparison extension](archive/029-doq-comparison-extension.md) | P2 / M | — | **Complete** — `54ce261` |
 | [030 — history summary sidecars](archive/030-history-summary-sidecar.md) | P2 / M | — | **Complete** — `96ccaed` |
 
-## Deep-reaudit wave (031-038, 2026-08-13)
-
-Plans 031-038 implement the vetted deep-reaudit findings (written against `930dfb6`). 031 is P1 (the watch measured the wrong population); 032-033
+## Deep-reaudit wave (031-038, 2026-08-13)Plans 031-038 implement the vetted deep-reaudit findings (written against `930dfb6`). 031 is P1 (the watch measured the wrong population); 032-033
 complete the watch surface; 034-036 harden sessions, security, and tests;
 037 is release readiness; 038 is the frontend structure pass. Recommended
 execution order: 031 → 033 → 032 → 034 → 035 → 036 → 037, with 038 last
@@ -92,6 +90,17 @@ execution order: 031 → 033 → 032 → 034 → 035 → 036 → 037, with 038 l
 | [036 — test depth and history filtering](archive/036-test-depth.md) | P2 / M | 035 (unified gates) | **DONE** — **Complete** — `4c44f1d` |
 | [037 — docs and release readiness](archive/037-docs-release-readiness.md) | P2 / M | — | **Complete** — merged `b392b6d`; flatpak `generated-sources.json` regen deferred (release-checklist item) |
 | [038 — frontend structure](archive/038-frontend-structure.md) | P2 / M | 032, 034 | **DONE** — **Complete** — `bebfd47` |
+| [039 — frontend revamp design spike](039-frontend-revamp-design-spike.md) | P1 / L | — | TODO |
+
+## Frontend revamp wave (039+, 2026-08-12)
+
+The user-requested frontend revamp ("The Instrument" direction + Quick/Lab
+two-mode UX + anti-slop enforcement). 039 is the design spike (audit →
+`docs/DESIGN_SYSTEM.md` → prototype → decision gates). Build plans follow
+after its gates are signed off: 040 design-system rollout (tokens, fonts
+self-hosting, component skins, styles.css restructure), 041 two-mode IA
+(ModeSwitcher + Quick check + Lab sub-nav), 042 chart/visualization
+re-skin. Planned at `b70ca05`.
 
 ## Deep reaudit — considered and rejected (2026-08-13)
 
