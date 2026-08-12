@@ -1,5 +1,7 @@
 # Monitoring mode — design spike (plan 021)
 
+> Status: superseded — implemented by plan 028; this record documents the design and signed-off decisions.
+
 Design and decision record for the README roadmap items 1–3: continuous
 monitoring (background re-checking at intervals), scheduled/recurring
 benchmarks, and alerting when a resolver degrades. Produced by the plan-021

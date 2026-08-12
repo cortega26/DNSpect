@@ -1,7 +1,6 @@
-# DNSpect Quick Wins — Technical Specifications
+# DNSpect Quick Wins — Completed Work Record
 
-These are self-contained features with minimal architectural changes that deliver high user value.
-Each spec is designed so any developer can pick it up and implement independently.
+All items below shipped as of 1.3.0. This document is kept as a completed-work record: the specs describe what was implemented, and the acceptance criteria reflect the shipped state. It is no longer a list of implementable tasks.
 
 ---
 
@@ -91,7 +90,7 @@ stats["nxdomain_hijack_detected"] = hijack_detected
 - [x] Resolvers returning NXDOMAIN shown as clean
 - [x] Timeouts/SERVFAIL shown as inconclusive
 - [x] Hijack status visible in ranking table
-- [ ] CSV export includes the column
+- [x] CSV export includes the column
 
 ---
 
