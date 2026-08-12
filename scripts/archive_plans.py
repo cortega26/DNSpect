@@ -22,7 +22,6 @@ ARCHIVE_DIR = PLANS_DIR / "archive"
 INDEX = PLANS_DIR / "README.md"
 
 ROW_PATTERN = re.compile(r"^\| \[[^]]+\]\(([^)]+)\) \|.*\*\*Complete\*\*.*\|$")
-LINK_PATTERN = re.compile(r"\]\(([0-9]{3}-[^)]+\.md)\)")
 
 
 def main() -> int:
@@ -31,33 +30,45 @@ def main() -> int:
         return 1
 
     index = INDEX.read_text(encoding="utf-8")
+    lines: list[str] = []
     moved: list[str] = []
     skipped: list[str] = []
 
-    for row in index.splitlines():
-        match = ROW_PATTERN.match(row)
+    for line in index.splitlines():
+        match = ROW_PATTERN.match(line)
         if not match:
+            lines.append(line)
             continue
         target = match.group(1)
         if target.startswith("archive/"):
             skipped.append(target)
+            lines.append(line)
             continue
         source = PLANS_DIR / target
         if not source.is_file():
             print(f"warning: {target} listed Complete but missing", file=sys.stderr)
+            lines.append(line)
             continue
         ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
         destination = ARCHIVE_DIR / target
         if destination.exists():
             print(f"warning: {destination.relative_to(ROOT)} already exists", file=sys.stderr)
+            lines.append(line)
             continue
         import subprocess
 
         subprocess.run(["git", "mv", str(source), str(destination)], check=True)
-        index = LINK_PATTERN.sub(r"](archive/\1)", index, count=1)
+        # Rewrite only this row's own link. A global count=1 rewrite over the
+        # whole index would corrupt the first archive-eligible link in the
+        # file instead of the moved row's (the bug that mislinked 028/030).
+        line = line.replace(f"]({target})", f"](archive/{target})", 1)
+        lines.append(line)
         moved.append(target)
 
-    INDEX.write_text(index, encoding="utf-8")
+    if moved:
+        # The input file is newline-terminated; splitlines() drops that
+        # final newline, so re-add it when writing back.
+        INDEX.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     if moved:
         print(f"archived {len(moved)} plan(s):")
