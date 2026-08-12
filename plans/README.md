@@ -92,7 +92,7 @@ execution order: 031 → 033 → 032 → 034 → 035 → 036 → 037, with 038 l
 | [038 — frontend structure](archive/038-frontend-structure.md) | P2 / M | 032, 034 | **DONE** — **Complete** — `bebfd47` |
 | [039 — frontend revamp design spike](archive/039-frontend-revamp-design-spike.md) | P1 / L | — | **Complete** — `1c42b08` (spike prototype kept on main as the build reference) |
 | [040 — design-system rollout](040-design-system-rollout.md) | P1 / L | 039 | **DONE** — worktree `/tmp/opencode/dnspect-040` (branch `plan/040-design-system-rollout`, commits `652d63c`, `2930db2`); gates re-verified by reviewer (166 vitest, e2e 26/26, anti-slop greps clean, dark-default with no light flash); **merge pending user decision** |
-| [041 — two-mode IA](041-two-mode-ia.md) | P1 / L | 040 | TODO |
+| [041 — two-mode IA](041-two-mode-ia.md) | P1 / L | 040 | **DONE** — worktree `/tmp/opencode/dnspect-041` (branch `plan/041-two-mode-ia`, commits `f4091ce`, `d231edf`, `78c5bd0`); gates re-verified by reviewer (177 vitest incl. 11 new component tests, e2e 27/27 with the Quick-check scenario); **merge pending user decision** |
 
 ## Frontend revamp wave (039+, 2026-08-12)
 
