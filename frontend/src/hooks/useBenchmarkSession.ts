@@ -52,6 +52,7 @@ export function useBenchmarkSession(): BenchmarkSession {
   const startRequestSeqRef = useRef(0)
   const startInFlightRef = useRef(false)
   const selectRequestSeqRef = useRef(0)
+  const consecutiveErrorsRef = useRef(0)
   const mountedRef = useRef(false)
 
   useEffect(() => {
@@ -109,6 +110,7 @@ export function useBenchmarkSession(): BenchmarkSession {
           const next = await getBenchmark(id, false, controller.signal)
           if (!isCurrentSession()) return
           setStatus(next)
+          consecutiveErrorsRef.current = 0
           if (next.status === 'running' || next.status === 'queued') {
             scheduleNext(POLL_INTERVAL_MS)
           } else {
@@ -116,8 +118,13 @@ export function useBenchmarkSession(): BenchmarkSession {
           }
         } catch (e) {
           if (controller.signal.aborted || !isCurrentSession()) return
+          consecutiveErrorsRef.current += 1
           setError(e instanceof Error ? e.message : t('error.benchmarkPoll'))
-          stopPolling()
+          if (consecutiveErrorsRef.current >= 5) {
+            stopPolling()
+          } else {
+            scheduleNext(Math.min(1000 * 2 ** (consecutiveErrorsRef.current - 1), 30_000))
+          }
         } finally {
           pollInFlightRef.current = false
           if (pollAbortRef.current === controller) {
