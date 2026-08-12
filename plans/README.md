@@ -71,6 +71,11 @@ priority describes expected impact, effort is an implementation estimate.
 | [020 — headless CLI benchmark](020-headless-cli-benchmark.md) | P2 / M | 019 | **DONE** — implemented in worktree `/tmp/opencode/dnspect-020` (branch `plan/020-headless-cli-benchmark`, commits `4a3f732`, `f3caa56`, `4315f21`, `93faf7d`); criteria re-verified by reviewer; **merge pending user decision** |
 | [021 — monitoring mode design spike](021-monitoring-mode-design-spike.md) | P1 / L | — | **DONE** — worktree `/tmp/opencode/dnspect-021` (branch `plan/021-monitoring-mode-design-spike`, commits `7a8e58a`, `aa23449`); criteria + doc re-verified by reviewer; **merge pending user decision**; spike evidence files deleted per decision 2 |
 | [022 — DNS-over-QUIC design spike](022-dns-over-quic-design-spike.md) | P2 / L | — | **DONE** — worktree `/tmp/opencode/dnspect-022` (branch `plan/022-dns-over-quic-design-spike`, commits `e02b6a1`, `cc3cb19`); criteria + doc re-verified by reviewer; **merge pending user decision**; spike evidence files deleted per decision 2 |
+| [023 — DNS-over-QUIC standalone benchmark](023-dns-over-quic-standalone.md) | P1 / L | — | **DONE** — worktree `/tmp/opencode/dnspect-023` (branch `plan/023-dns-over-quic-standalone`, 10 commits `c095a6b..9f48204`); criteria + gates re-verified by reviewer; one documented scope deviation (e2e `fixtures.ts` type widening); **merge pending user decision** |
+| [024 — persistence write-path robustness](024-persistence-write-path-robustness.md) | P1 / M | — | **DONE** — worktree `/tmp/opencode/dnspect-024` (branch `plan/024-persistence-write-path-robustness`, commits `fdf998c`, `38b23c6`); criteria + gate re-verified by reviewer; **merge pending user decision** |
+| [025 — manifest target-snapshot synthesis](025-manifest-target-snapshot-synthesis.md) | P1 / M | — | **DONE** — worktree `/tmp/opencode/dnspect-025` (branch `plan/025-manifest-target-snapshot-synthesis`, commits `5fbe3ac`, `7892c97`, `ad85928`); STOPPED once on `test_manager_lifecycle.py:155` (pre-fix contract assertion), resolved by reviewer (contract update, documented deviation), gate re-verified green; **merge pending user decision** |
+| [026 — frontend session fixes](026-frontend-session-fixes.md) | P2 / S-M | — | TODO |
+| [027 — orchestration hook unit tests](027-hook-unit-tests.md) | P2 / M | 026 (recommended) | TODO |
 
 ## Roadmap wave dependency notes (019-022)
 
@@ -86,6 +91,13 @@ priority describes expected impact, effort is an implementation estimate.
   egress without the plan-004 policy process.
 - Execution order: 019 → 020 first (cheap, self-contained), then 021/022
   spikes in either order.
+- **Audit wave (024-027)**: from the post-churn reaudit (12 tabled findings,
+  all planned). 024 covers findings 1/2/4/5/7 (persistence cluster), 025
+  finding 3 (manifest snapshot), 026 findings 8/9/10/12 + a11y glyph, 027
+  finding 11 (hook tests). 027 is recommended after 026 (its tests pin 026's
+  behaviors); 023/024/025 are independent of each other and of 026/027 —
+  merge-order conflicts are limited to `runner.py` line regions (023/024/025)
+  and `App.tsx`/hooks (026/027).
 
 ## Signed-off decisions (2026-08-11)
 
@@ -127,12 +139,11 @@ The deep audit ran against `e09fd2d`; all 18 plans since merged. A full
 reaudit is intentionally **not** run before this wave — the spikes are the
 investigation, and the build plans are small or test-gated. Instead:
 
-1. **Before the build plans that follow the 021/022 spikes** (scheduler in
-   production code, DoQ implementation): run a targeted `standard` audit of
-   the post-`e09fd2d` churn — the protocol-comparison state machine,
-   history/compare endpoints, and the new frontend hooks (`useRunComparison`,
-   `useRunHistory`, `useProtocolComparison`, `useBenchmarkSession`) — plus a
-   dependency pass (`pip-audit`) once `aioquic` enters `pyproject.toml`.
+1. **Executed 2026-08-11** — targeted `standard` audit of the post-`e09fd2d`
+   churn (protocol-comparison state machine, history/manifest layer, frontend
+   hooks). Findings vetted and presented; selected ones become plans 024+.
+   Remaining for later: the dependency pass (`pip-audit`) once `aioquic` is
+   installed (plan 023 covers the pin; the audit runs at release-prep).
 2. **A full `deep` reaudit** is recommended right before the next release
    (v1.4.0): monitoring + DoQ would be the largest change since 1.3.0, and
    the audit then has design docs plus working code to judge.
