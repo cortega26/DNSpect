@@ -90,7 +90,7 @@ execution order: 031 → 033 → 032 → 034 → 035 → 036 → 037, with 038 l
 | [036 — test depth and history filtering](archive/036-test-depth.md) | P2 / M | 035 (unified gates) | **DONE** — **Complete** — `4c44f1d` |
 | [037 — docs and release readiness](archive/037-docs-release-readiness.md) | P2 / M | — | **Complete** — merged `b392b6d`; flatpak `generated-sources.json` regen deferred (release-checklist item) |
 | [038 — frontend structure](archive/038-frontend-structure.md) | P2 / M | 032, 034 | **DONE** — **Complete** — `bebfd47` |
-| [039 — frontend revamp design spike](039-frontend-revamp-design-spike.md) | P1 / L | — | TODO |
+| [039 — frontend revamp design spike](039-frontend-revamp-design-spike.md) | P1 / L | — | **DONE** — worktree `/tmp/opencode/dnspect-039` (branch `plan/039-frontend-revamp-design-spike`, 3 commits `7beb483..72cf6f8`); `docs/DESIGN_SYSTEM.md` (10 sections, signed-off contract) + prototype (16/16 programmatic checks, 5 screenshots, self-hosted fonts w/ OFL) verified by reviewer; production untouched (166 tests green); **merge pending user decision** |
 
 ## Frontend revamp wave (039+, 2026-08-12)
 
