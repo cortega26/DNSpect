@@ -50,12 +50,12 @@ export function ResultsTable({ results, primary, secondary, emptyMessage, onSele
                 <th>{t('results.colRank')}</th>
                 <th>{t('results.colDns')}</th>
                 <th>{t('results.colProvider')}</th>
-                <th>{t('results.colMedian')}</th>
-                <th>{t('results.colP95')}</th>
-                <th>{t('results.colAverage')}</th>
-                <th>{t('results.colTimeouts')}</th>
-                <th>{t('results.colOk')}</th>
-                <th>{t('results.colBlocking')}</th>
+                <th className="num">{t('results.colMedian')}</th>
+                <th className="num">{t('results.colP95')}</th>
+                <th className="num">{t('results.colAverage')}</th>
+                <th className="num">{t('results.colTimeouts')}</th>
+                <th className="num">{t('results.colOk')}</th>
+                <th className="num">{t('results.colBlocking')}</th>
                 <th>{t('results.colDetail')}</th>
               </tr>
             </thead>
@@ -80,14 +80,12 @@ export function ResultsTable({ results, primary, secondary, emptyMessage, onSele
                       </div>
                     </td>
                     <td>{row.provider_name}</td>
-                    <td className={latencyClass} style={{ fontVariantNumeric: 'tabular-nums' }}>
-                      {fmtMs(row.stats.median_ms)}
-                    </td>
-                    <td style={{ fontVariantNumeric: 'tabular-nums' }}>{fmtMs(row.stats.p95_ms)}</td>
-                    <td style={{ fontVariantNumeric: 'tabular-nums' }}>{fmtMs(row.stats.avg_ms)}</td>
-                    <td>{row.stats.timeout_count}</td>
-                    <td>{row.stats.ok_count}</td>
-                    <td style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    <td className={`num ${latencyClass}`}>{fmtMs(row.stats.median_ms)}</td>
+                    <td className="num">{fmtMs(row.stats.p95_ms)}</td>
+                    <td className="num">{fmtMs(row.stats.avg_ms)}</td>
+                    <td className="num">{row.stats.timeout_count}</td>
+                    <td className="num">{row.stats.ok_count}</td>
+                    <td className="num">
                       {row.stats.blocking_efficacy !== null && row.stats.blocking_test_count > 0
                         ? `${(row.stats.blocking_efficacy * 100).toFixed(0)}%`
                         : 'NA'}
