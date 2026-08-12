@@ -603,6 +603,8 @@ export class MockApi {
     this.handlers.set('GET /api/protocol-comparisons/:id', (params) => json(protocolComparisonStatusFixture(params.id, { status: 'running' })))
     this.handlers.set('POST /api/probe', () => json(probeFixture()))
     this.handlers.set('GET /api/geoip', () => json(geoIpFixture))
+    this.handlers.set('GET /api/health', () => json({ status: 'ok', version: '1.3.0', backend_time_utc: '2026-08-11T00:00:00Z', capabilities: { doq: false } }))
+    this.handlers.set('GET /api/watch', () => json({ watches: [] }))
     this.handlers.set('GET https://api.ipify.org/', () => json(publicIpFixture))
     this.handlers.set('GET https://fonts.googleapis.com/css', () => ({
       status: 200,

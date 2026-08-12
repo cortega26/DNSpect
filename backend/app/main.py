@@ -21,6 +21,7 @@ from .models import (
     ProtocolComparisonRequest,
     ProtocolComparisonStatusResponse,
     RunComparisonResponse,
+    WatchConfigRequest,
 )
 from .runner import BenchmarkManager, dns_quic_available, is_generated_run_id
 
@@ -163,6 +164,35 @@ def protocol_comparison_status(comparison_id: str) -> ProtocolComparisonStatusRe
     if state is None:
         raise HTTPException(status_code=404, detail="comparación no encontrada")
     return ProtocolComparisonStatusResponse.model_validate(state.as_response())
+
+
+@app.get("/api/watch")
+def list_watches() -> dict:
+    return manager.list_watches()
+
+
+@app.post("/api/watch")
+def create_watch(request: WatchConfigRequest) -> dict:
+    try:
+        watch_id = manager.create_watch(request)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"watch_id": watch_id}
+
+
+@app.delete("/api/watch/{watch_id}")
+def delete_watch(watch_id: str) -> dict:
+    if not manager.delete_watch(watch_id):
+        raise HTTPException(status_code=404, detail="watch no encontrado")
+    return {"deleted": watch_id}
+
+
+@app.get("/api/watch/{watch_id}/status")
+def watch_status(watch_id: str) -> dict:
+    status = manager.get_watch_status(watch_id)
+    if status is None:
+        raise HTTPException(status_code=404, detail="watch no encontrado")
+    return status
 
 
 @app.get("/api/benchmarks/{benchmark_id}")

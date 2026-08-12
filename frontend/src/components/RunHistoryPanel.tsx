@@ -1,4 +1,7 @@
+import { useState } from 'react'
+
 import { useI18n } from '@/lib/useI18n'
+import { isWatchRun } from '@/lib/utils'
 import type { RunHistoryEntry } from '@/lib/api'
 
 interface Props {
@@ -46,6 +49,7 @@ function goalLabelText(goal: string, t: (key: string) => string): string {
 
 export function RunHistoryPanel({ runs, loading, onSelectRun, baselineId, candidateId, onSetBaseline, onSetCandidate }: Props) {
   const { t } = useI18n()
+  const [showWatchRuns, setShowWatchRuns] = useState(false)
 
   if (loading) {
     return (
@@ -65,18 +69,51 @@ export function RunHistoryPanel({ runs, loading, onSelectRun, baselineId, candid
     )
   }
 
+  const hasWatchRuns = runs.some(isWatchRun)
+  const visibleRuns = showWatchRuns ? runs : runs.filter((run) => !isWatchRun(run))
+
+  if (visibleRuns.length === 0) {
+    return (
+      <section className="card compact history-panel">
+        <h3>{t('history.title')}</h3>
+        <p className="muted">{t('history.empty')}</p>
+        {hasWatchRuns ? (
+          <label className="toggle">
+            <input
+              type="checkbox"
+              checked={showWatchRuns}
+              onChange={(e) => setShowWatchRuns(e.target.checked)}
+            />
+            {t('watch.showWatchRuns')}
+          </label>
+        ) : null}
+      </section>
+    )
+  }
+
   return (
     <section className="card compact history-panel">
       <h3>{t('history.title')}</h3>
       <p className="muted">{t('history.count', { count: runs.length })}</p>
+      {hasWatchRuns ? (
+        <label className="toggle">
+          <input
+            type="checkbox"
+            checked={showWatchRuns}
+            onChange={(e) => setShowWatchRuns(e.target.checked)}
+          />
+          {t('watch.showWatchRuns')}
+        </label>
+      ) : null}
       <ol className="history-list">
-        {runs.map((run) => {
+        {visibleRuns.map((run) => {
           const isBaseline = run.id === baselineId
           const isCandidate = run.id === candidateId
           return (
             <li key={run.id} className="history-item">
               <button type="button" className="history-btn" onClick={() => onSelectRun(run.id)}>
                 <div className="history-item-header">
+                  {isWatchRun(run) ? <span className="badge watch-run-badge">watch</span> : null}
                   <span className={`badge ${goalBadgeClass((run.scoring_profile || run.goal) ?? '')}`}>
                     {goalLabelText((run.scoring_profile || run.goal) ?? '', t as (key: string) => string)}
                   </span>

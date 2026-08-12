@@ -40,8 +40,17 @@ def _wait_for_server(url: str, max_retries: int = 50, delay: float = 0.2) -> Non
         time.sleep(delay)
 
 
+def _start_watch_scheduler_if_enabled() -> None:
+    if os.getenv("DNS_SPEED_LAB_WATCH_ENABLED", "1").strip().lower() in {"1", "true", "yes"}:
+        from app.main import manager
+
+        manager._watch_scheduler.start()
+
+
 def _start_server(host: str, port: int) -> None:
     import uvicorn
+
+    _start_watch_scheduler_if_enabled()
 
     config = uvicorn.Config(app=fastapi_app, host=host, port=port, log_level="info")
     server = uvicorn.Server(config)
@@ -78,6 +87,8 @@ def _start_native_gui(host: str, port: int) -> None:
 
 def _start_browser_mode(host: str, port: int) -> None:
     import webbrowser
+
+    _start_watch_scheduler_if_enabled()
 
     def _open() -> None:
         _wait_for_server(f"http://{host}:{port}/api/health")

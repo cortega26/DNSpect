@@ -305,3 +305,50 @@ manifest-mismatched* run is correctly skipped in baseline selection.
    `runner.py:72-73`) rather than the single-protocol path — the monitor
    baseline matcher is protocol-agnostic because `protocol` is a manifest
    field, so no scheduler change is needed.
+
+## Implementation notes (plan 028)
+
+Decisions made while building the production implementation where the design
+left detail open:
+
+- **Run-origin tagging**: an additive `origin` field flows on
+  `BenchmarkRequest` → `BenchmarkConfig` → `BenchmarkState` → `as_response()`
+  → `list_history()` entries (value `"watch"` for watch runs). It is
+  deliberately **not** part of `RunManifest` and never participates in
+  `compare_runs` — manifest equality and the 16-field contract are untouched,
+  so a watch run stays comparable to a manual run with the same measured set.
+- **Baseline selection may reuse previous watch runs**: `origin == "watch"`
+  history entries are eligible baselines; the previous cycle's run is the
+  natural baseline, and the manifest-equality check keeps the selection
+  correct regardless of origin.
+- **Coarse scheduler loop**: the daemon thread (`_run_loop`) ticks every 5
+  seconds (`WATCH_LOOP_INTERVAL_SEC`); each watch's `interval_min` decides its
+  own due time, tracked in-memory per watch (`_last_tick_at`).
+- **Default thresholds applied at creation**: when the request omits
+  `thresholds`, the model validator injects
+  `{"median_ms": 25.0, "failure_rate": 5.0, "success_rate": 5.0}` (needs
+  `validate_default=True` — Pydantic v2 does not run after-validators on
+  `default_factory` values otherwise).
+- **Env gate**: `DNS_SPEED_LAB_WATCH_ENABLED` (default on; harmless with no
+  watches) starts the scheduler from the launcher — inside `_start_server`
+  (headless + native) and before `uvicorn.run` in `_start_browser_mode`.
+- **Watch dir**: sibling `watch/` directory of the runs dir, override
+  `DNS_SPEED_LAB_WATCH_DIR`, atomic tmp + `os.replace` writes, schema
+  `watch_schema_version: 1`, one `{watch_id}.json` per watch with the same
+  canonical-UUIDv4-hex + containment rules as persisted run ids.
+- **Metric keys**: `WATCH_METRIC_KEYS` lives in `models.py` (mirror of
+  `COMPARISON_METRIC_KEYS` in `runner.py`) so `app/watch.py` does not import
+  `runner.py` (avoids a circular import through the manager).
+- **API validation note**: threshold/query validation errors surface as HTTP
+  422 (FastAPI's default for pydantic `ValidationError`); the route's 400
+  branch covers `ValueError` raised at creation time.
+- **Manager seam**: `BenchmarkManager` gains a `watch_dir` constructor
+  argument (defaults to `WATCH_DIR`) and four delegating methods
+  (`create_watch`, `delete_watch`, `list_watches`, `get_watch_status`); the
+  scheduler is created eagerly in `__init__` and started only by the launcher
+  gate.
+- **Alert event contract**: `threshold_alert` events carry `baseline_id`,
+  `run_id`, `resolver`, `metric`, `baseline_value`, `candidate_value`,
+  `delta` (relative % for `median_ms`/`p95_ms`/`blocking_efficacy`/
+  `score_total`; absolute 0-1 points for `success_rate`/`failure_rate`), and
+  `threshold` (configured value, e.g. `25.0` or `5.0`).

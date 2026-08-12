@@ -9,6 +9,7 @@ import { RecommendedResolverPanel } from '@/components/RecommendedResolverPanel'
 import { ResolverRankingPanel } from '@/components/ResolverRankingPanel'
 import { RunComparisonPanel } from '@/components/RunComparisonPanel'
 import { RunHistoryPanel } from '@/components/RunHistoryPanel'
+import { WatchPanel, type WatchSessionConfig } from '@/components/WatchPanel'
 import { useBenchmarkSession } from '@/hooks/useBenchmarkSession'
 import { useGuidedVerification } from '@/hooks/useGuidedVerification'
 import { useProtocolComparison } from '@/hooks/useProtocolComparison'
@@ -41,7 +42,7 @@ import {
 } from '@/lib/runtime'
 import { useTheme } from '@/lib/useTheme'
 import type { BenchmarkMode, BenchmarkProtocol, Provider, ResolverResult, ScoringProfile, SystemDnsPayload } from '@/lib/types'
-import { API_BASE, fmtMs, providersByGoal, regionLabelKey, resolverReliabilityScore } from '@/lib/utils'
+import { API_BASE, fmtMs, isWatchRun, latestUserRun, providersByGoal, regionLabelKey, resolverReliabilityScore } from '@/lib/utils'
 import {
   buildTargetSnapshot,
   deriveTargetResolvers,
@@ -421,6 +422,39 @@ function App() {
     timeoutSec,
   ])
 
+  const watchSessionConfig = useMemo<WatchSessionConfig | null>(() => {
+    const resolverIps = Array.from(selectedResolvers)
+    if (resolverIps.length === 0) return null
+    const scopeDerived = deriveTargetResolvers(providers, targetScope, systemDns)
+    const targetSnapshot = buildTargetSnapshot(
+      resolverIps,
+      { get: (ip) => resolverCatalog.get(ip)?.providerId ?? null },
+      selectionSourceFor(resolverIps, scopeDerived),
+    )
+    const customQueries = parseQueries(queriesText)
+    return {
+      target_snapshot: targetSnapshot,
+      protocol,
+      scoring_profile: scoringProfile,
+      mode,
+      runs,
+      timeout_sec: timeoutSec,
+      ...(customQueries.length > 0 ? { queries: customQueries } : {}),
+    }
+  }, [
+    mode,
+    protocol,
+    providers,
+    queriesText,
+    resolverCatalog,
+    runs,
+    scoringProfile,
+    selectedResolvers,
+    systemDns,
+    targetScope,
+    timeoutSec,
+  ])
+
   useEffect(() => {
     if (!protocolComparisonPayload) return
     const handle = window.setTimeout(() => {
@@ -464,6 +498,11 @@ function App() {
   const decisiveRanking = useMemo(() => status?.results ?? [], [status?.results])
   const sortedResults = decisiveRanking
   const primaryResult = useMemo(() => resolveRecommendedResult(status), [status])
+  const recommendationRun = useMemo(() => {
+    if (status?.status === 'done' && !isWatchRun(status)) return status
+    return latestUserRun(history)
+  }, [history, status])
+  const viewingWatchRun = useMemo(() => isWatchRun(status), [status])
   const picks = useMemo(() => {
     const primary = primaryResult?.resolver ?? decisiveRanking[0]?.resolver
     const secondary = decisiveRanking.find((item) => item.resolver !== primary)?.resolver
@@ -1179,6 +1218,13 @@ function App() {
         />
       )}
 
+      <WatchPanel
+        doqAvailable={doqAvailable}
+        running={isRunning}
+        currentSession={watchSessionConfig}
+        onCompare={(baselineId, candidateId) => selectComparisonPair(baselineId, candidateId)}
+      />
+
       {savedLastRunSummary && (
         <section className="card compact last-run-card fade-in-section">
           <h3 className="section-heading-icon">
@@ -1338,7 +1384,7 @@ function App() {
         />
       )}
 
-      {isCompleted && recommendationAvailable && primaryResult && (
+      {isCompleted && recommendationAvailable && primaryResult && recommendationRun !== null && !viewingWatchRun && (
         <RecommendedResolverPanel
           result={primaryResult}
           rank={primaryRank ?? 1}
@@ -1346,6 +1392,7 @@ function App() {
           improvementVsCurrentMs={improvementVsCurrentMs}
           recommendationWarning={status?.recommendation_warning ?? null}
           isSmallImprovement={isSmallImprovementLabel}
+          runOrigin={status?.origin ?? null}
           copyStatus={copyStatus}
           summaryCopyStatus={summaryCopyStatus}
           onApplyRecommended={applyRecommendation}

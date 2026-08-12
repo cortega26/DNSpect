@@ -134,6 +134,7 @@ export interface BenchmarkStatus {
   recommended_resolver?: string | null
   recommendation_warning?: string | null
   target_snapshot?: TargetSnapshot | null
+  origin?: 'watch' | null
 }
 
 export interface ProbeResult {
@@ -342,4 +343,58 @@ export interface ProtocolComparisonStatus {
   exclusions: ProtocolExclusion[]
   subruns: ProtocolSubrunResult[]
   delta_pairs: ProtocolDeltaPair[]
+}
+
+export interface WatchConfigPayload {
+  target_snapshot: TargetSnapshot
+  protocol?: BenchmarkProtocol
+  scoring_profile?: ScoringProfile
+  mode?: BenchmarkMode
+  runs?: number | null
+  timeout_sec?: number
+  interval_min: number
+  thresholds?: Record<string, number>
+  queries?: string[] | null
+}
+
+export interface WatchAlertEvent {
+  type: 'threshold_alert' | 'no_comparable_baseline' | 'watch_run_not_done'
+  baseline_id?: string | null
+  run_id?: string | null
+  resolver?: string
+  metric?: string
+  baseline_value?: number | null
+  candidate_value?: number | null
+  delta?: number | null
+  threshold?: number | null
+  status?: string | null
+  reason_codes?: string[]
+}
+
+export interface WatchRuntime {
+  active_run_id: string | null
+  last_run_id: string | null
+  last_evaluated_at: string | null
+  last_alert_at: string | null
+  alert_events: WatchAlertEvent[]
+}
+
+export interface WatchEntry {
+  watch_id: string
+  config: WatchConfigPayload
+  runtime: WatchRuntime
+}
+
+export interface WatchListResponse {
+  watches: WatchEntry[]
+}
+
+export interface WatchStatus {
+  watch_id: string
+  config: WatchConfigPayload
+  active_run_id: string | null
+  last_run_id: string | null
+  last_evaluated_at: string | null
+  last_alert_at: string | null
+  alert_events: WatchAlertEvent[]
 }

@@ -1,4 +1,5 @@
 import type { TranslationKey } from './i18n-translations'
+import type { RunHistoryEntry } from './api'
 import type { TargetScope } from './targetScope'
 import type { Goal, Provider, ResolverResult } from './types'
 
@@ -60,4 +61,14 @@ export function resolverBlockingScore(result: ResolverResult): number {
     return Math.max(0, Math.min(1, val))
   }
   return 0
+}
+
+export function isWatchRun(entry: { origin?: string | null } | null | undefined): boolean {
+  return entry?.origin === 'watch'
+}
+
+export function latestUserRun(history: RunHistoryEntry[]): RunHistoryEntry | null {
+  const candidates = history.filter((entry) => !isWatchRun(entry) && entry.status === 'done')
+  if (candidates.length === 0) return null
+  return [...candidates].sort((a, b) => b.started_at.localeCompare(a.started_at))[0] ?? null
 }
