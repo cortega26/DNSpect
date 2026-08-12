@@ -56,6 +56,8 @@ export function useGuidedVerification(onSystemDnsRefreshed: (dns: SystemDnsPaylo
       const requestSeq = verifySeqRef.current + 1
       verifySeqRef.current = requestSeq
       abortRef.current?.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
       setVerifyError(null)
       setVerification(null)
       setIsVerifying(true)
@@ -63,7 +65,7 @@ export function useGuidedVerification(onSystemDnsRefreshed: (dns: SystemDnsPaylo
       try {
         let latestSystemDns = systemDns
         try {
-          latestSystemDns = await getSystemDns()
+          latestSystemDns = await getSystemDns(controller.signal)
           if (requestSeq === verifySeqRef.current) {
             onSystemDnsRefreshed(latestSystemDns)
           }
@@ -84,11 +86,14 @@ export function useGuidedVerification(onSystemDnsRefreshed: (dns: SystemDnsPaylo
           return
         }
 
-        const probePayload = await probeResolvers({
-          resolvers: resolverTargets,
-          runs_per_resolver: 4,
-          timeout_sec: 1.5,
-        })
+        const probePayload = await probeResolvers(
+          {
+            resolvers: resolverTargets,
+            runs_per_resolver: 4,
+            timeout_sec: 1.5,
+          },
+          controller.signal,
+        )
         if (!shouldAcceptAsyncResult(requestSeq, verifySeqRef.current, mountedRef.current)) return
         const parsed = parseProbeResponse(probePayload)
         const recommendedProbe = parsed.get(recommendedResolver) ?? null

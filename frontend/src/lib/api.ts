@@ -37,8 +37,8 @@ export async function getCapabilities(signal?: AbortSignal): Promise<Capabilitie
   return (body.capabilities ?? { doq: false }) as Capabilities
 }
 
-export async function getSystemDns(): Promise<SystemDnsPayload> {
-  const res = await fetch(`${API_BASE}/api/dns/system`)
+export async function getSystemDns(signal?: AbortSignal): Promise<SystemDnsPayload> {
+  const res = await fetch(`${API_BASE}/api/dns/system`, { signal })
   if (!res.ok) throw new Error('No se pudo cargar /api/dns/system')
   return res.json()
 }
@@ -177,7 +177,7 @@ export async function getProtocolComparison(
   return res.json()
 }
 
-export async function probeResolvers(payload: ProbePayload): Promise<ProbeResponse> {
+export async function probeResolvers(payload: ProbePayload, signal?: AbortSignal): Promise<ProbeResponse> {
   const body: Record<string, unknown> = {
     resolvers: payload.resolvers,
   }
@@ -189,6 +189,7 @@ export async function probeResolvers(payload: ProbePayload): Promise<ProbeRespon
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+    signal,
   })
   if (!res.ok) {
     const detail = await safeError(res)
