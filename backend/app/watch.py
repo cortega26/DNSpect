@@ -92,11 +92,14 @@ class WatchStore:
 
     def _write_json_file(self, path: Path, payload: str) -> None:
         tmp_path = path.with_suffix(path.suffix + ".tmp")
-        with tmp_path.open("w", encoding="utf-8") as f:
-            f.write(payload)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp_path, path)
+        try:
+            with tmp_path.open("w", encoding="utf-8") as f:
+                f.write(payload)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, path)
+        except OSError as exc:
+            raise ValueError("No se pudo guardar la watch: " + str(exc)) from exc
 
     def list(self) -> list[str]:
         if not self._watch_dir.exists():
@@ -121,7 +124,10 @@ class WatchStore:
         path = self.file_path(watch_id)
         if path is None:
             raise ValueError("watch_id inválido")
-        self._watch_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self._watch_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise ValueError("No se pudo guardar la watch: " + str(exc)) from exc
         self._write_json_file(path, json.dumps(data, ensure_ascii=False, indent=2))
 
     def delete(self, watch_id: str) -> bool:
@@ -130,7 +136,7 @@ class WatchStore:
             return False
         try:
             path.unlink()
-        except FileNotFoundError:
+        except OSError:
             return False
         with suppress(OSError):
             tmp = path.with_suffix(path.suffix + ".tmp")
@@ -143,7 +149,7 @@ class SchedulerClock:
     """Testable now()/sleep() seam for the scheduler loop."""
 
     def now(self) -> float:
-        return time.monotonic()
+        return time.time()
 
     def sleep(self, seconds: float) -> None:
         time.sleep(seconds)
@@ -175,8 +181,10 @@ class WatchScheduler:
         self._manager = manager
         self._store = WatchStore(watch_dir=watch_dir)
         self._clock = clock or SchedulerClock()
+        self._lock = threading.Lock()
         self._last_tick_at: dict[str, float] = {}
-        self._stop_event = threading.Event()
+        self._due_cache: dict[str, tuple[float, float]] = {}
+        self._stop_event: threading.Event | None = None
         self._thread: threading.Thread | None = None
 
     # -- store-backed manager API -----------------------------------------
@@ -195,11 +203,14 @@ class WatchScheduler:
             },
         }
         self._store.save(watch_id, data)
+        self._due_cache.pop(watch_id, None)
         return watch_id
 
     def delete(self, watch_id: str) -> bool:
-        self._last_tick_at.pop(watch_id, None)
-        return self._store.delete(watch_id)
+        with self._lock:
+            self._last_tick_at.pop(watch_id, None)
+            self._due_cache.pop(watch_id, None)
+            return self._store.delete(watch_id)
 
     def list_watches(self) -> dict[str, list[dict[str, Any]]]:
         watches: list[dict[str, Any]] = []
@@ -233,39 +244,71 @@ class WatchScheduler:
 
     # -- scheduler loop -----------------------------------------------------
 
-    def _run_loop(self) -> None:
-        while not self._stop_event.is_set():
+    def _run_loop(self, stop_event: threading.Event) -> None:
+        while not stop_event.is_set():
             with suppress(Exception):
                 self.tick_all()
             self._clock.sleep(WATCH_LOOP_INTERVAL_SEC)
 
     def start(self) -> None:
-        if self._thread is not None and self._thread.is_alive():
-            return
-        self._stop_event.clear()
-        self._thread = threading.Thread(target=self._run_loop, name="dnswatch", daemon=True)
-        self._thread.start()
+        with self._lock:
+            if self._thread is not None and self._thread.is_alive():
+                return
+            stop_event = threading.Event()
+            thread = threading.Thread(target=self._run_loop, name="dnswatch", daemon=True, args=(stop_event,))
+            thread.start()
+            self._stop_event = stop_event
+            self._thread = thread
 
     def stop(self) -> None:
-        self._stop_event.set()
-        if self._thread is not None:
-            self._thread.join(timeout=10)
-            self._thread = None
+        with self._lock:
+            stop_event = self._stop_event
+            thread = self._thread
+        if stop_event is not None:
+            stop_event.set()
+        if thread is None:
+            return
+        thread.join(timeout=10)
+        with self._lock:
+            if not thread.is_alive():
+                if self._thread is thread:
+                    self._thread = None
+                if self._stop_event is stop_event:
+                    self._stop_event = None
 
     def tick_all(self) -> None:
         now = self._clock.now()
         for watch_id in self._store.list():
+            cached = self._due_cache.get(watch_id)
+            if cached is not None and cached[1] > now:
+                continue
             data = self._store.load(watch_id)
             if data is None:
                 self._last_tick_at.pop(watch_id, None)
+                self._due_cache.pop(watch_id, None)
                 continue
             config = data.get("config") or {}
             interval_sec = float(config.get("interval_min", 30)) * 60
             last_tick = self._last_tick_at.get(watch_id)
-            if last_tick is not None and now - last_tick < interval_sec:
+            if last_tick is None:
+                persisted = (data.get("runtime") or {}).get("last_tick_at")
+                last_tick = (
+                    float(persisted)
+                    if isinstance(persisted, int | float)
+                    else now - interval_sec  # first-ever run fires on the next tick
+                )
+                self._last_tick_at[watch_id] = last_tick
+            next_due = last_tick + interval_sec
+            self._due_cache[watch_id] = (interval_sec, next_due)
+            if now < next_due:
                 continue
             self._last_tick_at[watch_id] = now
-            self.tick(watch_id, data)
+            data.setdefault("runtime", {})["last_tick_at"] = now
+            try:
+                self.tick(watch_id, data)
+            except Exception as exc:  # noqa: BLE001
+                self._record_error_event(watch_id, data, exc)
+            self._persist(watch_id, data)
 
     def tick(self, watch_id: str, data: dict[str, Any]) -> None:
         data.setdefault("runtime", {})
@@ -391,6 +434,14 @@ class WatchScheduler:
                 )
         return events
 
+    def _record_error_event(self, watch_id: str, data: dict[str, Any], exc: Exception) -> None:
+        with suppress(Exception):
+            self._record_events(
+                watch_id,
+                data,
+                [{"type": "watch_config_error", "message": str(exc)[:300]}],
+            )
+
     def _record_events(
         self,
         watch_id: str,
@@ -413,8 +464,12 @@ class WatchScheduler:
     def _persist(self, watch_id: str, data: dict[str, Any]) -> None:
         if not _is_generated_watch_id(watch_id):
             return
-        with suppress(OSError):
-            self._store.save(watch_id, data)
+        with self._lock:
+            path = self._store.file_path(watch_id)
+            if path is None or not path.exists():
+                return
+            with suppress(OSError, ValueError):
+                self._store.save(watch_id, data)
 
     def _build_request(self, config: dict[str, Any]) -> BenchmarkRequest:
         snapshot = TargetSnapshot.model_validate(config["target_snapshot"])

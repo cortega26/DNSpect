@@ -442,3 +442,27 @@ def test_watch_id_lookup_containment(manager: BenchmarkManager, tmp_path) -> Non
     assert client.get("/api/watch/../evil/status").status_code == 404
     assert not (tmp_path / "evil.json").exists()
     assert client.get("/api/watch").json() == {"watches": []}
+
+
+def test_watch_create_oserror_maps_to_400(manager: BenchmarkManager, tmp_path, monkeypatch) -> None:
+    fixed_id = uuid.uuid4().hex
+    monkeypatch.setattr("app.watch.uuid.uuid4", lambda: SimpleNamespace(hex=fixed_id))
+    watch_dir = tmp_path / "watch"
+    watch_dir.mkdir(parents=True, exist_ok=True)
+    (watch_dir / f"{fixed_id}.json.tmp").mkdir()
+
+    response = client.post("/api/watch", json=_create_payload())
+
+    assert response.status_code == 400
+    assert client.get("/api/watch").json() == {"watches": []}
+
+
+def test_watch_delete_oserror_maps_to_404(manager: BenchmarkManager, tmp_path) -> None:
+    fixed_id = uuid.uuid4().hex
+    watch_dir = tmp_path / "watch"
+    watch_dir.mkdir(parents=True, exist_ok=True)
+    (watch_dir / f"{fixed_id}.json").mkdir()
+
+    response = client.delete(f"/api/watch/{fixed_id}")
+
+    assert response.status_code == 404
