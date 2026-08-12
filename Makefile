@@ -1,4 +1,4 @@
-.PHONY: backend-install backend-dev backend-check backend-semgrep frontend-install frontend-dev frontend-check dev smoke dependency-audit
+.PHONY: backend-install backend-dev backend-check backend-semgrep frontend-install frontend-dev frontend-check frontend-check-e2e dev smoke dependency-audit
 
 backend-install:
 	cd backend && python3 -m venv .venv && . .venv/bin/activate && pip install -r constraints.txt -e .[dev]
@@ -25,7 +25,11 @@ frontend-dev:
 	cd frontend && npm run dev
 
 frontend-check:
-	cd frontend && npm run lint && npm run typecheck && npm run build
+	cd frontend && npm run lint && npm run typecheck && npm run build && npm test
+
+# Prerequisite: npx playwright install chromium (once, in frontend/)
+frontend-check-e2e:
+	cd frontend && npx playwright test --reporter=line
 
 dev:
 	bash scripts/dev.sh

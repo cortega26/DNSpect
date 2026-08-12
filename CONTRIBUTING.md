@@ -9,7 +9,8 @@ Gracias por contribuir a `DNSpect`.
    - Backend: `make backend-check` (ruff, formato, mypy, bandit y pytest)
    - Backend (SAST adicional): `make backend-semgrep`
    - Auditoría de dependencias: `make dependency-audit`
-   - Frontend: `npm run lint && npm run typecheck && npm test && npm run build`
+   - Frontend: `npm run lint && npm run typecheck && npm test && npm run build` (o `make frontend-check`)
+   - Frontend (e2e): `npm run test:e2e` (o `make frontend-check-e2e`; requiere `npx playwright install chromium` la primera vez)
 3. Escribe cambios pequeños y enfocados.
 4. Actualiza documentación y tests cuando aplique.
 5. Abre PR con descripción clara, motivación y evidencia de pruebas.

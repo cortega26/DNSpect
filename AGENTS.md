@@ -15,12 +15,14 @@ DNSpect is a DNS performance lab. Resolvers are test targets, not products. Valu
 ```bash
 make dev                 # both servers: backend :8000, frontend :5173 (same as scripts/dev.sh)
 make backend-check       # ruff check + ruff format --check + mypy + bandit + pytest (CI order)
-make frontend-check      # npm run lint && npm run typecheck && npm run build
+make frontend-check      # npm run lint && npm run typecheck && npm run build && npm test
+make frontend-check-e2e  # Playwright e2e suite (frontend/tests/e2e); prerequisite: npx playwright install chromium
 make smoke               # smoke test against a backend on port 8001 (not 8000)
 make flatpak-validate    # flatpak-builder build + manifest/appdir lint
 make backend-semgrep     # SAST; installs pinned semgrep into a throwaway venv
 cd backend && pytest tests/test_stats.py::test_x -q    # single test
 cd frontend && npm test                                 # vitest (co-located *.test.ts in src/lib/)
+cd frontend && npm run test:e2e                         # Playwright e2e (same as make frontend-check-e2e)
 ```
 
 Formatting is enforced by `ruff format` (black is a dev dep but never the gate). `npm run build` already runs typecheck; `npm test` does not build.
