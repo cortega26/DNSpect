@@ -12,11 +12,15 @@ export interface TargetSnapshot {
   provider_ids?: Record<string, string> | null
 }
 
-export type BenchmarkProtocol = 'udp' | 'dot' | 'doh'
+export type BenchmarkProtocol = 'udp' | 'dot' | 'doh' | 'doq'
 
 export const GOALS: Goal[] = ['speed', 'security', 'privacy', 'ad-blocking', 'family']
 
-export const PROTOCOLS: BenchmarkProtocol[] = ['udp', 'dot', 'doh']
+export const PROTOCOLS: BenchmarkProtocol[] = ['udp', 'dot', 'doh', 'doq']
+
+// The protocol-comparison contract is frozen at three transports (plan 023);
+// DoQ does NOT join the comparison. See docs/PROTOCOL_COMPARISON_METHODOLOGY.md.
+export const COMPARISON_PROTOCOLS: BenchmarkProtocol[] = ['udp', 'dot', 'doh']
 
 export interface ProviderFeatures {
   filtering: string

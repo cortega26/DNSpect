@@ -28,6 +28,7 @@ class BenchmarkProtocol(str, Enum):
     udp = "udp"
     dot = "dot"
     doh = "doh"
+    doq = "doq"
 
 
 class SelectionSource(str, Enum):

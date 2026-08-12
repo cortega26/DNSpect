@@ -22,10 +22,11 @@ const METRIC_KEYS: Array<{ key: keyof ProtocolMetrics; labelKey: 'comparison.met
   { key: 'score_total', labelKey: 'comparison.metricScore' },
 ]
 
-const PROTOCOL_LABEL_KEY: Record<BenchmarkProtocol, 'protocol.udp' | 'protocol.dot' | 'protocol.doh'> = {
+const PROTOCOL_LABEL_KEY: Record<BenchmarkProtocol, 'protocol.udp' | 'protocol.dot' | 'protocol.doh' | 'protocol.doq'> = {
   udp: 'protocol.udp',
   dot: 'protocol.dot',
   doh: 'protocol.doh',
+  doq: 'protocol.doq',
 }
 
 function fmtPct(value: number | null): string {

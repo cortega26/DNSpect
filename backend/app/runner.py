@@ -22,6 +22,7 @@ from typing import Any, Literal
 import dns.exception
 import dns.message
 import dns.query
+import dns.quic
 import dns.rcode
 import dns.resolver
 from platformdirs import user_data_path
@@ -127,6 +128,11 @@ with suppress(OSError):
 DRILL_RCODE_RE = re.compile(r"rcode:\s*([A-Z]+)", re.IGNORECASE)
 DRILL_ANSWER_RE = re.compile(r"^[a-zA-Z0-9._-]+\s+\d+\s+IN\s+A\s+([\d.]+)", re.MULTILINE)
 RELIABILITY_FAILURE_KINDS = {"timeout", "servfail", "refused", "noanswer", "other"}
+
+
+def dns_quic_available() -> bool:
+    return dns.quic.have_quic
+
 
 FIXED_DIAGNOSTIC_ATTEMPTS = 2
 
@@ -336,6 +342,15 @@ def _protocol_endpoint_eligibility(
         if not is_valid_doh_url(url):
             return None, "doh_url_invalid"
         return url, None
+    if protocol == BenchmarkProtocol.doq:
+        if not dns_quic_available():
+            return None, "doq_unavailable"
+        hostname = features.get("doq_hostname")
+        if not isinstance(hostname, str) or not hostname.strip():
+            return None, "doq_hostname_missing"
+        if not is_valid_dns_hostname(hostname):
+            return None, "doq_hostname_invalid"
+        return hostname, None
     return None, "dot_hostname_missing"
 
 
@@ -721,6 +736,9 @@ class BenchmarkManager:
             raise ValueError("No hay dominios para consultar")
 
         protocol = req.protocol.value
+
+        if protocol == "doq" and not dns_quic_available():
+            raise ValueError("DoQ no disponible en esta instalación (falta aioquic).")
 
         if req.resolvers:
             resolvers = req.resolvers
@@ -1739,6 +1757,8 @@ class BenchmarkManager:
             return bool(features.get("dot_hostname") or features.get("dot") == "yes")
         if protocol == "doh":
             return bool(features.get("doh_url"))
+        if protocol == "doq":
+            return features.get("doq") == "yes" and bool(features.get("doq_hostname"))
         return False
 
     def _measure_with_protocol(
@@ -1758,6 +1778,11 @@ class BenchmarkManager:
             features = provider_data.get("features") or {}
             doh_url = features.get("doh_url")
             return run_doh_query(resolver, domain, config.timeout_sec, doh_url)
+        if config.protocol == "doq":
+            provider_data = self.provider_index.get(resolver, {})
+            features = provider_data.get("features") or {}
+            doq_hostname = features.get("doq_hostname")
+            return run_doq_query(resolver, domain, config.timeout_sec, doq_hostname)
         return measure_query(resolver=resolver, domain=domain, timeout_sec=config.timeout_sec, engine=engine)
 
     def _run(self, benchmark_id: str, config: BenchmarkConfig) -> None:
@@ -2066,6 +2091,72 @@ def run_doh_query(resolver: str, domain: str, timeout_sec: float, doh_url: str |
             "error": None,
             "failure_kind": None,
             "answer_ips": answer_ips,
+        }
+    except Exception as exc:  # noqa: BLE001
+        fkind = classify_dnspython_exception(exc) if isinstance(exc, dns.exception.DNSException) else "other"
+        return {
+            "ok": False,
+            "ms": None,
+            "query": domain,
+            "error": str(exc),
+            "failure_kind": fkind,
+        }
+
+
+def run_doq_query(resolver: str, domain: str, timeout_sec: float, doq_hostname: str | None) -> dict[str, Any]:
+    if not dns_quic_available():
+        return {
+            "ok": False,
+            "ms": None,
+            "query": domain,
+            "error": "DoQ no disponible en esta instalación (falta aioquic).",
+            "failure_kind": "doq_unavailable",
+        }
+    q = dns.message.make_query(domain, "A")
+    hostname = doq_hostname or resolver
+    start = perf_counter()
+    try:
+        response = dns.query.quic(q, resolver, timeout=timeout_sec, port=853, server_hostname=hostname)
+        elapsed_ms = (perf_counter() - start) * 1000.0
+        rcode = dns.rcode.to_text(response.rcode())
+        failure_kind = _rcode_to_failure_kind(rcode)
+        if failure_kind is not None:
+            return {
+                "ok": False,
+                "ms": None,
+                "query": domain,
+                "error": f"DNS RCODE: {rcode}",
+                "failure_kind": failure_kind,
+            }
+        answer_ips = [
+            str(rr.address)
+            for ans in response.answer
+            for rr in ans
+            if rr.rdtype in (dns.rdatatype.A, dns.rdatatype.AAAA)
+        ]
+        return {
+            "ok": True,
+            "ms": round(elapsed_ms, 3),
+            "query": domain,
+            "error": None,
+            "failure_kind": None,
+            "answer_ips": answer_ips,
+        }
+    except dns.exception.Timeout:
+        return {
+            "ok": False,
+            "ms": None,
+            "query": domain,
+            "error": "timeout",
+            "failure_kind": "timeout",
+        }
+    except dns.query.NoDOQ:
+        return {
+            "ok": False,
+            "ms": None,
+            "query": domain,
+            "error": "DoQ no disponible en esta instalación (falta aioquic).",
+            "failure_kind": "doq_unavailable",
         }
     except Exception as exc:  # noqa: BLE001
         fkind = classify_dnspython_exception(exc) if isinstance(exc, dns.exception.DNSException) else "other"

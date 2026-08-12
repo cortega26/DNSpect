@@ -22,7 +22,7 @@ import { buildDnsClipboardText, buildGuidedDnsSet, detectPlatformGroup } from '@
 import { useI18n } from '@/lib/useI18n'
 import type { Language } from '@/lib/i18n-translations'
 import { computeRunningEtaText, formatEtaRange } from '@/lib/eta'
-import { getProviders, getSystemDns } from '@/lib/api'
+import { getCapabilities, getProviders, getSystemDns } from '@/lib/api'
 import { resolveEgressScope } from '@/lib/egress'
 import {
   buildBenchmarkCsv,
@@ -194,6 +194,7 @@ function App() {
 
   const [providers, setProviders] = useState<Provider[]>([])
   const [systemDns, setSystemDns] = useState<SystemDnsPayload | null>(null)
+  const [doqAvailable, setDoqAvailable] = useState<boolean>(true)
   const [selectedResolvers, setSelectedResolvers] = useState<Set<string>>(new Set())
   const [mode, setMode] = useState<BenchmarkMode>('standard')
   const [protocol, setProtocol] = useState<BenchmarkProtocol>('udp')
@@ -254,6 +255,26 @@ function App() {
   useFocusTrap(resolverListRef, resolverListOpen)
   const localeTriggerRef = useRef<HTMLButtonElement>(null)
   const localeOptionRefs = useRef<Array<HTMLButtonElement | null>>([])
+
+  useEffect(() => {
+    let cancelled = false
+    const controller = new AbortController()
+
+    void getCapabilities(controller.signal)
+      .then((caps) => {
+        if (cancelled) return
+        setDoqAvailable(caps.doq === true)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setDoqAvailable(false)
+      })
+
+    return () => {
+      cancelled = true
+      controller.abort()
+    }
+  }, [])
 
   useEffect(() => {
     const loaded: LoadSavedLastRunResult = loadSavedLastRun()
@@ -1143,6 +1164,7 @@ function App() {
           onToggleComparison={handleToggleComparison}
           onToggleComparisonProtocol={handleToggleComparisonProtocol}
           onStartComparison={handleStartComparison}
+          doqAvailable={doqAvailable}
         />
       )}
 
@@ -1555,6 +1577,7 @@ function App() {
           provider={providers.find((p) => p.id === selectedResult.provider_id)}
           isLoadingSamples={loadingSamples}
           canLoadSamples={Boolean(benchmarkId) && selectedResult.samples.length === 0}
+          doqAvailable={doqAvailable}
           onLoadSamples={() => {
             void handleLoadSamples()
           }}

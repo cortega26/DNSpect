@@ -34,6 +34,7 @@ dev = [
   "types-PyYAML==6.0.12.20250822"
 ]
 geoip = ["maxminddb==2.7.0"]
+doq = ["aioquic==1.3.0"]
 pack = [
   "pyinstaller==6.16.0"
 ]

@@ -136,6 +136,14 @@ non-default port today.
   module list and possibly `--hidden-import aioquic` need it). macOS wheel
   availability confirmed above — no build-from-source blocker.
 
+**Release prep (plan 023):** the standalone DoQ benchmark shipped with the
+`doq` optional extra (`aioquic==1.3.0`), so source installs measure DoQ only
+after `pip install -e .[doq]`. Before the next release, the packaged builds
+must include aioquic: add the dynamic submodule imports (e.g.
+`--hidden-import aioquic`) to `scripts/package_backend.py` and add aioquic
+(plus its runtime deps) to `packaging/flatpak/requirements.txt`, then regen
+the flatpak module list and the constraints header.
+
 ## 4. Comparison-contract decision
 
 The protocol-comparison contract (`ProtocolComparisonRequest`,
