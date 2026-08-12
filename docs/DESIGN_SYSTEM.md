@@ -114,10 +114,15 @@ chamfered CTA's clipped corner (see Component skins).
 
 ### Verification of OFL status (plan 039)
 
-- Bricolage Grotesque: OFL 1.1, variable woff2 available at
-  `github.com/google/fonts` (`ofl/bricolagegrotesque/`) — verified, used.
-- Martian Mono: OFL 1.1, variable woff2 available at
-  `github.com/google/fonts` (`ofl/martianmono/`) — verified, used.
+- Bricolage Grotesque: OFL 1.1, variable woff2 available — verified,
+  used. Downloaded as the latin subset of the variable file via the
+  official Google Fonts distribution (CSS API on `fonts.googleapis.com`,
+  woff2 on `fonts.gstatic.com`).
+- Martian Mono: OFL 1.1, variable woff2 available — verified, used.
+  Same distribution path.
+- Note: `github.com/google/fonts` (the Google-hosted source repo) ships
+  TTF only; the woff2 comes from the Google Fonts CDN, which serves the
+  OFL-licensed variable files subsetted per script.
 - License texts shipped alongside the woff2 in
   `spikes/design-prototype/fonts/`; both are OFL, no licensing question.
 - Shortlist if either had been unavailable (not needed): display
@@ -270,8 +275,10 @@ Verified against the live tree at plan-039 execution (commit `02ed0e9`):
   (11-14); `--shadow: 0 14px 38px ...` (38); `[data-theme='dark']` block
   (81-82).
 - Components: 14 component files + `App.tsx` (1450 lines); one long
-  single-screen flow; `DashboardControls.tsx` holds 13 source lines
-  matching `chip|segment` (9 `chip` + 4 `segment`).
+  single-screen flow; `DashboardControls.tsx` renders ~27 chip/segmented
+  elements across 13 source lines matching `chip|segment`
+  (3 mode + 4 protocol + 5 goal + 7 region + 1 comparison toggle +
+  4 comparison protocols + 3 timeout presets).
 - `design-system/dnspect/MASTER.md` — generated token doc (2026-05-08)
   enshrining the generic aesthetic; superseded by this document.
 - `docs/screenshots/` — the before-state visual reference (e.g.
