@@ -270,3 +270,65 @@ def test_summary_does_not_affect_get_fallback(manager: BenchmarkManager) -> None
     assert loaded is not None
     assert loaded["status"] == "done"
     assert loaded["results"] == _valid_run_payload(benchmark_id)["results"]
+
+
+def _seed_run(runs_dir, benchmark_id: str, *, origin: str, started_at: datetime) -> None:
+    payload = _valid_run_payload(benchmark_id)
+    payload["origin"] = origin
+    payload["started_at"] = started_at.isoformat()
+    payload["finished_at"] = started_at.isoformat()
+    _write_run(runs_dir, benchmark_id, payload)
+
+
+def test_history_route_excludes_watch_runs_by_default(manager: BenchmarkManager) -> None:
+    now = datetime.now(UTC)
+    user_id = uuid.uuid4().hex
+    watch_id = uuid.uuid4().hex
+    runs_dir = _runs_dir(manager)
+    _seed_run(runs_dir, user_id, origin="manual", started_at=now)
+    _seed_run(runs_dir, watch_id, origin="watch", started_at=now - timedelta(days=1))
+
+    default = client.get("/api/benchmarks/history")
+    assert default.status_code == 200
+    assert [entry["id"] for entry in default.json()["runs"]] == [user_id]
+
+    included = client.get("/api/benchmarks/history?include_watch_runs=1")
+    assert included.status_code == 200
+    assert [entry["id"] for entry in included.json()["runs"]] == [user_id, watch_id]
+
+    excluded = client.get("/api/benchmarks/history?include_watch_runs=0")
+    assert excluded.status_code == 200
+    assert [entry["id"] for entry in excluded.json()["runs"]] == [user_id]
+
+
+def test_list_history_unfiltered_at_manager(manager: BenchmarkManager) -> None:
+    now = datetime.now(UTC)
+    user_id = uuid.uuid4().hex
+    watch_id = uuid.uuid4().hex
+    runs_dir = _runs_dir(manager)
+    _seed_run(runs_dir, user_id, origin="manual", started_at=now)
+    _seed_run(runs_dir, watch_id, origin="watch", started_at=now - timedelta(days=1))
+
+    history = manager.list_history()
+    assert [entry["id"] for entry in history["runs"]] == [user_id, watch_id]
+
+
+def test_watch_runs_do_not_starve_user_runs(manager: BenchmarkManager) -> None:
+    now = datetime.now(UTC)
+    runs_dir = _runs_dir(manager)
+    user_ids = [uuid.uuid4().hex for _ in range(30)]
+    watch_ids = [uuid.uuid4().hex for _ in range(40)]
+    for index, watch_id in enumerate(watch_ids):
+        _seed_run(runs_dir, watch_id, origin="watch", started_at=now - timedelta(days=1, seconds=index))
+    for index, user_id in enumerate(user_ids):
+        _seed_run(runs_dir, user_id, origin="manual", started_at=now - timedelta(seconds=index))
+
+    filtered = client.get("/api/benchmarks/history")
+    assert filtered.status_code == 200
+    entries = filtered.json()["runs"]
+    assert [entry["id"] for entry in entries] == user_ids
+    assert all(entry["origin"] != "watch" for entry in entries)
+
+    unfiltered = client.get("/api/benchmarks/history?include_watch_runs=1")
+    assert unfiltered.status_code == 200
+    assert len(unfiltered.json()["runs"]) == 50
