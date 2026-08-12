@@ -27,8 +27,8 @@ Most "DNS speed test" pages run from a remote browser context or cloud vantage p
 - Local DNS benchmark API (`FastAPI`) and web UI (`React + Vite + TypeScript`).
 - **49 DNS providers** in the catalog with metadata (goals, tags, features) used for test selection.
 - **Scoring profiles** — five profiles (`speed`, `security`, `privacy`, `ad-blocking`, `family`) with goal-aware ranking weights. A scoring profile controls ranking policy; the immutable target snapshot records exactly which resolvers were measured. See `docs/PROFILE_MODEL.md`.
-- **Encrypted DNS benchmarking** — full DoT (DNS-over-TLS) and DoH (DNS-over-HTTPS) support with protocol selector in UI and capability filtering.
-- **Matched protocol comparison** — a single parent session measures one fixed common resolver set across UDP/DoT/DoH with the same query plan, then reports matched deltas. Resolvers missing a DoT hostname or DoH URL are excluded with a reason rather than guessed; results carry endpoint and transport caveats (local methodology, not a general privacy or performance claim). See `docs/PROTOCOL_COMPARISON_METHODOLOGY.md`.
+- **Encrypted DNS benchmarking** — DoT (DNS-over-TLS), DoH (DNS-over-HTTPS), and DoQ (DNS-over-QUIC, via the optional `doq` extra) support with protocol selector in UI and capability filtering, standalone and in protocol comparisons.
+- **Matched protocol comparison** — a single parent session measures one fixed common resolver set across UDP/DoT/DoH/DoQ with the same query plan, then reports matched deltas. Resolvers missing a DoT hostname, DoH URL, or DoQ hostname are excluded with a reason rather than guessed; results carry endpoint and transport caveats (local methodology, not a general privacy or performance claim). See `docs/PROTOCOL_COMPARISON_METHODOLOGY.md`.
 - **Region target scoping** — a region choice selects the measured resolver set (auto-detected through the approved egress GeoIP flow, or chosen manually). See `docs/REGION_TARGETING.md`.
 - Resolver benchmarking with per-run query samples and progress reporting.
 - Engine selection:
@@ -46,6 +46,8 @@ Most "DNS speed test" pages run from a remote browser context or cloud vantage p
 ### Advanced features
 - Guided "apply DNS" modal with platform-aware instructions and verification probe.
 - Live ranking panel during benchmark execution with motion budget controls.
+- **Monitoring (watch) mode** — scheduled background re-checks of a pinned target snapshot with threshold alerts; watchers persist, are enabled by default, and history/recommendations support origin filtering. See `docs/MONITORING_MODE.md`.
+- **Headless CLI** — `dnspect run` executes a full benchmark from the terminal with table/JSON/CSV output and scriptable exit codes.
 - **Dashboard panel** with post-benchmark overview metrics.
 - **Run history sidebar** for browsing and comparing past runs.
 - **Historical run comparison** — deterministic side-by-side deltas only for runs whose immutable run manifests match exactly (resolver targets, query plan, protocol, scoring policy, and catalog digest). Runs that do not share a manifest are never shown a numerical diff; they get an explicit reason instead. Comparisons are local, require matching immutable manifests, and do not prove a causal resolver regression.
@@ -228,15 +230,35 @@ cd frontend && npm run lint && npm run typecheck && npm test && npm run build
 | Determinism | May vary with server-side cohort/load | Deterministic ranking/scoring path with stable tie-breaks |
 | Input controls | Limited resolver/query control | Explicit resolvers, query list, run count, timeout, mode, protocol, goal |
 | Privacy | Traffic and metadata often leave local environment | Local-first operation; no telemetry codepath |
-| Provider catalog | Usually a handful of hardcoded resolvers | 50 providers across all regions with metadata |
+| Provider catalog | Usually a handful of hardcoded resolvers | 49 providers across all regions with metadata |
 | Validation guarantees | Usually undocumented | Enforced request validation and hard workload bounds |
 
 ## Roadmap
 
-- [ ] Continuous monitoring mode — background daemon re-checking resolvers at intervals
-- [ ] Scheduled/recurring benchmarks with persistent history
-- [ ] Configurable alerting when a resolver degrades beyond threshold
-- [ ] CLI-only mode (headless, no UI dependency)
+The 1.x features are shipped: monitoring/watch mode, threshold alerting, scheduled re-checks, the headless CLI, and DoQ are all in the tree. Post-release work will focus on packaged-build DoQ enablement (the `aioquic` extra is not yet included in the Flatpak/PyInstaller bundles — see `docs/DOQ_SUPPORT.md`) and follow-up polish.
+
+## Configuration
+
+All runtime configuration happens through `DNS_SPEED_LAB_*` environment variables. This table is the single reference.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `DNS_SPEED_LAB_HOST` | `127.0.0.1` | Bind host for the local server |
+| `DNS_SPEED_LAB_PORT` | `8000` | Bind port for the local server |
+| `DNS_SPEED_LAB_GUI` | `auto` | Packaged-app GUI mode: `auto`, `native`, `browser`, `headless` |
+| `DNS_SPEED_LAB_OPEN_BROWSER` | empty | Auto-open the browser on packaged start (any truthy value) |
+| `DNS_SPEED_LAB_WATCH_ENABLED` | `1` | Enable the watch scheduler on server start (`1`/`true`/`yes`) |
+| `DNS_SPEED_LAB_WATCH_DIR` | platformdirs `watch/` | Override the watch store directory |
+| `DNS_SPEED_LAB_DATA_DIR` | repo `data/` (or bundle `data/` when frozen) | Override the provider dataset root |
+| `DNS_SPEED_LAB_GEOIP_DB` | bundled `GeoLite2-City.mmdb` | Path to the MaxMind GeoLite2 database (missing file → GeoIP disabled) |
+| `DNS_SPEED_LAB_RUNS_DIR` | platformdirs `runs/` | Override the persisted-runs directory |
+| `DNS_SPEED_LAB_PERSIST_SAMPLES` | `0` | Persist full per-run samples to disk (`1`/`true`/`yes`) |
+| `DNS_SPEED_LAB_MAX_CONCURRENT_JOBS` | `2` | Maximum concurrent benchmark jobs |
+| `DNS_SPEED_LAB_MAX_QUEUED_JOBS` | `5` | Maximum queued benchmark jobs |
+| `DNS_SPEED_LAB_TERMINAL_TTL_SEC` | `3600` | Terminal benchmark states kept in memory (seconds) |
+| `DNS_SPEED_LAB_MAX_RETAINED_STATES` | `256` | Maximum retained benchmark states |
+| `DNS_SPEED_LAB_MAX_QUERY_ATTEMPTS` | `10000` | Aggregate query-attempt budget per benchmark |
+| `DNS_SPEED_LAB_MAX_ESTIMATED_DURATION_SEC` | `14400` | Aggregate estimated-duration budget per benchmark (4 h) |
 
 ## Contributing
 - Start here: `CONTRIBUTING.md`
