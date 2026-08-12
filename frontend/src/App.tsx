@@ -1,10 +1,11 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useFocusTrap } from '@/lib/useFocusTrap'
 import { DashboardControls, type TimeoutPreset } from '@/components/DashboardControls'
 import { DashboardPanel } from '@/components/DashboardPanel'
 import { GuidedApplyModal } from '@/components/GuidedApplyModal'
 import { LiveRankingPanel } from '@/components/LiveRankingPanel'
+import { LocaleMenu } from '@/components/LocaleMenu'
 import { RecommendedResolverPanel } from '@/components/RecommendedResolverPanel'
 import { ResolverRankingPanel } from '@/components/ResolverRankingPanel'
 import { RunComparisonPanel } from '@/components/RunComparisonPanel'
@@ -15,13 +16,13 @@ import { useGuidedVerification } from '@/hooks/useGuidedVerification'
 import { useProtocolComparison } from '@/hooks/useProtocolComparison'
 import { useRunComparison } from '@/hooks/useRunComparison'
 import { useRunHistory } from '@/hooks/useRunHistory'
+import { useTargetSnapshot, type ResolverCatalogItem } from '@/hooks/useTargetSnapshot'
 
 const ChartsPanel = lazy(() => import('@/components/ChartsPanel').then((m) => ({ default: m.ChartsPanel })))
 const ProtocolComparisonPanel = lazy(() => import('@/components/ProtocolComparisonPanel').then((m) => ({ default: m.ProtocolComparisonPanel })))
 const ResolverDetailModal = lazy(() => import('@/components/ResolverDetailModal').then((m) => ({ default: m.ResolverDetailModal })))
 import { buildDnsClipboardText, buildGuidedDnsSet, detectPlatformGroup } from '@/lib/applyGuide'
 import { useI18n } from '@/lib/useI18n'
-import type { Language } from '@/lib/i18n-translations'
 import { computeRunningEtaText, formatEtaRange } from '@/lib/eta'
 import { getCapabilities, getProviders, getSystemDns } from '@/lib/api'
 import { isEgressWriteBackCurrent, resolveEgressScope } from '@/lib/egress'
@@ -44,10 +45,8 @@ import { useTheme } from '@/lib/useTheme'
 import type { BenchmarkMode, BenchmarkProtocol, Provider, ResolverResult, ScoringProfile, SystemDnsPayload } from '@/lib/types'
 import { API_BASE, fmtMs, isWatchRun, latestUserRun, providersByGoal, regionLabelKey, resolverReliabilityScore } from '@/lib/utils'
 import {
-  buildTargetSnapshot,
   deriveTargetResolvers,
   scopeEligibleProviders,
-  selectionSourceFor,
   type TargetScope,
 } from '@/lib/targetScope'
 
@@ -119,13 +118,6 @@ const FALLBACK_PROVIDERS: Provider[] = [
   },
 ]
 
-
-interface ResolverCatalogItem {
-  resolver: string
-  providerName: string
-  providerId: string
-}
-
 function parseQueries(value: string): string[] {
   return Array.from(
     new Set(
@@ -183,12 +175,6 @@ function triggerDownload(content: BlobPart, fileName: string, mimeType: string) 
   window.URL.revokeObjectURL(url)
 }
 
-const languageOptions: Array<{ value: Language; code: string; srLabel: string }> = [
-  { value: 'es', code: 'ES', srLabel: 'Español' },
-  { value: 'en', code: 'EN', srLabel: 'English' },
-  { value: 'pt', code: 'PT', srLabel: 'Português' },
-]
-
 function App() {
   const { language, setLanguage, t } = useI18n()
   const { theme, toggleTheme } = useTheme()
@@ -223,7 +209,6 @@ function App() {
   const guidedVerification = useGuidedVerification(setSystemDns)
   const [savedLastRun, setSavedLastRun] = useState<SavedLastRunV1 | null>(null)
   const [savedRunNotice, setSavedRunNotice] = useState<string | null>(null)
-  const [localeMenuOpen, setLocaleMenuOpen] = useState<boolean>(false)
   const [nowMs, setNowMs] = useState<number>(() => Date.now())
   const [isInitializing, setIsInitializing] = useState<boolean>(true)
   const { history, historyLoading, refresh: refreshRunHistory } = useRunHistory(status?.id ?? null)
@@ -260,11 +245,8 @@ function App() {
     clear: clearProtocolComparison,
   } = protocolComparison
   const rankingPanelRef = useRef<HTMLElement | null>(null)
-  const localeMenuRef = useRef<HTMLDivElement>(null)
   const resolverListRef = useRef<HTMLDivElement>(null)
   useFocusTrap(resolverListRef, resolverListOpen)
-  const localeTriggerRef = useRef<HTMLButtonElement>(null)
-  const localeOptionRefs = useRef<Array<HTMLButtonElement | null>>([])
 
   useEffect(() => {
     let cancelled = false
@@ -392,16 +374,17 @@ function App() {
     return catalog
   }, [providers, systemDns?.resolvers, t])
 
+  const targetSnapshot = useTargetSnapshot({
+    resolvers: selectedResolvers,
+    providers,
+    scope: targetScope,
+    systemDns,
+    catalog: resolverCatalog,
+  })
+
   const protocolComparisonPayload = useMemo(() => {
     if (!comparisonOpen || comparisonProtocols.length < 2) return null
     const customQueries = parseQueries(queriesText)
-    const resolverIps = Array.from(selectedResolvers)
-    const scopeDerived = deriveTargetResolvers(providers, targetScope, systemDns)
-    const targetSnapshot = buildTargetSnapshot(
-      resolverIps,
-      { get: (ip) => resolverCatalog.get(ip)?.providerId ?? null },
-      selectionSourceFor(resolverIps, scopeDerived),
-    )
     return {
       protocols: comparisonProtocols,
       target_snapshot: targetSnapshot,
@@ -411,30 +394,10 @@ function App() {
       timeout_sec: timeoutSec,
       ...(customQueries.length > 0 ? { queries: customQueries } : {}),
     }
-  }, [
-    comparisonOpen,
-    comparisonProtocols,
-    mode,
-    providers,
-    queriesText,
-    resolverCatalog,
-    runs,
-    scoringProfile,
-    selectedResolvers,
-    systemDns,
-    targetScope,
-    timeoutSec,
-  ])
+  }, [comparisonOpen, comparisonProtocols, mode, queriesText, runs, scoringProfile, targetSnapshot, timeoutSec])
 
   const watchSessionConfig = useMemo<WatchSessionConfig | null>(() => {
-    const resolverIps = Array.from(selectedResolvers)
-    if (resolverIps.length === 0) return null
-    const scopeDerived = deriveTargetResolvers(providers, targetScope, systemDns)
-    const targetSnapshot = buildTargetSnapshot(
-      resolverIps,
-      { get: (ip) => resolverCatalog.get(ip)?.providerId ?? null },
-      selectionSourceFor(resolverIps, scopeDerived),
-    )
+    if (selectedResolvers.size === 0) return null
     const customQueries = parseQueries(queriesText)
     return {
       target_snapshot: targetSnapshot,
@@ -445,19 +408,7 @@ function App() {
       timeout_sec: timeoutSec,
       ...(customQueries.length > 0 ? { queries: customQueries } : {}),
     }
-  }, [
-    mode,
-    protocol,
-    providers,
-    queriesText,
-    resolverCatalog,
-    runs,
-    scoringProfile,
-    selectedResolvers,
-    systemDns,
-    targetScope,
-    timeoutSec,
-  ])
+  }, [mode, protocol, queriesText, runs, scoringProfile, selectedResolvers, targetSnapshot, timeoutSec])
 
   useEffect(() => {
     if (!protocolComparisonPayload) return
@@ -500,7 +451,6 @@ function App() {
   )
 
   const decisiveRanking = useMemo(() => status?.results ?? [], [status?.results])
-  const sortedResults = decisiveRanking
   const primaryResult = useMemo(() => resolveRecommendedResult(status), [status])
   const recommendationRun = useMemo(() => {
     if (status?.status === 'done' && !isWatchRun(status)) return status
@@ -523,14 +473,14 @@ function App() {
 
   const filteredResults = useMemo(() => {
     const term = searchTerm.trim().toLowerCase()
-    return sortedResults.filter((row) => {
+    return decisiveRanking.filter((row) => {
       const tags = providerById.get(row.provider_id)?.tags ?? []
       const searchable = `${row.resolver} ${row.provider_name} ${tags.join(' ')}`.toLowerCase()
       const matchesSearch = term.length === 0 || searchable.includes(term)
       const matchesReliable = !onlyReliable || row.stats.failure_rate <= 0.2
       return matchesSearch && matchesReliable
     })
-  }, [onlyReliable, providerById, searchTerm, sortedResults])
+  }, [onlyReliable, providerById, searchTerm, decisiveRanking])
   const workloadMetrics = useMemo(() => {
     const resolvers = selectedResolvers.size
     const safeRuns = Number.isFinite(runs) && runs > 0 ? runs : MODE_RUNS[mode]
@@ -619,15 +569,6 @@ function App() {
     const secondsPerOp = elapsedSec / current
     return remainingOps * secondsPerOp
   }, [status])
-  const activeLanguage = useMemo(
-    () => languageOptions.find((option) => option.value === language) ?? languageOptions[0],
-    [language],
-  )
-  const activeLanguageIndex = useMemo(
-    () => Math.max(0, languageOptions.findIndex((option) => option.value === language)),
-    [language],
-  )
-
   useEffect(() => {
     if (!isRunning) return
     setNowMs(Date.now())
@@ -638,45 +579,14 @@ function App() {
   }, [isRunning])
 
   useEffect(() => {
-    if (!localeMenuOpen) return
-
-    function handlePointerDown(event: PointerEvent) {
-      if (localeMenuRef.current && !localeMenuRef.current.contains(event.target as Node)) {
-        setLocaleMenuOpen(false)
-      }
-    }
-
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key !== 'Escape') return
-      setLocaleMenuOpen(false)
-      localeTriggerRef.current?.focus()
-    }
-
-    document.addEventListener('pointerdown', handlePointerDown)
-    document.addEventListener('keydown', handleEscape)
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown)
-      document.removeEventListener('keydown', handleEscape)
-    }
-  }, [localeMenuOpen])
-
-  useEffect(() => {
-    if (copyStatus !== 'success') return
-    const timer = window.setTimeout(() => setCopyStatus('idle'), 2200)
+    if (copyStatus !== 'success' && summaryCopyStatus !== 'success' && guidedCopyStatus !== 'success') return
+    const timer = window.setTimeout(() => {
+      if (copyStatus === 'success') setCopyStatus('idle')
+      if (summaryCopyStatus === 'success') setSummaryCopyStatus('idle')
+      if (guidedCopyStatus === 'success') setGuidedCopyStatus('idle')
+    }, 2200)
     return () => window.clearTimeout(timer)
-  }, [copyStatus])
-
-  useEffect(() => {
-    if (summaryCopyStatus !== 'success') return
-    const timer = window.setTimeout(() => setSummaryCopyStatus('idle'), 2200)
-    return () => window.clearTimeout(timer)
-  }, [summaryCopyStatus])
-
-  useEffect(() => {
-    if (guidedCopyStatus !== 'success') return
-    const timer = window.setTimeout(() => setGuidedCopyStatus('idle'), 2200)
-    return () => window.clearTimeout(timer)
-  }, [guidedCopyStatus])
+  }, [copyStatus, summaryCopyStatus, guidedCopyStatus])
 
   useEffect(() => {
     if (!status || status.status !== 'done' || viewingSavedRun) return
@@ -694,81 +604,6 @@ function App() {
     if (persisted) setSavedLastRun(persisted)
   }, [status, systemDns?.platform, viewingSavedRun])
 
-  function closeLocaleMenu(restoreTriggerFocus = false) {
-    setLocaleMenuOpen(false)
-    if (restoreTriggerFocus) {
-      requestAnimationFrame(() => {
-        localeTriggerRef.current?.focus()
-      })
-    }
-  }
-
-  function focusLocaleOption(index: number) {
-    if (languageOptions.length === 0) return
-    const safeIndex = (index + languageOptions.length) % languageOptions.length
-    localeOptionRefs.current[safeIndex]?.focus()
-  }
-
-  function openLocaleMenuAndFocus(index = activeLanguageIndex) {
-    setLocaleMenuOpen(true)
-    requestAnimationFrame(() => {
-      focusLocaleOption(index)
-    })
-  }
-
-  function onLocaleTriggerKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault()
-      if (event.key === 'ArrowUp') {
-        openLocaleMenuAndFocus(languageOptions.length - 1)
-      } else {
-        openLocaleMenuAndFocus(activeLanguageIndex)
-      }
-      return
-    }
-
-    if (event.key === 'Escape' && localeMenuOpen) {
-      event.preventDefault()
-      closeLocaleMenu(true)
-    }
-  }
-
-  function onLocaleItemKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>, index: number) {
-    if (event.key === 'ArrowDown') {
-      event.preventDefault()
-      focusLocaleOption(index + 1)
-      return
-    }
-
-    if (event.key === 'ArrowUp') {
-      event.preventDefault()
-      focusLocaleOption(index - 1)
-      return
-    }
-
-    if (event.key === 'Home') {
-      event.preventDefault()
-      focusLocaleOption(0)
-      return
-    }
-
-    if (event.key === 'End') {
-      event.preventDefault()
-      focusLocaleOption(languageOptions.length - 1)
-      return
-    }
-
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      closeLocaleMenu(true)
-      return
-    }
-
-    if (event.key === 'Tab') {
-      setLocaleMenuOpen(false)
-    }
-  }
-
   function handleStart() {
     guidedVerification.cancel()
 
@@ -780,12 +615,6 @@ function App() {
 
     const customQueries = parseQueries(queriesText)
     const resolverIps = Array.from(selectedResolvers)
-    const scopeDerived = deriveTargetResolvers(providers, targetScope, systemDns)
-    const targetSnapshot = buildTargetSnapshot(
-      resolverIps,
-      { get: (ip) => resolverCatalog.get(ip)?.providerId ?? null },
-      selectionSourceFor(resolverIps, scopeDerived),
-    )
     const payload = {
       mode,
       scoring_profile: scoringProfile,
@@ -1056,46 +885,7 @@ function App() {
                 </svg>
               )}
             </button>
-            <div className="locale-menu" ref={localeMenuRef}>
-              <button
-                ref={localeTriggerRef}
-                className={`select-inline locale-trigger${localeMenuOpen ? ' is-open' : ''}`}
-                type="button"
-                aria-label={`${t('header.language')}: ${activeLanguage.srLabel}`}
-                aria-haspopup="menu"
-                aria-controls="locale-menu-options"
-                aria-expanded={localeMenuOpen}
-                onClick={() => setLocaleMenuOpen((prev) => !prev)}
-                onKeyDown={onLocaleTriggerKeyDown}
-              >
-                <span className="locale-current" aria-hidden="true">
-                  <span className="locale-code-badge">{activeLanguage.code}</span>
-                </span>
-                <span className="select-caret" aria-hidden="true">▾</span>
-              </button>
-              {localeMenuOpen ? (
-                <div id="locale-menu-options" className="locale-dropdown" role="menu" aria-label={t('header.language')}>
-                  {languageOptions.map((option, index) => {
-                    const selected = option.value === language
-                    return (
-                      <button
-                        key={option.value}
-                        ref={(el) => { localeOptionRefs.current[index] = el }}
-                        className={`locale-item${selected ? ' is-active' : ''}`}
-                        type="button"
-                        role="menuitemradio"
-                        aria-label={option.srLabel}
-                        aria-checked={selected}
-                        onKeyDown={(event) => onLocaleItemKeyDown(event, index)}
-                        onClick={() => { setLanguage(option.value); closeLocaleMenu(true) }}
-                      >
-                        <span className="locale-code-badge">{option.code}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              ) : null}
-            </div>
+            <LocaleMenu language={language} onLanguageChange={setLanguage} />
           </div>
         </div>
 
@@ -1457,7 +1247,7 @@ function App() {
         </section>
       )}
 
-      {hasResults && sortedResults.length > 0 && (
+      {hasResults && decisiveRanking.length > 0 && (
         <>
           <section className="card compact card-subtle fade-in-section">
             <h3 className="section-heading-icon">

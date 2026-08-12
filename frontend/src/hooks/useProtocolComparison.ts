@@ -4,6 +4,8 @@ import { getProtocolComparison, preflightProtocolComparison, startProtocolCompar
 import type { ProtocolComparisonPreflight, ProtocolComparisonStartPayload, ProtocolComparisonStatus } from '@/lib/types'
 import { useI18n } from '@/lib/useI18n'
 
+import { usePolling } from './usePolling'
+
 const POLL_INTERVAL_MS = 1000
 
 export interface ProtocolComparisonState {
@@ -33,11 +35,7 @@ export function useProtocolComparison(): ProtocolComparisonState {
   const preflightSeqRef = useRef(0)
   const preflightAbortRef = useRef<AbortController | null>(null)
   const startRequestSeqRef = useRef(0)
-  const pollSessionIdRef = useRef(0)
-  const pollTimerRef = useRef<number | null>(null)
-  const pollAbortRef = useRef<AbortController | null>(null)
-  const pollInFlightRef = useRef(false)
-  const consecutiveErrorsRef = useRef(0)
+  const activeComparisonIdRef = useRef<string | null>(null)
   const pollFailedRef = useRef(false)
   const mountedRef = useRef(false)
 
@@ -85,88 +83,43 @@ export function useProtocolComparison(): ProtocolComparisonState {
     }
   }, [])
 
-  const stopPolling = useCallback(() => {
-    pollSessionIdRef.current += 1
-    if (pollTimerRef.current !== null) {
-      window.clearTimeout(pollTimerRef.current)
-      pollTimerRef.current = null
-    }
-    if (pollAbortRef.current) {
-      pollAbortRef.current.abort()
-      pollAbortRef.current = null
-    }
-    pollInFlightRef.current = false
-  }, [])
-
-  const startPolling = useCallback(
-    (id: string) => {
-      stopPolling()
-      const sessionId = pollSessionIdRef.current
-      let cancelled = false
-
-      const isCurrent = () =>
-        !cancelled && sessionId === pollSessionIdRef.current && mountedRef.current
-
-      const scheduleNext = (delayMs: number) => {
-        if (!isCurrent()) return
-        pollTimerRef.current = window.setTimeout(() => {
-          void pollOnce()
-        }, delayMs)
-      }
-
-      const pollOnce = async () => {
-        if (!isCurrent()) return
-        if (pollInFlightRef.current) {
-          scheduleNext(120)
-          return
+  const fetchFn = useCallback(
+    async (signal: AbortSignal): Promise<boolean> => {
+      const id = activeComparisonIdRef.current
+      if (!id) return false
+      try {
+        const next = await getProtocolComparison(id, signal)
+        if (signal.aborted) return false
+        setComparison(next)
+        setComparisonLoading(false)
+        if (pollFailedRef.current) {
+          pollFailedRef.current = false
+          setComparisonError(null)
         }
-        pollInFlightRef.current = true
-        const controller = new AbortController()
-        pollAbortRef.current = controller
-        try {
-          const next = await getProtocolComparison(id, controller.signal)
-          if (!isCurrent()) return
-          setComparison(next)
-          setComparisonLoading(false)
-          consecutiveErrorsRef.current = 0
-          if (pollFailedRef.current) {
-            pollFailedRef.current = false
-            setComparisonError(null)
-          }
-          if (next.status === 'running' || next.status === 'queued') {
-            scheduleNext(POLL_INTERVAL_MS)
-          } else {
-            stopPolling()
-          }
-        } catch (e) {
-          if (controller.signal.aborted || !isCurrent()) return
-          consecutiveErrorsRef.current += 1
-          pollFailedRef.current = true
-          setComparisonError(e instanceof Error ? e.message : t('error.protocolComparePoll'))
-          setComparisonLoading(false)
-          if (consecutiveErrorsRef.current >= 5) {
-            stopPolling()
-          } else {
-            scheduleNext(Math.min(1000 * 2 ** (consecutiveErrorsRef.current - 1), 30_000))
-          }
-        } finally {
-          pollInFlightRef.current = false
-          if (pollAbortRef.current === controller) {
-            pollAbortRef.current = null
-          }
-        }
-      }
-
-      void pollOnce()
-
-      return () => {
-        cancelled = true
-        if (sessionId === pollSessionIdRef.current) {
-          stopPolling()
-        }
+        return next.status === 'running' || next.status === 'queued'
+      } catch (e) {
+        if (signal.aborted) throw e
+        pollFailedRef.current = true
+        setComparisonError(e instanceof Error ? e.message : t('error.protocolComparePoll'))
+        setComparisonLoading(false)
+        throw e
       }
     },
-    [stopPolling, t],
+    [t],
+  )
+
+  const { start: startPolling, stop: stopPolling } = usePolling({
+    fetchFn,
+    intervalMs: POLL_INTERVAL_MS,
+    shouldContinue: () => mountedRef.current,
+  })
+
+  const startPollingFor = useCallback(
+    (id: string) => {
+      activeComparisonIdRef.current = id
+      return startPolling()
+    },
+    [startPolling],
   )
 
   useEffect(() => {
@@ -174,14 +127,8 @@ export function useProtocolComparison(): ProtocolComparisonState {
       stopPolling()
       return
     }
-    return startPolling(comparisonId)
-  }, [comparisonId, startPolling, stopPolling])
-
-  useEffect(() => {
-    return () => {
-      stopPolling()
-    }
-  }, [stopPolling])
+    return startPollingFor(comparisonId)
+  }, [comparisonId, startPollingFor, stopPolling])
 
   const runPreflight = useCallback((payload: ProtocolComparisonStartPayload) => {
     setPreflightPayload(payload)
@@ -190,7 +137,6 @@ export function useProtocolComparison(): ProtocolComparisonState {
   const start = useCallback(
     async (payload: ProtocolComparisonStartPayload) => {
       stopPolling()
-      consecutiveErrorsRef.current = 0
       const requestSeq = startRequestSeqRef.current + 1
       startRequestSeqRef.current = requestSeq
       setComparisonError(null)
@@ -211,7 +157,6 @@ export function useProtocolComparison(): ProtocolComparisonState {
   )
 
   const clear = useCallback(() => {
-    consecutiveErrorsRef.current = 0
     preflightSeqRef.current += 1
     startRequestSeqRef.current += 1
     preflightAbortRef.current?.abort()

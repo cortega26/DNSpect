@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { getBenchmark, startBenchmark } from '@/lib/api'
-import { isActivePollSession, shouldAcceptAsyncResult, shouldPollBenchmark } from '@/lib/runtime'
+import { shouldAcceptAsyncResult, shouldPollBenchmark } from '@/lib/runtime'
 import type { BenchmarkMode, BenchmarkProtocol, BenchmarkStatus, Goal, ResolverResult, ScoringProfile, TargetSnapshot } from '@/lib/types'
 import { useI18n } from '@/lib/useI18n'
+
+import { usePolling } from './usePolling'
 
 export interface BenchmarkStartPayload {
   mode: BenchmarkMode
@@ -44,15 +46,10 @@ export function useBenchmarkSession(): BenchmarkSession {
   const [loadingSamples, setLoadingSamples] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const pollTimerRef = useRef<number | null>(null)
-  const pollAbortRef = useRef<AbortController | null>(null)
-  const pollInFlightRef = useRef(false)
-  const pollSessionIdRef = useRef(0)
   const activePollBenchmarkIdRef = useRef<string | null>(null)
   const startRequestSeqRef = useRef(0)
   const startInFlightRef = useRef(false)
   const selectRequestSeqRef = useRef(0)
-  const consecutiveErrorsRef = useRef(0)
   const pollFailedRef = useRef(false)
   const mountedRef = useRef(false)
 
@@ -63,93 +60,41 @@ export function useBenchmarkSession(): BenchmarkSession {
     }
   }, [])
 
-  const stopPolling = useCallback(() => {
-    pollSessionIdRef.current += 1
-    if (pollTimerRef.current !== null) {
-      window.clearTimeout(pollTimerRef.current)
-      pollTimerRef.current = null
-    }
-    if (pollAbortRef.current) {
-      pollAbortRef.current.abort()
-      pollAbortRef.current = null
-    }
-    pollInFlightRef.current = false
-    activePollBenchmarkIdRef.current = null
-    pollFailedRef.current = false
-  }, [])
-
-  const startPolling = useCallback(
-    (id: string) => {
-      stopPolling()
-      activePollBenchmarkIdRef.current = id
-      const sessionId = pollSessionIdRef.current
-      let cancelled = false
-
-      const isCurrentSession = () =>
-        !cancelled &&
-        isActivePollSession(sessionId, pollSessionIdRef.current, id, activePollBenchmarkIdRef.current) &&
-        mountedRef.current
-
-      const scheduleNext = (delayMs: number) => {
-        if (!isCurrentSession()) return
-        pollTimerRef.current = window.setTimeout(() => {
-          void pollOnce()
-        }, delayMs)
-      }
-
-      const pollOnce = async () => {
-        if (!isCurrentSession()) return
-        if (pollInFlightRef.current) {
-          scheduleNext(120)
-          return
+  const fetchFn = useCallback(
+    async (signal: AbortSignal): Promise<boolean> => {
+      const id = activePollBenchmarkIdRef.current
+      if (!id) return false
+      try {
+        const next = await getBenchmark(id, false, signal)
+        if (signal.aborted) return false
+        setStatus(next)
+        if (pollFailedRef.current) {
+          pollFailedRef.current = false
+          setError(null)
         }
-
-        pollInFlightRef.current = true
-        const controller = new AbortController()
-        pollAbortRef.current = controller
-
-        try {
-          const next = await getBenchmark(id, false, controller.signal)
-          if (!isCurrentSession()) return
-          setStatus(next)
-          consecutiveErrorsRef.current = 0
-          if (pollFailedRef.current) {
-            pollFailedRef.current = false
-            setError(null)
-          }
-          if (next.status === 'running' || next.status === 'queued') {
-            scheduleNext(POLL_INTERVAL_MS)
-          } else {
-            stopPolling()
-          }
-        } catch (e) {
-          if (controller.signal.aborted || !isCurrentSession()) return
-          consecutiveErrorsRef.current += 1
-          pollFailedRef.current = true
-          setError(e instanceof Error ? e.message : t('error.benchmarkPoll'))
-          if (consecutiveErrorsRef.current >= 5) {
-            stopPolling()
-          } else {
-            scheduleNext(Math.min(1000 * 2 ** (consecutiveErrorsRef.current - 1), 30_000))
-          }
-        } finally {
-          pollInFlightRef.current = false
-          if (pollAbortRef.current === controller) {
-            pollAbortRef.current = null
-          }
-        }
-      }
-
-      void pollOnce()
-
-      return () => {
-        cancelled = true
-        if (isActivePollSession(sessionId, pollSessionIdRef.current, id, activePollBenchmarkIdRef.current)) {
-          stopPolling()
-        }
+        return next.status === 'running' || next.status === 'queued'
+      } catch (e) {
+        if (signal.aborted) throw e
+        pollFailedRef.current = true
+        setError(e instanceof Error ? e.message : t('error.benchmarkPoll'))
+        throw e
       }
     },
-    [stopPolling, t],
+    [t],
+  )
+
+  const { start: startPolling, stop: stopPolling } = usePolling({
+    fetchFn,
+    intervalMs: POLL_INTERVAL_MS,
+    shouldContinue: () => mountedRef.current,
+  })
+
+  const startPollingFor = useCallback(
+    (id: string) => {
+      activePollBenchmarkIdRef.current = id
+      return startPolling()
+    },
+    [startPolling],
   )
 
   useEffect(() => {
@@ -157,14 +102,8 @@ export function useBenchmarkSession(): BenchmarkSession {
       stopPolling()
       return
     }
-    return startPolling(benchmarkId)
-  }, [benchmarkId, startPolling, stopPolling, viewingSavedRun])
-
-  useEffect(() => {
-    return () => {
-      stopPolling()
-    }
-  }, [stopPolling])
+    return startPollingFor(benchmarkId)
+  }, [benchmarkId, startPollingFor, stopPolling, viewingSavedRun])
 
   const reportError = useCallback((message: string) => {
     setError(message)
@@ -249,15 +188,18 @@ export function useBenchmarkSession(): BenchmarkSession {
     }
   }, [benchmarkId, loadingSamples, selectedResult, t])
 
-  const viewSavedRun = useCallback((payload: BenchmarkStatus) => {
-    stopPolling()
-    setError(null)
-    setSelectedResult(null)
-    setLoadingSamples(false)
-    setStatus(payload)
-    setBenchmarkId(payload.id)
-    setViewingSavedRun(true)
-  }, [stopPolling])
+  const viewSavedRun = useCallback(
+    (payload: BenchmarkStatus) => {
+      stopPolling()
+      setError(null)
+      setSelectedResult(null)
+      setLoadingSamples(false)
+      setStatus(payload)
+      setBenchmarkId(payload.id)
+      setViewingSavedRun(true)
+    },
+    [stopPolling],
+  )
 
   return {
     benchmarkId,
