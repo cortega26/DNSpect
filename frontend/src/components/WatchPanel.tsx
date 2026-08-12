@@ -61,7 +61,7 @@ function shortId(id: string): string {
 
 export function WatchPanel({ doqAvailable, running, currentSession, onCompare }: Props) {
   const { t } = useI18n()
-  const { watches, watchesLoading, create, remove } = useWatch()
+  const { watches, watchesLoading, watchesError, create, remove } = useWatch()
   const [intervalMin, setIntervalMin] = useState(30)
   const [createError, setCreateError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -156,6 +156,10 @@ export function WatchPanel({ doqAvailable, running, currentSession, onCompare }:
 
       {watchesLoading ? (
         <p className="muted">{t('history.loading')}</p>
+      ) : watchesError ? (
+        <p className="muted" role="alert">
+          {t('watch.error.load')}
+        </p>
       ) : watches.length === 0 ? (
         <p className="muted">{t('watch.empty')}</p>
       ) : (

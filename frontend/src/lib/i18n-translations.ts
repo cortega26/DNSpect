@@ -470,6 +470,7 @@ const esTranslations = {
   'watch.showWatchRuns': 'Mostrar ejecuciones de watch',
   'watch.error.create': 'No se pudo crear el watch',
   'watch.error.delete': 'No se pudo eliminar el watch',
+  'watch.error.load': 'No se pudieron cargar los watches',
 } as const
 
 export type TranslationKey = keyof typeof esTranslations
@@ -952,6 +953,7 @@ export const translations: { es: Record<TranslationKey, string>; en: Translation
     'watch.showWatchRuns': 'Show watch runs',
     'watch.error.create': 'Could not create the watch',
     'watch.error.delete': 'Could not delete the watch',
+    'watch.error.load': 'Could not load watches',
   },
   pt: {
     'app.title': 'DNSpect',
@@ -1405,5 +1407,6 @@ export const translations: { es: Record<TranslationKey, string>; en: Translation
     'watch.showWatchRuns': 'Mostrar execuções de watch',
     'watch.error.create': 'Não foi possível criar o watch',
     'watch.error.delete': 'Não foi possível excluir o watch',
+    'watch.error.load': 'Não foi possível carregar os watches',
   },
 }
