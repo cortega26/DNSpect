@@ -267,7 +267,10 @@ class WatchScheduler:
             if last_tick is not None and now - last_tick < interval_sec:
                 continue
             self._last_tick_at[watch_id] = now
-            self.tick(watch_id, data)
+            try:
+                self.tick(watch_id, data)
+            except Exception as exc:  # noqa: BLE001
+                self._record_error_event(watch_id, data, exc)
 
     def tick(self, watch_id: str, data: dict[str, Any]) -> None:
         data.setdefault("runtime", {})
@@ -392,6 +395,14 @@ class WatchScheduler:
                     }
                 )
         return events
+
+    def _record_error_event(self, watch_id: str, data: dict[str, Any], exc: Exception) -> None:
+        with suppress(Exception):
+            self._record_events(
+                watch_id,
+                data,
+                [{"type": "watch_config_error", "message": str(exc)[:300]}],
+            )
 
     def _record_events(
         self,
