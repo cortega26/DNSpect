@@ -72,7 +72,7 @@ SCORING_SEMANTICS_VERSION = "score-v1"
 NORMAL_QUERY_SCHEDULE_VERSION = "round-robin-v1"
 DIAGNOSTIC_POLICY_VERSION = "random-nxdomain-v1"
 
-PROTOCOL_COMPARISON_MANIFEST_VERSION = 1
+PROTOCOL_COMPARISON_MANIFEST_VERSION = 2
 PROTOCOL_COMPARISON_DIAGNOSTIC_POLICY_VERSION = "protocol-v1"
 
 COMPARISON_ADMISSION_REASON_CODES: tuple[
@@ -1230,6 +1230,11 @@ class BenchmarkManager:
                 entry["dot"] = identity.dot_hostname
             if identity.doh_url is not None:
                 entry["doh"] = identity.doh_url
+            provider = self.provider_index.get(identity.resolver)
+            features = (provider or {}).get("features") or {}
+            doq_hostname = features.get("doq_hostname")
+            if isinstance(doq_hostname, str) and doq_hostname.strip():
+                entry["doq"] = doq_hostname
             endpoints[identity.resolver] = entry
         return endpoints
 
@@ -1559,6 +1564,8 @@ class BenchmarkManager:
             return run_dot_query(resolver, domain, timeout_sec, endpoint)
         if protocol == "doh":
             return run_doh_query(resolver, domain, timeout_sec, endpoint)
+        if protocol == "doq":
+            return run_doq_query(resolver, domain, timeout_sec, endpoint)
         return measure_query(resolver=resolver, domain=domain, timeout_sec=timeout_sec, engine=engine)
 
     def compare_runs(self, baseline_id: str, candidate_id: str) -> RunComparisonResponse | None:

@@ -242,7 +242,12 @@ class RunComparisonResponse(BaseModel):
     missing_candidate_results: list[str]
 
 
-CANONICAL_PROTOCOL_ORDER = (BenchmarkProtocol.udp, BenchmarkProtocol.dot, BenchmarkProtocol.doh)
+CANONICAL_PROTOCOL_ORDER = (
+    BenchmarkProtocol.udp,
+    BenchmarkProtocol.dot,
+    BenchmarkProtocol.doh,
+    BenchmarkProtocol.doq,
+)
 
 
 class ProtocolComparisonRequest(BaseModel):
@@ -250,7 +255,7 @@ class ProtocolComparisonRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    protocols: list[BenchmarkProtocol] = Field(min_length=2, max_length=3)
+    protocols: list[BenchmarkProtocol] = Field(min_length=2, max_length=4)
     target_snapshot: TargetSnapshot
     scoring_profile: BenchmarkGoal
     mode: BenchmarkMode = BenchmarkMode.standard

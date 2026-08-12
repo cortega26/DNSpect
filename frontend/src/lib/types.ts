@@ -18,9 +18,9 @@ export const GOALS: Goal[] = ['speed', 'security', 'privacy', 'ad-blocking', 'fa
 
 export const PROTOCOLS: BenchmarkProtocol[] = ['udp', 'dot', 'doh', 'doq']
 
-// The protocol-comparison contract is frozen at three transports (plan 023);
-// DoQ does NOT join the comparison. See docs/PROTOCOL_COMPARISON_METHODOLOGY.md.
-export const COMPARISON_PROTOCOLS: BenchmarkProtocol[] = ['udp', 'dot', 'doh']
+// The protocol-comparison contract covers four transports (plan 029):
+// udp, dot, doh, doq. See docs/PROTOCOL_COMPARISON_METHODOLOGY.md.
+export const COMPARISON_PROTOCOLS: BenchmarkProtocol[] = ['udp', 'dot', 'doh', 'doq']
 
 export interface ProviderFeatures {
   filtering: string

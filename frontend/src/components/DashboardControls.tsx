@@ -85,6 +85,9 @@ const EXCLUSION_LABEL_KEY: Record<string, TranslationKey> = {
   dot_hostname_invalid: 'comparisonMode.exclusionReason.dot_hostname_invalid',
   doh_url_missing: 'comparisonMode.exclusionReason.doh_url_missing',
   doh_url_invalid: 'comparisonMode.exclusionReason.doh_url_invalid',
+  doq_hostname_missing: 'comparisonMode.exclusionReason.doq_hostname_missing',
+  doq_hostname_invalid: 'comparisonMode.exclusionReason.doq_hostname_invalid',
+  doq_unavailable: 'comparisonMode.exclusionReason.doq_unavailable',
 }
 
 const ADMISSION_LABEL_KEY: Record<string, TranslationKey> = {
