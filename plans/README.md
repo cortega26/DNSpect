@@ -76,8 +76,7 @@ priority describes expected impact, effort is an implementation estimate.
 
 ## Deep-reaudit wave (031-038, 2026-08-13)
 
-Plans 031-038 implement the vetted deep-reaudit findings (written against
-`930dfb6`). 031 is P1 (the watch measured the wrong population); 032-033
+Plans 031-038 implement the vetted deep-reaudit findings (written against `930dfb6`). 031 is P1 (the watch measured the wrong population); 032-033
 complete the watch surface; 034-036 harden sessions, security, and tests;
 037 is release readiness; 038 is the frontend structure pass. Recommended
 execution order: 031 → 033 → 032 → 034 → 035 → 036 → 037, with 038 last
@@ -85,14 +84,14 @@ execution order: 031 → 033 → 032 → 034 → 035 → 036 → 037, with 038 l
 
 | Plan | Priority / effort | Depends on | Status |
 |---|---|---|---|
-| [031 — watch measures the configured snapshot](031-watch-measures-snapshot.md) | P1 / S | — | **DONE** — worktree `/tmp/opencode/dnspect-031` (branch `plan/031-watch-measures-snapshot`, commits `c3a227a`, `a0bcf3b`); gates re-verified by reviewer; **merge pending user decision** |
-| [032 — watch UI alive](032-watch-ui-alive.md) | P1 / S-M | — | **DONE** — worktree `/tmp/opencode/dnspect-032` (branch `plan/032-watch-ui-alive`, commits `2aabea1`, `3372419`, `047cabc`); e2e 26/26 re-verified by reviewer against the worktree build (port-shifted config; documented `APP_ORIGIN` env-override in fixtures); **merge pending user decision** |
-| [033 — watch scheduler reliability](033-watch-reliability.md) | P1 / M | — | **DONE** — worktree `/tmp/opencode/dnspect-033` (branch `plan/033-watch-reliability`, 7 commits, tip `019f740`); one revision round (first-ever watches now fire immediately — the stagger caused up-to-29-min silent waits); gates re-verified; **merge pending user decision** |
-| [034 — session and egress hardening](034-session-egress-hardening.md) | P2 / S | — | **DONE** — worktree `/tmp/opencode/dnspect-034` (branch `plan/034-session-egress-hardening`, commits `28f537e`, `be48568`, `038f627`); gates re-verified by reviewer; **merge pending user decision** |
-| [035 — security and consistency hardening](035-security-consistency.md) | P1 / S-M | 031 (snapshot validation half) | **DONE** — worktree `/tmp/opencode/dnspect-035` (branch `plan/035-security-consistency`, 4 commits `d8ec240..17424a0`); gates re-verified by reviewer (256 backend, 142 frontend, e2e 26/26); doq-flag semantics change is intentional and test-pinned; **merge pending user decision** |
-| [036 — test depth and history filtering](036-test-depth.md) | P2 / M | 035 (unified gates) | **DONE** — worktree `/tmp/opencode/dnspect-036` (branch `plan/036-test-depth`, 3 commits, tip `c5ef950`); gates re-verified by reviewer (267 backend, 166 frontend, e2e 26/26); **merge pending user decision** |
-| [037 — docs and release readiness](037-docs-release-readiness.md) | P2 / M | — | **DONE** — merged `b392b6d`; flatpak `generated-sources.json` regen deferred (release-checklist item) |
-| [038 — frontend structure](038-frontend-structure.md) | P2 / M | 032, 034 | **DONE** — worktree `/tmp/opencode/dnspect-038` (branch `plan/038-frontend-structure`, 3 commits `4b86bc8..627a4f2`; first executor attempt died without work — re-dispatched); gates re-verified by reviewer (e2e 26/26 ×3, hooks 32, App.tsx 1451 lines vs the 1400 target — plan arithmetic, documented deviation); **merge pending user decision** |
+| [031 — watch measures the configured snapshot](archive/031-watch-measures-snapshot.md) | P1 / S | — | **DONE** — **Complete** — `9b4eec5` |
+| [032 — watch UI alive](archive/032-watch-ui-alive.md) | P1 / S-M | — | **DONE** — **Complete** — `caa2862` |
+| [033 — watch scheduler reliability](archive/033-watch-reliability.md) | P1 / M | — | **DONE** — **Complete** — `648f40c` |
+| [034 — session and egress hardening](archive/034-session-egress-hardening.md) | P2 / S | — | **DONE** — **Complete** — `b36de43` |
+| [035 — security and consistency hardening](archive/035-security-consistency.md) | P1 / S-M | 031 (snapshot validation half) | **DONE** — **Complete** — `1b0bcdd` |
+| [036 — test depth and history filtering](archive/036-test-depth.md) | P2 / M | 035 (unified gates) | **DONE** — **Complete** — `4c44f1d` |
+| [037 — docs and release readiness](archive/037-docs-release-readiness.md) | P2 / M | — | **Complete** — merged `b392b6d`; flatpak `generated-sources.json` regen deferred (release-checklist item) |
+| [038 — frontend structure](archive/038-frontend-structure.md) | P2 / M | 032, 034 | **DONE** — **Complete** — `bebfd47` |
 
 ## Deep reaudit — considered and rejected (2026-08-13)
 
