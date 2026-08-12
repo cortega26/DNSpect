@@ -15,7 +15,7 @@ from app.models import (
     WatchOrigin,
 )
 from app.runner import BenchmarkManager
-from app.watch import SchedulerClock, WatchScheduler
+from app.watch import WatchScheduler
 
 client = TestClient(app)
 

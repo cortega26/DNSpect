@@ -13,6 +13,7 @@ from typing import Any
 from platformdirs import user_data_path
 
 from .models import (
+    WATCH_METRIC_KEYS,
     BenchmarkGoal,
     BenchmarkMode,
     BenchmarkProtocol,
@@ -20,7 +21,6 @@ from .models import (
     TargetSnapshot,
     WatchConfigRequest,
     WatchOrigin,
-    WATCH_METRIC_KEYS,
 )
 
 WATCH_SCHEMA_VERSION = 1
@@ -102,9 +102,7 @@ class WatchStore:
         if not self._watch_dir.exists():
             return []
         return sorted(
-            path.stem
-            for path in self._watch_dir.glob("[!.]*.json")
-            if not path.name.endswith(".tmp")
+            path.stem for path in self._watch_dir.glob("[!.]*.json") if not path.name.endswith(".tmp")
         )
 
     def load(self, watch_id: str) -> dict[str, Any] | None:
@@ -157,8 +155,7 @@ def _manifests_equal(
     if baseline_manifest is None or candidate_manifest is None:
         return False
     return all(
-        baseline_manifest.get(field) == candidate_manifest.get(field)
-        for field in _MANIFEST_EQUALITY_FIELDS
+        baseline_manifest.get(field) == candidate_manifest.get(field) for field in _MANIFEST_EQUALITY_FIELDS
     )
 
 
@@ -238,10 +235,8 @@ class WatchScheduler:
 
     def _run_loop(self) -> None:
         while not self._stop_event.is_set():
-            try:
+            with suppress(Exception):
                 self.tick_all()
-            except Exception:
-                pass
             self._clock.sleep(WATCH_LOOP_INTERVAL_SEC)
 
     def start(self) -> None:
@@ -289,10 +284,16 @@ class WatchScheduler:
                     self._record_events(
                         watch_id,
                         data,
-                        [{"type": "watch_run_not_done", "run_id": active_run_id, "status": run.get("status")}],
+                        [
+                            {
+                                "type": "watch_run_not_done",
+                                "run_id": active_run_id,
+                                "status": run.get("status"),
+                            }
+                        ],
                     )
                     return
-                self.evaluate(data, run)
+                self.evaluate(watch_id, data, run)
                 return
 
         request = self._build_request(data.get("config") or {})
@@ -303,8 +304,7 @@ class WatchScheduler:
         runtime["active_run_id"] = run_id
         self._persist(watch_id, data)
 
-    def evaluate(self, data: dict[str, Any], candidate: dict[str, Any]) -> None:
-        watch_id = str(data.get("config", {}).get("watch_id") or "")
+    def evaluate(self, watch_id: str, data: dict[str, Any], candidate: dict[str, Any]) -> None:
         config = data.get("config") or {}
         runtime = data.setdefault("runtime", {})
         candidate_id = str(candidate.get("id", ""))
@@ -335,9 +335,7 @@ class WatchScheduler:
 
         self._record_events(watch_id, data, events, evaluated_at=datetime.now(UTC).isoformat())
 
-    def _find_baseline(
-        self, candidate: dict[str, Any], candidate_id: str
-    ) -> tuple[str | None, str | None]:
+    def _find_baseline(self, candidate: dict[str, Any], candidate_id: str) -> tuple[str | None, str | None]:
         history = self._manager.list_history()
         entries = history.get("runs", []) if isinstance(history, dict) else []
         newest_done_id: str | None = None
@@ -361,12 +359,8 @@ class WatchScheduler:
     ) -> list[dict[str, Any]]:
         thresholds = config.get("thresholds") or {}
         events: list[dict[str, Any]] = []
-        baseline_results = {
-            str(item.get("resolver", "")): item for item in (baseline.get("results") or [])
-        }
-        candidate_results = {
-            str(item.get("resolver", "")): item for item in (candidate.get("results") or [])
-        }
+        baseline_results = {str(item.get("resolver", "")): item for item in (baseline.get("results") or [])}
+        candidate_results = {str(item.get("resolver", "")): item for item in (candidate.get("results") or [])}
         candidate_id = str(candidate.get("id", ""))
         for resolver in sorted(set(baseline_results) & set(candidate_results)):
             baseline_stats = baseline_results[resolver].get("stats") or {}
