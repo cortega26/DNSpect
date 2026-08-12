@@ -1,4 +1,4 @@
-.PHONY: backend-install backend-dev backend-check backend-semgrep frontend-install frontend-dev frontend-check frontend-check-e2e dev smoke dependency-audit
+.PHONY: backend-install backend-dev backend-check backend-semgrep frontend-install frontend-dev frontend-check frontend-check-e2e dev smoke dependency-audit release-check
 
 backend-install:
 	cd backend && python3 -m venv .venv && . .venv/bin/activate && pip install -r constraints.txt -e .[dev]
@@ -40,6 +40,9 @@ smoke:
 dependency-audit:
 	cd backend && . .venv/bin/activate && pip-audit -r constraints.txt --no-deps --progress-spinner off
 	cd frontend && npm audit --package-lock-only
+
+release-check:
+	bash scripts/release_check.sh
 
 # Flatpak
 FLATPAK_MANIFEST := io.github.cortega26.DNSpect.yaml
