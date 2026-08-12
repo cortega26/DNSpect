@@ -292,10 +292,11 @@ class WatchScheduler:
             last_tick = self._last_tick_at.get(watch_id)
             if last_tick is None:
                 persisted = (data.get("runtime") or {}).get("last_tick_at")
-                if isinstance(persisted, int | float):
-                    last_tick = float(persisted)
-                else:
-                    last_tick = now - interval_sec + self._startup_offset_sec(watch_id, interval_sec)
+                last_tick = (
+                    float(persisted)
+                    if isinstance(persisted, int | float)
+                    else now - interval_sec  # first-ever run fires on the next tick
+                )
                 self._last_tick_at[watch_id] = last_tick
             next_due = last_tick + interval_sec
             self._due_cache[watch_id] = (interval_sec, next_due)
@@ -308,13 +309,6 @@ class WatchScheduler:
             except Exception as exc:  # noqa: BLE001
                 self._record_error_event(watch_id, data, exc)
             self._persist(watch_id, data)
-
-    def _startup_offset_sec(self, watch_id: str, interval_sec: float) -> float:
-        try:
-            seed = int(watch_id, 16)
-        except ValueError:
-            seed = 0
-        return float(seed % max(1, int(interval_sec // 60))) * 60.0
 
     def tick(self, watch_id: str, data: dict[str, Any]) -> None:
         data.setdefault("runtime", {})

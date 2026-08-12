@@ -178,13 +178,6 @@ def test_first_tick_after_restart_is_staggered(tmp_path) -> None:
     scheduler_a = WatchScheduler(facade_a, watch_dir=watch_dir, clock=FakeClock())
     first_id = scheduler_a.create(_watch_config(interval_min=1))
     second_id = scheduler_a.create(_watch_config(interval_min=1))
-    fresh_id = uuid.uuid4().hex
-    while int(fresh_id, 16) % 10 != 7:
-        fresh_id = uuid.uuid4().hex
-    payload = _bad_watch_payload()
-    payload["config"]["mode"] = "quick"
-    payload["config"]["interval_min"] = 10
-    (watch_dir / f"{fresh_id}.json").write_text(json.dumps(payload), encoding="utf-8")
 
     scheduler_a.tick_all()
     assert len(facade_a.started) == 2
@@ -192,22 +185,24 @@ def test_first_tick_after_restart_is_staggered(tmp_path) -> None:
         data = scheduler_a._store.load(watch_id)
         assert data is not None
         assert data["runtime"]["last_tick_at"] == 1000.0
-    fresh_data = scheduler_a._store.load(fresh_id)
-    assert fresh_data is not None
-    assert "last_tick_at" not in fresh_data["runtime"]
+
+    fresh_id = uuid.uuid4().hex
+    payload = _bad_watch_payload()
+    payload["config"]["mode"] = "quick"
+    payload["config"]["interval_min"] = 10
+    (watch_dir / f"{fresh_id}.json").write_text(json.dumps(payload), encoding="utf-8")
 
     facade_b = Facade()
     clock_b = FakeClock()
     restarted = WatchScheduler(facade_b, watch_dir=watch_dir, clock=clock_b)
     restarted.tick_all()
-    assert facade_b.started == []
+    assert len(facade_b.started) == 1  # fresh watch fires on its first tick_all
     assert restarted._last_tick_at[first_id] == 1000.0
     assert restarted._last_tick_at[second_id] == 1000.0
+    fresh_data = restarted._store.load(fresh_id)
+    assert fresh_data is not None
+    assert fresh_data["runtime"]["last_tick_at"] == 1000.0
 
-    clock_b.advance(30)
+    clock_b.advance(60)
     restarted.tick_all()
-    assert facade_b.started == []
-
-    clock_b.advance(390)
-    restarted.tick_all()
-    assert len(facade_b.started) == 3
+    assert len(facade_b.started) == 3  # persisted watches fire once their interval elapses
