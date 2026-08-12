@@ -216,4 +216,48 @@ describe('useProtocolComparison', () => {
     })
     expect(mockGetProtocolComparison).toHaveBeenCalledTimes(5)
   })
+
+  it('transient poll error clears and backoff resets on recovery', async () => {
+    vi.useFakeTimers()
+    mockStartProtocolComparison.mockResolvedValue({ comparison_id: 'c1' })
+    mockGetProtocolComparison
+      .mockRejectedValueOnce(new Error('transient 1'))
+      .mockRejectedValueOnce(new Error('transient 2'))
+      .mockResolvedValueOnce(protocolStatus('c1', 'running'))
+
+    const { result } = renderHook(() => useProtocolComparison(), { wrapper: Wrapper })
+
+    await act(async () => {
+      await result.current.start(PAYLOAD)
+    })
+    await act(async () => {})
+    expect(result.current.comparisonError).toBe('transient 1')
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000)
+    })
+    expect(result.current.comparisonError).toBe('transient 2')
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000)
+    })
+    expect(mockGetProtocolComparison).toHaveBeenCalledTimes(3)
+    expect(result.current.comparison?.status).toBe('running')
+    expect(result.current.comparisonError).toBeNull()
+
+    mockStartProtocolComparison.mockResolvedValue({ comparison_id: 'c2' })
+    mockGetProtocolComparison.mockRejectedValueOnce(new Error('new session boom'))
+    await act(async () => {
+      await result.current.start(PAYLOAD)
+    })
+    await act(async () => {})
+    expect(result.current.comparisonId).toBe('c2')
+    expect(mockGetProtocolComparison).toHaveBeenCalledTimes(4)
+    expect(result.current.comparisonError).toBe('new session boom')
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000)
+    })
+    expect(mockGetProtocolComparison).toHaveBeenCalledTimes(5)
+  })
 })
