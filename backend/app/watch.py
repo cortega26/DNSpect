@@ -149,7 +149,7 @@ class SchedulerClock:
     """Testable now()/sleep() seam for the scheduler loop."""
 
     def now(self) -> float:
-        return time.monotonic()
+        return time.time()
 
     def sleep(self, seconds: float) -> None:
         time.sleep(seconds)
@@ -183,7 +183,7 @@ class WatchScheduler:
         self._clock = clock or SchedulerClock()
         self._lock = threading.Lock()
         self._last_tick_at: dict[str, float] = {}
-        self._stop_event = threading.Event()
+        self._stop_event: threading.Event | None = None
         self._thread: threading.Thread | None = None
 
     # -- store-backed manager API -----------------------------------------
@@ -241,24 +241,39 @@ class WatchScheduler:
 
     # -- scheduler loop -----------------------------------------------------
 
-    def _run_loop(self) -> None:
-        while not self._stop_event.is_set():
+    def _run_loop(self, stop_event: threading.Event) -> None:
+        while not stop_event.is_set():
             with suppress(Exception):
                 self.tick_all()
             self._clock.sleep(WATCH_LOOP_INTERVAL_SEC)
 
     def start(self) -> None:
-        if self._thread is not None and self._thread.is_alive():
-            return
-        self._stop_event.clear()
-        self._thread = threading.Thread(target=self._run_loop, name="dnswatch", daemon=True)
-        self._thread.start()
+        with self._lock:
+            if self._thread is not None and self._thread.is_alive():
+                return
+            stop_event = threading.Event()
+            thread = threading.Thread(
+                target=self._run_loop, name="dnswatch", daemon=True, args=(stop_event,)
+            )
+            thread.start()
+            self._stop_event = stop_event
+            self._thread = thread
 
     def stop(self) -> None:
-        self._stop_event.set()
-        if self._thread is not None:
-            self._thread.join(timeout=10)
-            self._thread = None
+        with self._lock:
+            stop_event = self._stop_event
+            thread = self._thread
+        if stop_event is not None:
+            stop_event.set()
+        if thread is None:
+            return
+        thread.join(timeout=10)
+        with self._lock:
+            if not thread.is_alive():
+                if self._thread is thread:
+                    self._thread = None
+                if self._stop_event is stop_event:
+                    self._stop_event = None
 
     def tick_all(self) -> None:
         now = self._clock.now()
@@ -270,13 +285,30 @@ class WatchScheduler:
             config = data.get("config") or {}
             interval_sec = float(config.get("interval_min", 30)) * 60
             last_tick = self._last_tick_at.get(watch_id)
-            if last_tick is not None and now - last_tick < interval_sec:
+            if last_tick is None:
+                persisted = (data.get("runtime") or {}).get("last_tick_at")
+                if isinstance(persisted, (int, float)):
+                    last_tick = float(persisted)
+                    self._last_tick_at[watch_id] = last_tick
+                else:
+                    last_tick = now - interval_sec + self._startup_offset_sec(watch_id, interval_sec)
+                    self._last_tick_at[watch_id] = last_tick
+            if now - last_tick < interval_sec:
                 continue
             self._last_tick_at[watch_id] = now
+            data.setdefault("runtime", {})["last_tick_at"] = now
             try:
                 self.tick(watch_id, data)
             except Exception as exc:  # noqa: BLE001
                 self._record_error_event(watch_id, data, exc)
+            self._persist(watch_id, data)
+
+    def _startup_offset_sec(self, watch_id: str, interval_sec: float) -> float:
+        try:
+            seed = int(watch_id, 16)
+        except ValueError:
+            seed = 0
+        return float(seed % max(1, int(interval_sec // 60))) * 60.0
 
     def tick(self, watch_id: str, data: dict[str, Any]) -> None:
         data.setdefault("runtime", {})
