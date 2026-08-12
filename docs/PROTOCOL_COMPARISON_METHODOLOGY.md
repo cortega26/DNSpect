@@ -1,10 +1,10 @@
 # Protocol Comparison Methodology
 
 This document freezes the exact methodology for measuring one fixed common
-target set across UDP, DNS-over-TLS (DoT), and DNS-over-HTTPS (DoH). It is the
-contract for the parent comparison session: one target snapshot, one query
-plan, sequential transport subruns inside one bounded worker, and matched
-deltas with explicit endpoint caveats.
+target set across UDP, DNS-over-TLS (DoT), DNS-over-HTTPS (DoH), and
+DNS-over-QUIC (DoQ). It is the contract for the parent comparison session:
+one target snapshot, one query plan, sequential transport subruns inside one
+bounded worker, and matched deltas with explicit endpoint caveats.
 
 ## Non-negotiable rules
 
@@ -20,15 +20,19 @@ deltas with explicit endpoint caveats.
    second top-level `resolvers` field and no reconciliation of two target
    lists.
 
-2. **Protocols.** `protocols` has length two or three. Duplicate values are a
+2. **Protocols.** `protocols` has length two to four. Duplicate values are a
    Pydantic validation error. A valid unique set is normalized to the fixed
-   stored/executed order `udp`, `dot`, `doh`, independent of caller order.
-   `queries`, `runs`, `timeout_sec`, and the target-IP list reuse the landed
-   `BenchmarkRequest` validation/effective-runs rules rather than copying
-   current numeric limits: `runs=None` means `MODE_DEFAULT_RUNS[mode]`.
+   stored/executed order `udp`, `dot`, `doh`, `doq`, independent of caller
+   order. `queries`, `runs`, `timeout_sec`, and the target-IP list reuse the
+   landed `BenchmarkRequest` validation/effective-runs rules rather than
+   copying current numeric limits: `runs=None` means `MODE_DEFAULT_RUNS[mode]`.
    Malformed IP/domain input, invalid enum, duplicate protocol, conflicting or
    malformed Plan-003 snapshot, and out-of-range option input are
    FastAPI/Pydantic 422 responses before manager admission.
+   DoQ comparisons require the optional `aioquic` extra
+   (`dns.quic.have_quic`); when unavailable, eligible resolvers are excluded
+   with the `doq_unavailable` code (the existing exclusion machinery). The
+   `manifest_version` was bumped to 2 for this extension.
 
 3. **Shared preflight.** One manager-owned preflight serves both routes:
    `POST /api/protocol-comparisons/preflight` returns a typed
@@ -100,8 +104,8 @@ deltas with explicit endpoint caveats.
    `dot_hostname_invalid` or `doh_url_invalid`.
 
 7. **Diagnostic derivation.** Parent execution order is the canonical
-   requested subset of `udp`, `dot`, `doh` — not caller order. Execution is
-   sequential within one worker. After the parent UUID is allocated, one nonce
+   requested subset of `udp`, `dot`, `doh`, `doq` — not caller order.
+   Execution is sequential within one worker. After the parent UUID is allocated, one nonce
    is derived as the first 16 lowercase hex characters of
    `sha256("dnspect-protocol-v1:" + parent_id)`; every diagnostic subrun uses
    `<nonce>.dnspect.invalid`. Only the diagnostic-plan digest and
