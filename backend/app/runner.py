@@ -44,6 +44,7 @@ from .models import (
     RunComparisonRow,
     RunManifest,
     TargetSnapshot,
+    WatchConfigRequest,
 )
 from .providers import (
     build_default_resolvers,
@@ -61,6 +62,7 @@ from .stats import (
     parse_drill_query_time,
     select_recommended_resolver,
 )
+from .watch import WatchScheduler
 
 TERMINAL_STATUSES = {"done", "failed", "cancelled"}
 
@@ -525,6 +527,7 @@ class BenchmarkState:
     run_storage_warning: str | None = None
     target_snapshot: dict[str, object] | None = None
     manifest: RunManifest | None = None
+    origin: str | None = None
 
     def as_response(self, include_samples: bool = False) -> dict[str, Any]:
         sanitized_results = _sanitize_results(self.results, include_samples=include_samples)
@@ -559,6 +562,7 @@ class BenchmarkState:
             "recommendation_warning": recommendation_warning,
             "target_snapshot": self.target_snapshot,
             "manifest": self.manifest.model_dump() if self.manifest else None,
+            "origin": self.origin,
         }
         return response
 
@@ -574,6 +578,7 @@ class BenchmarkConfig:
     scoring_profile: str
     protocol: str
     target_snapshot: dict[str, object] | None = None
+    origin: str | None = None
 
 
 def _sanitize_results(
@@ -662,6 +667,7 @@ class BenchmarkManager:
         terminal_ttl_sec: int | None = None,
         max_retained_states: int | None = None,
         data_runs_dir: Path | None = None,
+        watch_dir: Path | None = None,
     ) -> None:
         self._lock = threading.RLock()
         self._states: dict[str, BenchmarkState] = {}
@@ -697,6 +703,7 @@ class BenchmarkManager:
             "true",
             "yes",
         }
+        self._watch_scheduler = WatchScheduler(self, watch_dir=watch_dir)
 
     def providers_payload(self) -> list[dict[str, Any]]:
         return self.providers
@@ -777,6 +784,7 @@ class BenchmarkManager:
             scoring_profile=scoring_profile,
             protocol=req.protocol.value,
             target_snapshot=target_snapshot_dict,
+            origin=req.origin.value if req.origin else None,
         )
 
     def start(self, req: BenchmarkRequest) -> str:
@@ -814,6 +822,7 @@ class BenchmarkManager:
             runs=config.runs,
             target_snapshot=config.target_snapshot,
             manifest=manifest,
+            origin=config.origin,
         )
         with self._lock:
             self._cleanup_terminal_states_locked()
@@ -979,6 +988,7 @@ class BenchmarkManager:
                 "finished_at": data.get("finished_at"),
                 "status": data.get("status"),
                 "target_snapshot": data.get("target_snapshot"),
+                "origin": data.get("origin"),
                 "results_summary": [
                     {"provider_name": r.get("provider_name"), "resolver": r.get("resolver")}
                     for r in results[:3]
@@ -996,6 +1006,18 @@ class BenchmarkManager:
 
         runs.sort(key=_sort_key, reverse=True)
         return {"runs": runs[:50]}
+
+    def create_watch(self, request: WatchConfigRequest) -> str:
+        return self._watch_scheduler.create(request)
+
+    def delete_watch(self, watch_id: str) -> bool:
+        return self._watch_scheduler.delete(watch_id)
+
+    def list_watches(self) -> dict[str, list[dict[str, Any]]]:
+        return self._watch_scheduler.list_watches()
+
+    def get_watch_status(self, watch_id: str) -> dict[str, Any] | None:
+        return self._watch_scheduler.get_status(watch_id)
 
     def preflight_protocol_comparison(
         self, request: ProtocolComparisonRequest
