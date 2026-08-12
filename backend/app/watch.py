@@ -175,6 +175,7 @@ class WatchScheduler:
         self._manager = manager
         self._store = WatchStore(watch_dir=watch_dir)
         self._clock = clock or SchedulerClock()
+        self._lock = threading.Lock()
         self._last_tick_at: dict[str, float] = {}
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
@@ -198,8 +199,9 @@ class WatchScheduler:
         return watch_id
 
     def delete(self, watch_id: str) -> bool:
-        self._last_tick_at.pop(watch_id, None)
-        return self._store.delete(watch_id)
+        with self._lock:
+            self._last_tick_at.pop(watch_id, None)
+            return self._store.delete(watch_id)
 
     def list_watches(self) -> dict[str, list[dict[str, Any]]]:
         watches: list[dict[str, Any]] = []
@@ -413,8 +415,12 @@ class WatchScheduler:
     def _persist(self, watch_id: str, data: dict[str, Any]) -> None:
         if not _is_generated_watch_id(watch_id):
             return
-        with suppress(OSError):
-            self._store.save(watch_id, data)
+        with self._lock:
+            path = self._store.file_path(watch_id)
+            if path is None or not path.exists():
+                return
+            with suppress(OSError):
+                self._store.save(watch_id, data)
 
     def _build_request(self, config: dict[str, Any]) -> BenchmarkRequest:
         return BenchmarkRequest(
