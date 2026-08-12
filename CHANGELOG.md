@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [1.4.0] - Unreleased
+
+### Added
+
+- **Monitoring (watch) mode**: a background scheduler re-checks a pinned target snapshot at configurable intervals, with threshold alerts surfaced through an in-UI alert banner. Watches are managed via the `/api/watch` endpoints, persist under the data directory, and history/recommendations support origin filtering.
+- **DNS-over-QUIC (DoQ)**: standalone DoQ benchmarking through the optional `aioquic` extra, with a capability-gated protocol selector and resolver badge, plus the protocol-comparison contract extended to four protocols (UDP/DoT/DoH/DoQ) under manifest v2 with per-resolver exclusion codes.
+- **Headless CLI**: `dnspect run` executes a full benchmark from the terminal with table/JSON/CSV output and scriptable exit codes.
+- **Run comparison/history improvements**: the immutable target snapshot is now synthesized for API/CLI runs, persistence writes are atomic, reads are resilient to corruption, samples read back on demand, and history listing reads summary sidecars (with a legacy fallback).
+- **Export parity**: CSV export now includes the diagnostics columns (NXDOMAIN hijacking, DNSSEC validation, blocking efficacy).
+- **Hook unit tests**: the orchestration hooks (benchmark session, run history, guided verification, watch) gained unit coverage.
+
+### Fixed
+
+- Run history now refreshes after terminal transitions; guided-verification cancel actually aborts the request; protocol-comparison preflight is debounced; transient poll errors retry with backoff.
+
+### Build/CI
+
+- e2e fixtures updated for the watch endpoints and protocol comparisons.
+- Flatpak manifest re-pinned to the `v1.3.0` tag.
+
 ## [1.3.0] - 2026-08-11
 
 ### Added

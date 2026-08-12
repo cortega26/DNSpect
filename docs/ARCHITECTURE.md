@@ -20,7 +20,11 @@ Ruta: `backend/app/`
 - `detect_dns.py`: detección DNS del sistema (resolvectl, scutil, networksetup, ipconfig, netsh).
 - `providers.py`: carga del dataset de proveedores (`dns_providers.es.json`) y consultas por defecto (`queries.txt`).
 - `geoip.py`: lookup opcional de GeoIP (MaxMind GeoLite2), mapeo país → región.
+- `export.py`: exportaciones CSV/JSON con paridad de columnas diagnósticas.
+- `watch.py`: subsistema de monitoreo (watch): scheduler en segundo plano, store persistente, evaluación de umbrales y generación de eventos.
 - `cli.py`: arranque del servidor para binario empaquetado (soporta native GTK/WebKit, browser, headless).
+- `cli_run.py`: subcomando `run` headless del CLI (benchmark completo sin UI).
+- `packaged_main.py`: entrypoint del binario empaquetado (bootstrap de data paths y arranque).
 
 ### Motores DNS
 
@@ -165,6 +169,13 @@ Códigos de no comparabilidad exactos (orden estable):
 | `/api/dns/system` | GET | Detección de DNS del sistema |
 | `/api/geoip` | GET | GeoIP lookup opcional |
 | `/api/probe` | POST | Probe rápida (sample pequeño) |
+| `/api/protocol-comparisons/preflight` | POST | Preflight de comparación de protocolos (eligibilidad por resolver/transporte) |
+| `/api/protocol-comparisons` | POST | Iniciar comparación de protocolos |
+| `/api/protocol-comparisons/{id}` | GET | Poll de estado/resultados de la comparación |
+| `/api/watch` | GET | Listar watches activos |
+| `/api/watch` | POST | Crear un watch |
+| `/api/watch/{id}` | DELETE | Eliminar un watch |
+| `/api/watch/{id}/status` | GET | Estado/eventos de un watch |
 | `/api/benchmarks` | POST | Iniciar benchmark |
 | `/api/benchmarks/history` | GET | Historial de runs persistidos |
 | `/api/benchmarks/compare` | GET | Comparación determinista de dos runs con manifest inmutable idéntico |
@@ -180,6 +191,31 @@ Códigos de no comparabilidad exactos (orden estable):
 - Número máximo de estados retenidos: `max_retained_states` (default 256).
 - Policies de cola: `max_concurrent_jobs` (default 2), `max_queued_jobs` (default 5).
 - Path de datos: configurable via `DNS_SPEED_LAB_DATA_DIR`; por defecto `platformdirs` (`user_data_path("dnspect", "DNSpect") / "runs"`).
+
+### Subsistema de monitoreo (watch)
+
+`watch.py` implementa el modo watch: un thread daemon (`dnswatch`) con
+intervalos por watch re-ejecuta el snapshot de destino pineado y compara los
+resultados contra umbrales configurados. El gate de arranque es
+`DNS_SPEED_LAB_WATCH_ENABLED` (default `1`); el store persiste los watches en
+`<data_dir>/watch/` (configurable via `DNS_SPEED_LAB_WATCH_DIR`). El estado
+runtime de cada watch mantiene un ring buffer acotado de
+`alert_events` (`WATCH_ALERT_RING_CAPACITY`) y los runs generados por el
+scheduler se etiquetan con `origin=watch` para filtrar historial y
+recomendaciones. Decisiones de diseño y umbrales: `docs/MONITORING_MODE.md`.
+
+### Contrato de comparación de protocolos
+
+`/api/protocol-comparisons*` implementa la comparación matched entre
+transportes: una sesión padre mide un conjunto común fijo de resolvers con el
+mismo plan de consultas y reporta deltas por protocolo. El contrato está
+congelado en `docs/PROTOCOL_COMPARISON_METHODOLOGY.md`:
+`PROTOCOL_COMPARISON_MANIFEST_VERSION = 2` (extendido a UDP/DoT/DoH/DoQ),
+eligibilidad por resolver/transporte vía
+`_protocol_endpoint_eligibility()` con códigos de exclusión explícitos
+(`dot_hostname_missing`, `doh_url_missing`, `doq_hostname_missing`, ...) en
+lugar de adivinar endpoints, y gating de capacidad DoQ
+(`dns.quic.have_quic`).
 
 ## Frontend
 

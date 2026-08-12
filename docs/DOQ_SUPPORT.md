@@ -1,5 +1,7 @@
 # DNS-over-QUIC (DoQ) support — design spike
 
+> Status: superseded — DoQ shipped in plans 023/029 (standalone + comparison, manifest v2); this record documents the spike-time state.
+
 > Plan 022. Design + decision record + catalog verification. No production
 > code was landed; the exact diffs are *described* below, not applied.
 > Prototype evidence: `backend/tests/doq_query_spike.py` +

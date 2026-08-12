@@ -37,6 +37,6 @@ modules:
     sources:
       - type: git
         url: https://github.com/cortega26/DNSpect.git
-        commit: a1a97c3efe17f7822d2d5988206fa6adc2a02ed4
+        commit: 3b2dbb0ea6e73dfa99513d68d682cb2d7b1cd649
         dest: dnspect-src
       - packaging/flatpak/generated-sources.json
