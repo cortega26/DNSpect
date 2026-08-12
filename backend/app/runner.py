@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from time import perf_counter
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import dns.exception
 import dns.message
@@ -320,15 +320,15 @@ def _protocol_diagnostic_domain(parent_id: str) -> str:
     return f"{nonce}.dnspect.invalid"
 
 
-def _protocol_endpoint_eligibility(
-    resolver: str,
+def _resolver_protocol_endpoint(
+    resolver_ip: str,
     protocol: BenchmarkProtocol,
     provider_index: dict[str, dict[str, Any]],
 ) -> tuple[str | None, str | None]:
-    """Return (endpoint, exclusion_code) for one resolver under one transport."""
+    """(endpoint, exclusion_code) — the single source of per-protocol eligibility."""
     if protocol == BenchmarkProtocol.udp:
-        return resolver, None
-    provider = provider_index.get(resolver)
+        return resolver_ip, None
+    provider = provider_index.get(resolver_ip)
     features = (provider or {}).get("features") or {}
     if protocol == BenchmarkProtocol.dot:
         hostname = features.get("dot_hostname")
@@ -345,6 +345,8 @@ def _protocol_endpoint_eligibility(
             return None, "doh_url_invalid"
         return url, None
     if protocol == BenchmarkProtocol.doq:
+        if features.get("doq") != "yes":
+            return None, "doq_unsupported"
         if not dns_quic_available():
             return None, "doq_unavailable"
         hostname = features.get("doq_hostname")
@@ -353,7 +355,7 @@ def _protocol_endpoint_eligibility(
         if not is_valid_dns_hostname(hostname):
             return None, "doq_hostname_invalid"
         return hostname, None
-    return None, "dot_hostname_missing"
+    return None, "invalid_protocol"
 
 
 def _protocol_metrics_dict(result: dict[str, Any]) -> dict[str, float | None]:
@@ -1073,7 +1075,7 @@ class BenchmarkManager:
             endpoints: dict[str, str | None] = {}
             excluded: list[tuple[str, str]] = []
             for protocol in canonical_protocols:
-                endpoint, exclusion = _protocol_endpoint_eligibility(resolver, protocol, self.provider_index)
+                endpoint, exclusion = _resolver_protocol_endpoint(resolver, protocol, self.provider_index)
                 endpoints[protocol.value] = endpoint
                 if exclusion is not None:
                     excluded.append((protocol.value, exclusion))
@@ -1258,15 +1260,10 @@ class BenchmarkManager:
         endpoints: dict[str, dict[str, str]] = {}
         for identity in preflight.endpoint_identities:
             entry: dict[str, str] = {"udp": identity.udp_resolver_ip}
-            if identity.dot_hostname is not None:
-                entry["dot"] = identity.dot_hostname
-            if identity.doh_url is not None:
-                entry["doh"] = identity.doh_url
-            provider = self.provider_index.get(identity.resolver)
-            features = (provider or {}).get("features") or {}
-            doq_hostname = features.get("doq_hostname")
-            if isinstance(doq_hostname, str) and doq_hostname.strip():
-                entry["doq"] = doq_hostname
+            for protocol in (BenchmarkProtocol.dot, BenchmarkProtocol.doh, BenchmarkProtocol.doq):
+                endpoint, _ = _resolver_protocol_endpoint(identity.resolver, protocol, self.provider_index)
+                if endpoint is not None:
+                    entry[protocol.value] = endpoint
             endpoints[identity.resolver] = entry
         return endpoints
 
@@ -1867,19 +1864,10 @@ class BenchmarkManager:
         self._clear_storage_warning(benchmark_id)
 
     def _resolver_supports_protocol(self, resolver_ip: str, protocol: str) -> bool:
-        if protocol == "udp":
-            return True
-        provider = self.provider_index.get(resolver_ip)
-        if not provider:
-            return False
-        features = provider.get("features") or {}
-        if protocol == "dot":
-            return bool(features.get("dot_hostname") or features.get("dot") == "yes")
-        if protocol == "doh":
-            return bool(features.get("doh_url"))
-        if protocol == "doq":
-            return features.get("doq") == "yes" and bool(features.get("doq_hostname"))
-        return False
+        endpoint, _ = _resolver_protocol_endpoint(
+            resolver_ip, cast(BenchmarkProtocol, protocol), self.provider_index
+        )
+        return endpoint is not None
 
     def _measure_with_protocol(
         self,

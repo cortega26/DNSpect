@@ -388,13 +388,3 @@ export interface WatchEntry {
 export interface WatchListResponse {
   watches: WatchEntry[]
 }
-
-export interface WatchStatus {
-  watch_id: string
-  config: WatchConfigPayload
-  active_run_id: string | null
-  last_run_id: string | null
-  last_evaluated_at: string | null
-  last_alert_at: string | null
-  alert_events: WatchAlertEvent[]
-}

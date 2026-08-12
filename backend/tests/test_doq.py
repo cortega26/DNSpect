@@ -16,7 +16,7 @@ from app.models import BenchmarkRequest
 from app.providers import load_providers
 from app.runner import (
     BenchmarkManager,
-    _protocol_endpoint_eligibility,
+    _resolver_protocol_endpoint,
     dns_quic_available,
     run_doq_query,
 )
@@ -100,7 +100,7 @@ def test_providers_validate_doq_hostname(monkeypatch, tmp_path) -> None:
 
 
 def test_doq_eligibility_codes(monkeypatch) -> None:
-    """_protocol_endpoint_eligibility gates doq on availability and hostname validity."""
+    """_resolver_protocol_endpoint gates doq on the flag, availability and hostname validity."""
     monkeypatch.setattr("app.runner.dns_quic_available", lambda: True)
 
     provider_index = {
@@ -110,24 +110,58 @@ def test_doq_eligibility_codes(monkeypatch) -> None:
             "features": {"doq": "yes", "doq_hostname": "one.one.one.one"},
         }
     }
-    endpoint, code = _protocol_endpoint_eligibility("1.1.1.1", "doq", provider_index)
+    endpoint, code = _resolver_protocol_endpoint("1.1.1.1", "doq", provider_index)
     assert endpoint == "one.one.one.one"
     assert code is None
 
     missing = {"id": "m", "name": "M", "features": {"doq": "yes"}}
-    endpoint, code = _protocol_endpoint_eligibility("1.1.1.1", "doq", {"1.1.1.1": missing})
+    endpoint, code = _resolver_protocol_endpoint("1.1.1.1", "doq", {"1.1.1.1": missing})
     assert endpoint is None
     assert code == "doq_hostname_missing"
 
     invalid = {"id": "i", "name": "I", "features": {"doq": "yes", "doq_hostname": "bad hostname"}}
-    endpoint, code = _protocol_endpoint_eligibility("1.1.1.1", "doq", {"1.1.1.1": invalid})
+    endpoint, code = _resolver_protocol_endpoint("1.1.1.1", "doq", {"1.1.1.1": invalid})
     assert endpoint is None
     assert code == "doq_hostname_invalid"
 
     monkeypatch.setattr("app.runner.dns_quic_available", lambda: False)
-    endpoint, code = _protocol_endpoint_eligibility("1.1.1.1", "doq", provider_index)
+    endpoint, code = _resolver_protocol_endpoint("1.1.1.1", "doq", provider_index)
     assert endpoint is None
     assert code == "doq_unavailable"
+
+
+def test_doq_flag_required_in_plain_benchmark(monkeypatch) -> None:
+    """A provider with a doq_hostname but doq != "yes" is filtered from a plain doq run."""
+    monkeypatch.setattr("app.runner.dns_quic_available", lambda: True)
+    manager = BenchmarkManager()
+    manager.provider_index = {
+        "1.1.1.1": {
+            "id": "cf",
+            "name": "Cloudflare",
+            "features": {"doq": "no", "doq_hostname": "one.one.one.one"},
+        },
+        "9.9.9.9": {
+            "id": "q9",
+            "name": "Quad9",
+            "features": {"doq": "yes", "doq_hostname": "dns.quad9.net"},
+        },
+    }
+    assert not manager._resolver_supports_protocol("1.1.1.1", "doq")
+    assert manager._resolver_supports_protocol("9.9.9.9", "doq")
+    endpoint, code = _resolver_protocol_endpoint("1.1.1.1", "doq", manager.provider_index)
+    assert endpoint is None
+    assert code == "doq_unsupported"
+
+
+def test_unknown_protocol_returns_invalid_protocol(monkeypatch) -> None:
+    """The old fallthrough returned a wrong dot code; the unified gate must not."""
+    monkeypatch.setattr("app.runner.dns_quic_available", lambda: True)
+    provider_index = {
+        "1.1.1.1": {"id": "cf", "name": "Cloudflare", "features": {"doq": "yes"}},
+    }
+    endpoint, code = _resolver_protocol_endpoint("1.1.1.1", "unknown_protocol", provider_index)
+    assert endpoint is None
+    assert code == "invalid_protocol"
 
 
 def test_run_doq_query_success(monkeypatch) -> None:

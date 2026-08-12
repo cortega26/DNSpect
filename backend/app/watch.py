@@ -28,7 +28,6 @@ WATCH_ALERT_RING_CAPACITY = 50
 WATCH_LOOP_INTERVAL_SEC = 5
 
 RELATIVE_METRICS = ("median_ms", "p95_ms", "blocking_efficacy", "score_total")
-RATE_METRICS = ("success_rate", "failure_rate")
 HIGHER_IS_BETTER = {"success_rate", "blocking_efficacy", "score_total"}
 
 _MANIFEST_EQUALITY_FIELDS = (
