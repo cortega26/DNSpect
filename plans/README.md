@@ -70,7 +70,7 @@ priority describes expected impact, effort is an implementation estimate.
 | [025 — manifest target-snapshot synthesis](archive/025-manifest-target-snapshot-synthesis.md) | P1 / M | — | **DONE** — **Complete** — `4be0274` |
 | [026 — frontend session fixes](archive/026-frontend-session-fixes.md) | P2 / S-M | — | **DONE** — **Complete** — `d6c1c8f` |
 | [027 — orchestration hook unit tests](archive/027-hook-unit-tests.md) | P2 / M | 026 (recommended) | **DONE** — **Complete** — `d775029` |
-| [028 — monitoring mode implementation](archive/028-monitoring-mode-implementation.md) | P1 / L | — | **DONE** — merged `29cfaa9` + `abca400` (2 revision rounds: e2e fixtures repaired a pre-existing plan-023 regression; precise heading-role locators fixed a strict-mode collision the WatchPanel copy introduced in `accessibility-i18n.spec.ts`); e2e 25/25 verified on merged main; pushed to `abca400` |
+| [028 — monitoring mode implementation](archive/028-monitoring-mode-implementation.md) | P1 / L | — | **Complete** — merged `29cfaa9` + `abca400` (2 revision rounds: e2e fixtures repaired a pre-existing plan-023 regression; precise heading-role locators fixed a strict-mode collision the WatchPanel copy introduced in `accessibility-i18n.spec.ts`); e2e 25/25 verified on merged main; pushed to `abca400` |
 | [029 — DoQ comparison extension](archive/029-doq-comparison-extension.md) | P2 / M | — | **DONE** — **Complete** — `54ce261` |
 | [030 — history summary sidecars](030-history-summary-sidecar.md) | P2 / M | — | **DONE** — **Complete** — `96ccaed` |
 
