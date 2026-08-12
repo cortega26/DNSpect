@@ -9,25 +9,19 @@ Every executor must run the plan's drift check before starting. Do not update
 this index from an implementation branch; a coordinating reviewer updates the
 status once a plan has passed its own done criteria.
 
-> **Drift-check note**: plan files are anchored to commit `e09fd2d`. Merged
-> plans have since touched many files that pending plans also list
-> (`frontend/src/App.tsx`, `i18n-translations.ts`, `api.ts`, `utils.ts`,
-> `AGENTS.md`). When executing a pending plan, re-anchor its drift check to
-> current HEAD (`37bfbfa`) and treat diffs caused by *merged* plans as expected
-> context, not new drift.
+> **Drift-check note**: all plans are now complete and archived; the anchor
+> history (e09fd2d → 96ccaed) is retained for reference only. New plans
+> (031+) anchor to the current HEAD at their writing time.
 
-## Status snapshot (2026-08-11)
+## Status snapshot (2026-08-13)
 
-**All 18 plans complete.** The improvement backlog from the deep review is
-fully implemented and merged to main.
-
-**Roadmap wave (plans 019-022)** — written against commit `087e5ff` by the
-improve-skill direction audit on 2026-08-11. 019 and 020 are build plans; 021
-and 022 are design spikes (design doc + disposable prototype module under
-`backend/tests/`, no production code). The wave targets the README roadmap
-items and the stated-but-undelivered DoQ claim. Status rows for 019-022 are
-maintained by the coordinating reviewer; completed plans are archived with
-`make plans-archive`.
+**All 30 plans complete.** The full improvement backlog — the deep-review
+wave (001-018), the roadmap wave (019-022), the audit wave (023-027), and
+the final wave (028-030: monitoring implementation, DoQ comparison
+extension, history summary sidecars) — is implemented, merged, and pushed.
+The remaining open item is the pre-release deep reaudit follow-up (see
+"Reaudit checkpoint"), whose findings and follow-up plans will be recorded
+here as 031+.
 
 ## Recommended execution order
 
@@ -67,18 +61,18 @@ priority describes expected impact, effort is an implementation estimate.
 | [016 — documentation contract](archive/016-documentation-contract.md) | P2 / M | 001, 003, 004, 006, 011, 013 | **Complete** — `8a54401` |
 | [017 — profile-aware history comparison](archive/017-profile-aware-history-comparison.md) | P3 / L | 009, 010, 014, 015, 016 | **Complete** — `80248ce` |
 | [018 — controlled protocol comparison](archive/018-controlled-protocol-comparison.md) | P3 / L | 009, 010, 012, 014, 015, 016, 017 | **Complete** — `ba24025` |
-| [019 — backend CSV diagnostics parity](019-backend-csv-diagnostics-parity.md) | P2 / S | — | **DONE** — implemented in worktree `/tmp/opencode/dnspect-019` (branch `plan/019-backend-csv-diagnostics-parity`, commits `66f65e2`, `814a912`); criteria re-verified by reviewer; **merge pending user decision** |
-| [020 — headless CLI benchmark](020-headless-cli-benchmark.md) | P2 / M | 019 | **DONE** — implemented in worktree `/tmp/opencode/dnspect-020` (branch `plan/020-headless-cli-benchmark`, commits `4a3f732`, `f3caa56`, `4315f21`, `93faf7d`); criteria re-verified by reviewer; **merge pending user decision** |
-| [021 — monitoring mode design spike](021-monitoring-mode-design-spike.md) | P1 / L | — | **DONE** — worktree `/tmp/opencode/dnspect-021` (branch `plan/021-monitoring-mode-design-spike`, commits `7a8e58a`, `aa23449`); criteria + doc re-verified by reviewer; **merge pending user decision**; spike evidence files deleted per decision 2 |
-| [022 — DNS-over-QUIC design spike](022-dns-over-quic-design-spike.md) | P2 / L | — | **DONE** — worktree `/tmp/opencode/dnspect-022` (branch `plan/022-dns-over-quic-design-spike`, commits `e02b6a1`, `cc3cb19`); criteria + doc re-verified by reviewer; **merge pending user decision**; spike evidence files deleted per decision 2 |
-| [023 — DNS-over-QUIC standalone benchmark](023-dns-over-quic-standalone.md) | P1 / L | — | **DONE** — worktree `/tmp/opencode/dnspect-023` (branch `plan/023-dns-over-quic-standalone`, 10 commits `c095a6b..9f48204`); criteria + gates re-verified by reviewer; one documented scope deviation (e2e `fixtures.ts` type widening); **merge pending user decision** |
-| [024 — persistence write-path robustness](024-persistence-write-path-robustness.md) | P1 / M | — | **DONE** — worktree `/tmp/opencode/dnspect-024` (branch `plan/024-persistence-write-path-robustness`, commits `fdf998c`, `38b23c6`); criteria + gate re-verified by reviewer; **merge pending user decision** |
-| [025 — manifest target-snapshot synthesis](025-manifest-target-snapshot-synthesis.md) | P1 / M | — | **DONE** — worktree `/tmp/opencode/dnspect-025` (branch `plan/025-manifest-target-snapshot-synthesis`, commits `5fbe3ac`, `7892c97`, `ad85928`); STOPPED once on `test_manager_lifecycle.py:155` (pre-fix contract assertion), resolved by reviewer (contract update, documented deviation), gate re-verified green; **merge pending user decision** |
-| [026 — frontend session fixes](026-frontend-session-fixes.md) | P2 / S-M | — | **DONE** — worktree `/tmp/opencode/dnspect-026` (branch `plan/026-frontend-session-fixes`, 5 commits `b069943..edf5e6f`); criteria + gates re-verified by reviewer; **merge pending user decision** |
-| [027 — orchestration hook unit tests](027-hook-unit-tests.md) | P2 / M | 026 (recommended) | **DONE** — worktree `/tmp/opencode/dnspect-027` (branch `plan/027-hook-unit-tests`, branched from 026's tip, commits `8f65c62`, `700d3e2`); 23 tests, gates re-verified by reviewer; **merge pending user decision** |
-| [028 — monitoring mode implementation](028-monitoring-mode-implementation.md) | P1 / L | — | **DONE** — merged `29cfaa9` + `abca400` (2 revision rounds: e2e fixtures repaired a pre-existing plan-023 regression; precise heading-role locators fixed a strict-mode collision the WatchPanel copy introduced in `accessibility-i18n.spec.ts`); e2e 25/25 verified on merged main; pushed to `abca400` |
-| [029 — DoQ comparison extension](029-doq-comparison-extension.md) | P2 / M | — | **DONE** — worktree `/tmp/opencode/dnspect-029` (branch `plan/029-doq-comparison-extension`, commits `a72eeb6`, `c863f98`); executor found and fixed two real dispatch gaps the plan's trace had missed (`_plan_endpoints` doq key, `_measure_comparison_sample` doq branch — mechanical mirrors, in-scope); gates + e2e re-verified by reviewer; **merge pending user decision** |
-| [030 — history summary sidecars](030-history-summary-sidecar.md) | P2 / M | — | **DONE** — worktree `/tmp/opencode/dnspect-030` (branch `plan/030-history-summary-sidecar`, commits `45a9357`, `f7d0cb0`); documented judgment call: ghost-run cleanup also unlinks the summary sidecar (keeps the 024 invariant green); gates re-verified by reviewer; **merge pending user decision** |
+| [019 — backend CSV diagnostics parity](archive/019-backend-csv-diagnostics-parity.md) | P2 / S | — | **DONE** — **Complete** — `6a71835` |
+| [020 — headless CLI benchmark](archive/020-headless-cli-benchmark.md) | P2 / M | 019 | **DONE** — **Complete** — `44c9eae` |
+| [021 — monitoring mode design spike](archive/021-monitoring-mode-design-spike.md) | P1 / L | — | **DONE** — **Complete** — `7a4cad9` |
+| [022 — DNS-over-QUIC design spike](archive/022-dns-over-quic-design-spike.md) | P2 / L | — | **DONE** — **Complete** — `d5002d0` |
+| [023 — DNS-over-QUIC standalone benchmark](archive/023-dns-over-quic-standalone.md) | P1 / L | — | **DONE** — **Complete** — `cdf4e30` |
+| [024 — persistence write-path robustness](archive/024-persistence-write-path-robustness.md) | P1 / M | — | **DONE** — **Complete** — `82a9d0a` |
+| [025 — manifest target-snapshot synthesis](archive/025-manifest-target-snapshot-synthesis.md) | P1 / M | — | **DONE** — **Complete** — `4be0274` |
+| [026 — frontend session fixes](archive/026-frontend-session-fixes.md) | P2 / S-M | — | **DONE** — **Complete** — `d6c1c8f` |
+| [027 — orchestration hook unit tests](archive/027-hook-unit-tests.md) | P2 / M | 026 (recommended) | **DONE** — **Complete** — `d775029` |
+| [028 — monitoring mode implementation](archive/028-monitoring-mode-implementation.md) | P1 / L | — | **DONE** — merged `29cfaa9` + `abca400` (2 revision rounds: e2e fixtures repaired a pre-existing plan-023 regression; precise heading-role locators fixed a strict-mode collision the WatchPanel copy introduced in `accessibility-i18n.spec.ts`); e2e 25/25 verified on merged main; pushed to `abca400` |
+| [029 — DoQ comparison extension](archive/029-doq-comparison-extension.md) | P2 / M | — | **DONE** — **Complete** — `54ce261` |
+| [030 — history summary sidecars](030-history-summary-sidecar.md) | P2 / M | — | **DONE** — **Complete** — `96ccaed` |
 
 ## Roadmap wave dependency notes (019-022)
 
