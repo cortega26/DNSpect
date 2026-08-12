@@ -48,7 +48,15 @@ Expected release assets (produced by `release.yml` from the tagged commit):
 - [ ] Root route (`/`) serves frontend HTML from the packaged runtime.
 - [ ] Per-asset verification: run the checks in `docs/RELEASE_VERIFY.md` against each downloaded asset.
 
-## 6. Pre-Upload Windows Packaged Smoke
+## 6. Flatpak Manifest Verification
+
+- [ ] The manifest `io.github.cortega26.DNSpect.yaml` `commit:` field matches the release tag hash: `git rev-parse v<version>`.
+- [ ] Regenerate `packaging/flatpak/generated-sources.json` (node deps): `make flatpak-deps`.
+- [ ] Regenerate `packaging/flatpak/python3-requirements.json` (python deps): `make flatpak-python-deps`.
+  - Both targets need the flatpak tooling installed locally (`flatpak-node-generator`, `flatpak-pip-generator`). If it is not available, record the regeneration as a checklist item for the release machine.
+- [ ] When tooling is available, validate the manifest and build: `make flatpak-validate`.
+
+## 7. Pre-Upload Windows Packaged Smoke
 
 Before publishing the Windows asset:
 
@@ -56,7 +64,7 @@ Before publishing the Windows asset:
   `pwsh ./scripts/smoke_packaged_windows.ps1 -BinaryPath release-assets/dnspect-windows-x64.exe`
 - [ ] The smoke log shows the health check passing and no unexpected failures.
 
-## 7. GitHub Release Steps
+## 8. GitHub Release Steps
 
 - [ ] Local tag created: `git tag v<version>`.
 - [ ] Push branch and tag:
