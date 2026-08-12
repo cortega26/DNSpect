@@ -789,7 +789,6 @@ function App() {
     const payload = {
       mode,
       scoring_profile: scoringProfile,
-      goal: scoringProfile,
       protocol,
       runs,
       timeout_sec: timeoutSec,

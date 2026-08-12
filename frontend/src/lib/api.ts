@@ -1,4 +1,4 @@
-import type { BenchmarkMode, BenchmarkProtocol, BenchmarkStatus, Goal, ProbeResponse, Provider, ProtocolComparisonPreflight, ProtocolComparisonStartPayload, ProtocolComparisonStatus, RunComparisonResponse, ScoringProfile, SystemDnsPayload, TargetSnapshot, WatchConfigPayload, WatchListResponse, WatchStatus } from './types'
+import type { BenchmarkMode, BenchmarkProtocol, BenchmarkStatus, Goal, ProbeResponse, Provider, ProtocolComparisonPreflight, ProtocolComparisonStartPayload, ProtocolComparisonStatus, RunComparisonResponse, ScoringProfile, SystemDnsPayload, TargetSnapshot, WatchConfigPayload, WatchListResponse } from './types'
 import { API_BASE } from './utils'
 
 interface StartBenchmarkPayload {
@@ -74,7 +74,6 @@ export async function startBenchmark(payload: StartBenchmarkPayload): Promise<{ 
   const body: Record<string, unknown> = {
     mode: payload.mode,
     scoring_profile: payload.scoring_profile ?? payload.goal ?? 'speed',
-    goal: payload.scoring_profile ?? payload.goal ?? 'speed',
     protocol: payload.protocol ?? 'udp',
     timeout_sec: payload.timeout_sec,
     resolvers: payload.resolvers,
@@ -226,13 +225,7 @@ export async function deleteWatch(watchId: string): Promise<void> {
   }
 }
 
-export async function getWatchStatus(watchId: string, signal?: AbortSignal): Promise<WatchStatus> {
-  const res = await fetch(`${API_BASE}/api/watch/${watchId}/status`, { signal })
-  if (!res.ok) throw new Error('No se pudo consultar el watch')
-  return res.json()
-}
-
-async function safeError(res: Response): Promise<string> {
+export async function safeError(res: Response): Promise<string> {
   try {
     const payload = await res.json()
     if (payload?.detail) return String(payload.detail)
