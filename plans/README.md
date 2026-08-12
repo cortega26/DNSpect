@@ -77,8 +77,8 @@ priority describes expected impact, effort is an implementation estimate.
 | [026 — frontend session fixes](026-frontend-session-fixes.md) | P2 / S-M | — | **DONE** — worktree `/tmp/opencode/dnspect-026` (branch `plan/026-frontend-session-fixes`, 5 commits `b069943..edf5e6f`); criteria + gates re-verified by reviewer; **merge pending user decision** |
 | [027 — orchestration hook unit tests](027-hook-unit-tests.md) | P2 / M | 026 (recommended) | **DONE** — worktree `/tmp/opencode/dnspect-027` (branch `plan/027-hook-unit-tests`, branched from 026's tip, commits `8f65c62`, `700d3e2`); 23 tests, gates re-verified by reviewer; **merge pending user decision** |
 | [028 — monitoring mode implementation](028-monitoring-mode-implementation.md) | P1 / L | — | **DONE** — merged `29cfaa9` + `abca400` (2 revision rounds: e2e fixtures repaired a pre-existing plan-023 regression; precise heading-role locators fixed a strict-mode collision the WatchPanel copy introduced in `accessibility-i18n.spec.ts`); e2e 25/25 verified on merged main; pushed to `abca400` |
-| [029 — DoQ comparison extension](029-doq-comparison-extension.md) | P2 / M | — | TODO |
-| [030 — history summary sidecars](030-history-summary-sidecar.md) | P2 / M | — | TODO |
+| [029 — DoQ comparison extension](029-doq-comparison-extension.md) | P2 / M | — | **DONE** — worktree `/tmp/opencode/dnspect-029` (branch `plan/029-doq-comparison-extension`, commits `a72eeb6`, `c863f98`); executor found and fixed two real dispatch gaps the plan's trace had missed (`_plan_endpoints` doq key, `_measure_comparison_sample` doq branch — mechanical mirrors, in-scope); gates + e2e re-verified by reviewer; **merge pending user decision** |
+| [030 — history summary sidecars](030-history-summary-sidecar.md) | P2 / M | — | **DONE** — worktree `/tmp/opencode/dnspect-030` (branch `plan/030-history-summary-sidecar`, commits `45a9357`, `f7d0cb0`); documented judgment call: ghost-run cleanup also unlinks the summary sidecar (keeps the 024 invariant green); gates re-verified by reviewer; **merge pending user decision** |
 
 ## Roadmap wave dependency notes (019-022)
 
