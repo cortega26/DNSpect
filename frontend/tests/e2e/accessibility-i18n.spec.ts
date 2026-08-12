@@ -15,6 +15,14 @@ async function htmlLang(page: import('@playwright/test').Page): Promise<string> 
   return page.evaluate(() => document.documentElement.lang)
 }
 
+async function switchToMode(page: import('@playwright/test').Page, name: string) {
+  await page.getByRole('tab', { name, exact: true }).click()
+}
+
+async function switchToSection(page: import('@playwright/test').Page, name: string) {
+  await page.getByRole('tab', { name, exact: true }).click()
+}
+
 test.describe('accessibility and i18n contract', () => {
   test('a saved English locale drives the document language and UI copy', async ({ page }) => {
     await page.addInitScript(() => {
@@ -24,9 +32,12 @@ test.describe('accessibility and i18n contract', () => {
     await api.install()
     await page.goto('/')
 
+    await switchToMode(page, 'Lab')
     await expect(page.locator('.btn-start')).toBeVisible()
     expect(await htmlLang(page)).toBe('en')
+    await switchToSection(page, 'History')
     await expect(page.getByRole('heading', { name: 'History' })).toBeVisible()
+    await switchToSection(page, 'Benchmark')
     await expect(page.locator('.chip-compact', { hasText: 'South America' })).toBeVisible()
     expect(api.unhandledRequests).toEqual([])
   })
@@ -49,6 +60,7 @@ test.describe('accessibility and i18n contract', () => {
     for (const deferred of api.deferredsFor(GET_SYSTEM_DNS)) {
       deferred.resolve({ body: { resolvers: [], method: 'test', platform: 'test', detected_provider_id: 'isp-detectado' } })
     }
+    await switchToMode(page, 'Lab')
     await expect(page.locator('.btn-start')).toBeVisible()
     expect(api.unhandledRequests).toEqual([])
   })
@@ -61,8 +73,10 @@ test.describe('accessibility and i18n contract', () => {
       await api.install()
       await page.goto('/')
 
+      await switchToMode(page, 'Laboratório')
       await expect(page.locator('.btn-start')).toBeVisible()
       expect(await htmlLang(page)).toBe('pt')
+      await switchToSection(page, 'Histórico')
       await expect(page.getByRole('heading', { name: 'Histórico' })).toBeVisible()
       expect(api.unhandledRequests).toEqual([])
     })
@@ -85,6 +99,8 @@ test.describe('accessibility and i18n contract', () => {
     await page.keyboard.press('Enter')
 
     expect(await htmlLang(page)).toBe('pt')
+    await switchToMode(page, 'Laboratório')
+    await switchToSection(page, 'Histórico')
     await expect(page.getByRole('heading', { name: 'Histórico' })).toBeVisible()
     expect(api.unhandledRequests).toEqual([])
   })
@@ -129,6 +145,8 @@ test.describe('accessibility and i18n contract', () => {
     await api.install()
     await page.goto('/')
 
+    await switchToMode(page, 'Lab')
+    await switchToSection(page, 'History')
     await expect(page.locator('.history-btn')).toHaveCount(2)
     await page.locator('.history-btn', { hasText: 'Quad9' }).click()
 
@@ -141,6 +159,7 @@ test.describe('accessibility and i18n contract', () => {
     })
     selection.resolve({ body })
 
+    await switchToSection(page, 'Results')
     await expect(page.locator('#resolver-ranking-panel')).toBeVisible()
 
     const rankingMeta = page.locator('.ranking-meta').first()

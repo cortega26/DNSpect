@@ -22,6 +22,14 @@ function comparisonPanel(page: import('@playwright/test').Page) {
   return page.locator('.protocol-comparison-panel')
 }
 
+async function switchToMode(page: import('@playwright/test').Page, name: 'Quick check' | 'Lab') {
+  await page.getByRole('tab', { name, exact: true }).click()
+}
+
+async function switchToSection(page: import('@playwright/test').Page, name: string) {
+  await page.getByRole('tab', { name, exact: true }).click()
+}
+
 async function openComparisonMode(page: import('@playwright/test').Page) {
   const toggle = page.locator('.comparison-toggle')
   await expect(toggle).toBeVisible()
@@ -36,6 +44,7 @@ test.describe('protocol comparison (Chromium, mocked network)', () => {
     await api.install()
     await page.goto('/')
 
+    await switchToMode(page, 'Lab')
     await openComparisonMode(page)
     await expect(page.getByText('Compatible resolvers: 2')).toBeVisible()
     await expect(page.getByText('8.20.247.20')).toBeVisible()
@@ -52,6 +61,7 @@ test.describe('protocol comparison (Chromium, mocked network)', () => {
     await api.install()
     await page.goto('/')
 
+    await switchToMode(page, 'Lab')
     await openComparisonMode(page)
     await expect(page.getByText('Compatible resolvers: 0')).toBeVisible()
     await expect(page.getByText('Cannot start the comparison:')).toBeVisible()
@@ -68,12 +78,14 @@ test.describe('protocol comparison (Chromium, mocked network)', () => {
     await api.install()
     await page.goto('/')
 
+    await switchToMode(page, 'Lab')
     await openComparisonMode(page)
     await expect(page.getByText('Compatible resolvers: 2')).toBeVisible()
     expect(api.countOf(PREFLIGHT)).toBe(1)
 
     await page.getByRole('button', { name: 'Start comparison' }).click()
     expect(api.countOf(START)).toBe(1)
+    await switchToSection(page, 'Protocol Lab')
 
     await waitForRouteDeferred(api, GET_STATUS, 1)
     const [firstPoll] = api.deferredsFor(GET_STATUS)
@@ -101,11 +113,13 @@ test.describe('protocol comparison (Chromium, mocked network)', () => {
     await api.install()
     await page.goto('/')
 
+    await switchToMode(page, 'Lab')
     await openComparisonMode(page)
     await page.getByRole('button', { name: 'DoH', exact: true }).click()
     await expect(page.getByText('Compatible resolvers: 2')).toBeVisible()
 
     await page.getByRole('button', { name: 'Start comparison' }).click()
+    await switchToSection(page, 'Protocol Lab')
     await waitForRouteDeferred(api, GET_STATUS, 1)
     const [firstPoll] = api.deferredsFor(GET_STATUS)
     const comparisonId = firstPoll.meta.id
@@ -137,9 +151,11 @@ test.describe('protocol comparison (Chromium, mocked network)', () => {
     await api.install()
     await page.goto('/')
 
+    await switchToMode(page, 'Lab')
     await openComparisonMode(page)
     await expect(page.getByText('Compatible resolvers: 2')).toBeVisible()
     await page.getByRole('button', { name: 'Start comparison' }).click()
+    await switchToSection(page, 'Protocol Lab')
 
     await waitForRouteDeferred(api, GET_STATUS, 1)
     const [firstPoll] = api.deferredsFor(GET_STATUS)
@@ -164,6 +180,7 @@ test.describe('protocol comparison (Chromium, mocked network)', () => {
     await api.install()
     await page.goto('/')
 
+    await switchToMode(page, 'Lab')
     await openComparisonMode(page)
     await waitForRouteDeferred(api, PREFLIGHT, 1)
 
@@ -178,12 +195,15 @@ test.describe('protocol comparison (Chromium, mocked network)', () => {
     await expect(page.getByText('Requested: 2 protocols')).toHaveCount(0)
 
     await page.getByRole('button', { name: 'Start comparison' }).click()
+    await switchToSection(page, 'Protocol Lab')
     await waitForRouteDeferred(api, GET_STATUS, 1)
     const [oldParent] = api.deferredsFor(GET_STATUS)
     oldParent.resolve({ body: protocolComparisonStatusFixture(oldParent.meta.id, { status: 'done' }) })
     await expect(comparisonPanel(page)).toContainText('Completed')
 
+    await switchToSection(page, 'Benchmark')
     await page.getByRole('button', { name: 'Start comparison' }).click()
+    await switchToSection(page, 'Protocol Lab')
     await waitForRouteDeferred(api, GET_STATUS, 2)
     const [staleParent, currentParent] = api.deferredsFor(GET_STATUS)
     currentParent.resolve({ body: protocolComparisonStatusFixture(currentParent.meta.id, { status: 'running' }) })

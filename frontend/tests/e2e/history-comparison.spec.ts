@@ -19,6 +19,19 @@ async function waitForRouteDeferred(api: MockApi, routeKey: string, count: numbe
     .poll(() => api.deferredsFor(routeKey).length, { timeout: timeoutMs })
     .toBeGreaterThanOrEqual(count)
 }
+async function switchToMode(page: import('@playwright/test').Page, name: 'Quick check' | 'Lab') {
+  await page.getByRole('tab', { name, exact: true }).click()
+}
+
+async function switchToSection(page: import('@playwright/test').Page, name: string) {
+  await page.getByRole('tab', { name, exact: true }).click()
+}
+
+async function openHistorySection(page: import('@playwright/test').Page) {
+  await switchToMode(page, 'Lab')
+  await switchToSection(page, 'History')
+}
+
 
 function comparisonPanel(page: import('@playwright/test').Page) {
   return page.locator('.comparison-panel')
@@ -35,6 +48,7 @@ test.describe('run history comparison (Chromium, mocked network)', () => {
     await api.install()
     await page.goto('/')
 
+    await openHistorySection(page)
     await expect(page.locator('.history-btn')).toHaveCount(2)
     await selectPair(page, 'Use 1.1.1.1 as baseline', 'Use 9.9.9.9 as candidate')
 
@@ -63,6 +77,7 @@ test.describe('run history comparison (Chromium, mocked network)', () => {
     await api.install()
     await page.goto('/')
 
+    await openHistorySection(page)
     await expect(page.locator('.history-btn')).toHaveCount(2)
     await selectPair(page, 'Use 1.1.1.1 as baseline', 'Use 9.9.9.9 as candidate')
 
@@ -97,6 +112,7 @@ test.describe('run history comparison (Chromium, mocked network)', () => {
     await api.install()
     await page.goto('/')
 
+    await openHistorySection(page)
     await expect(page.locator('.history-btn')).toHaveCount(3)
     await selectPair(page, 'Use 1.1.1.1 as baseline', 'Use 9.9.9.9 as candidate')
     await waitForRouteDeferred(api, GET_COMPARE, 1)
@@ -125,6 +141,7 @@ test.describe('run history comparison (Chromium, mocked network)', () => {
     await api.install()
     await page.goto('/')
 
+    await openHistorySection(page)
     await expect(page.locator('.history-btn')).toHaveCount(2)
     await selectPair(page, 'Use 1.1.1.1 as baseline', 'Use 9.9.9.9 as candidate')
 
