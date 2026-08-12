@@ -26,7 +26,7 @@ test.describe('accessibility and i18n contract', () => {
 
     await expect(page.locator('.btn-start')).toBeVisible()
     expect(await htmlLang(page)).toBe('en')
-    await expect(page.getByText('History')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'History' })).toBeVisible()
     await expect(page.locator('.chip-compact', { hasText: 'South America' })).toBeVisible()
     expect(api.unhandledRequests).toEqual([])
   })
@@ -63,7 +63,7 @@ test.describe('accessibility and i18n contract', () => {
 
       await expect(page.locator('.btn-start')).toBeVisible()
       expect(await htmlLang(page)).toBe('pt')
-      await expect(page.getByText('Histórico')).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Histórico' })).toBeVisible()
       expect(api.unhandledRequests).toEqual([])
     })
   })
@@ -85,7 +85,7 @@ test.describe('accessibility and i18n contract', () => {
     await page.keyboard.press('Enter')
 
     expect(await htmlLang(page)).toBe('pt')
-    await expect(page.getByText('Histórico')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Histórico' })).toBeVisible()
     expect(api.unhandledRequests).toEqual([])
   })
 
