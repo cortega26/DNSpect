@@ -423,7 +423,10 @@ function App() {
 
   useEffect(() => {
     if (!protocolComparisonPayload) return
-    runProtocolComparisonPreflight(protocolComparisonPayload)
+    const handle = window.setTimeout(() => {
+      void runProtocolComparisonPreflight(protocolComparisonPayload)
+    }, 300)
+    return () => window.clearTimeout(handle)
   }, [protocolComparisonPayload, runProtocolComparisonPreflight])
 
   const protocolComparisonActive = Boolean(
