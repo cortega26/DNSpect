@@ -334,7 +334,7 @@ export function DashboardControls({ doqAvailable = true, ...props }: Props) {
                 <div className="actions-row">
                   <button
                     type="button"
-                    className="btn-start"
+                    className="btn-start btn-chamfer"
                     onClick={props.onStartComparison}
                     disabled={!props.comparisonPreflight.admissible || props.comparisonActive}
                   >
@@ -349,7 +349,7 @@ export function DashboardControls({ doqAvailable = true, ...props }: Props) {
 
       <div className="actions-row controls-actions">
         <div className="start-cta">
-          <button className="btn-start" onClick={props.onStart} disabled={props.isRunning || props.selected.size === 0}>
+          <button className="btn-start btn-chamfer" onClick={props.onStart} disabled={props.isRunning || props.selected.size === 0}>
             {t('controls.start')}
           </button>
           <p className="helper-text start-subtext">{props.startHelperText}</p>
