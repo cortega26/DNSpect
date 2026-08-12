@@ -1,0 +1,602 @@
+/* ===================================================================
+   DNSpect — "The Instrument" design spike (plan 039)
+   Tokens: binding values from docs/DESIGN_SYSTEM.md section 2.
+   =================================================================== */
+
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('fonts/BricolageGrotesque.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Martian Mono';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url('fonts/MartianMono.woff2') format('woff2');
+}
+
+:root {
+  color-scheme: dark;
+
+  --chassis: #0b0e13;
+  --panel: #12161d;
+  --panel-raised: #171c25;
+  --hairline: #232a36;
+  --ink: #e6eaf1;
+  --ink-muted: #98a2b3;
+  --accent-live: #e8a33d;
+  --accent-active: #5fc9d6;
+  --ok: #5bb98c;
+  --bad: #e06c5f;
+  --focus: #5fc9d6;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+
+  --radius-micro: 2px;
+  --radius-default: 4px;
+  --radius-large: 8px;
+
+  --font-display: 'Bricolage Grotesque', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-mono: 'Martian Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --t-fast: 120ms;
+  --t-base: 200ms;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--chassis);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ---------- Chassis: grain + hairline grid ---------- */
+.chassis {
+  position: relative;
+  min-height: 100vh;
+  background-color: var(--chassis);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E"),
+    linear-gradient(rgba(35, 42, 54, 0.28) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(35, 42, 54, 0.28) 1px, transparent 1px);
+  background-size: 160px 160px, 40px 40px, 40px 40px;
+}
+
+/* ---------- Hairline helpers ---------- */
+.hairline-b { border-bottom: 1px solid var(--hairline); }
+.hairline-t { border-top: 1px solid var(--hairline); }
+
+/* ---------- Header ---------- */
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: 0 var(--space-6);
+  height: 56px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  letter-spacing: 0.02em;
+}
+
+.brand-mark {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--accent-active);
+  transform: rotate(45deg);
+  position: relative;
+}
+.brand-mark::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  background: var(--accent-live);
+}
+
+.brand-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: 0.01em;
+}
+
+/* ---------- ModeSwitcher (two-tab segmented) ---------- */
+.modeswitcher {
+  display: inline-flex;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-default);
+  overflow: hidden;
+}
+
+.mode-tab {
+  appearance: none;
+  border: 0;
+  border-left: 1px solid var(--hairline);
+  background: var(--panel);
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 6px var(--space-4);
+  cursor: pointer;
+  transition: background var(--t-fast) ease, color var(--t-fast) ease;
+}
+.mode-tab:first-child { border-left: 0; }
+.mode-tab.is-active {
+  background: var(--accent-active);
+  color: #0b0e13;
+}
+.mode-tab:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.header-actions { margin-left: auto; display: flex; gap: var(--space-2); }
+
+.ghost-icon {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-default);
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 5px 9px;
+  cursor: pointer;
+  transition: color var(--t-fast) ease, border-color var(--t-fast) ease;
+}
+.ghost-icon:hover { color: var(--ink); border-color: var(--ink-muted); }
+
+/* ---------- Status strip ---------- */
+.status-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 32px;
+  padding: 0 var(--space-6);
+  background: var(--panel);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--hairline);
+}
+.status-strip[data-state='running'] .status-dot {
+  background: var(--accent-live);
+  animation: blink 800ms steps(2, start) infinite;
+}
+.status-strip[data-state='complete'] .status-dot { background: var(--ok); }
+.status-strip[data-state='failed'] .status-dot { background: var(--bad); }
+
+.status-progress {
+  width: 120px;
+  height: 4px;
+  background: var(--hairline);
+  border-radius: var(--radius-micro);
+  overflow: hidden;
+}
+.status-progress span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--accent-active);
+  transition: width 300ms linear;
+}
+.status-meta { margin-left: auto; }
+
+/* ---------- Main layout ---------- */
+.main {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-6) var(--space-7);
+}
+
+.view[hidden] { display: none; }
+
+/* ---------- Quick check ---------- */
+.quick-intro {
+  color: var(--ink-muted);
+  font-size: 13px;
+  margin: 0 0 var(--space-5);
+}
+
+.btn-primary {
+  appearance: none;
+  border: 0;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #0b0e13;
+  background: var(--accent-live);
+  padding: 10px 22px;
+  border-radius: var(--radius-default);
+  cursor: pointer;
+  transition: filter var(--t-fast) ease, transform var(--t-fast) ease;
+}
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-primary:active { transform: translateY(1px); }
+.btn-primary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.btn-primary[disabled] { opacity: 0.55; cursor: default; }
+
+/* The ONE signature detail — chamfered corner, used nowhere else. */
+.btn-chamfer {
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
+  border-radius: 0;
+}
+
+.btn-lab {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-default);
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: color var(--t-fast) ease, background var(--t-fast) ease, border-color var(--t-fast) ease;
+}
+.btn-lab:hover {
+  color: var(--ink);
+  background: var(--panel-raised);
+  border-color: var(--ink-muted);
+}
+
+/* ---------- Measuring line ---------- */
+.measuring {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--accent-live);
+  font-size: 13px;
+  margin: var(--space-5) 0 0;
+}
+.measuring-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-live);
+  animation: blink 800ms steps(2, start) infinite;
+}
+
+/* ---------- Verdict card ---------- */
+.verdict {
+  margin-top: var(--space-6);
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-large);
+  padding: var(--space-7) var(--space-7) var(--space-6);
+}
+
+.verdict-eyebrow {
+  color: var(--ink-muted);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.verdict-line {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 34px;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  margin: var(--space-3) 0 var(--space-4);
+}
+
+.verdict-reasons {
+  list-style: none;
+  margin: 0 0 var(--space-6);
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+.verdict-reasons li {
+  color: var(--ink-muted);
+  font-size: 13px;
+  padding-left: var(--space-4);
+  position: relative;
+}
+.verdict-reasons li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 8px;
+  height: 1px;
+  background: var(--accent-active);
+}
+
+.mono-num {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.numbers-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+  border-top: 1px solid var(--hairline);
+  padding-top: var(--space-5);
+}
+
+.num-cell { display: grid; gap: var(--space-1); }
+.num-label {
+  color: var(--ink-muted);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.num-value {
+  font-size: 19px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.verdict-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+/* ---------- Run-complete reveal (the ONE orchestrated moment) ---------- */
+.verdict .rv { opacity: 0; transform: translateY(6px); }
+
+.verdict.run-complete .rv {
+  animation: rise 420ms cubic-bezier(0.22, 0.8, 0.36, 1) forwards;
+}
+.verdict.run-complete .rv-1 { animation-delay: 60ms; }
+.verdict.run-complete .rv-2 { animation-delay: 180ms; }
+.verdict.run-complete .rv-3 { animation-delay: 320ms; }
+.verdict.run-complete .rv-4 { animation-delay: 460ms; }
+
+.verdict.run-complete .pulse-key {
+  animation: settle-pulse 900ms ease 420ms 1;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes settle-pulse {
+  0% { color: var(--accent-live); transform: scale(1); }
+  35% { color: var(--accent-live); transform: scale(1.07); }
+  100% { color: var(--ink); transform: scale(1); }
+}
+
+@keyframes blink { 50% { opacity: 0.35; } }
+
+/* ---------- Lab ---------- */
+.subnav {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  padding-bottom: 0;
+  overflow-x: auto;
+}
+
+.subnav-tab {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 8px var(--space-2);
+  cursor: pointer;
+  transition: color var(--t-fast) ease, border-color var(--t-fast) ease;
+}
+.subnav-tab.is-active {
+  color: var(--ink);
+  border-bottom-color: var(--accent-active);
+}
+
+.lab-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-default);
+  padding: var(--space-5);
+}
+
+.panel-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.01em;
+  margin: 0 0 var(--space-4);
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.chip {
+  appearance: none;
+  border: 1px solid var(--hairline);
+  background: var(--panel);
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  border-radius: var(--radius-micro);
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background var(--t-fast) ease, color var(--t-fast) ease, border-color var(--t-fast) ease;
+}
+.chip.is-active {
+  background: var(--accent-active);
+  border-color: var(--accent-active);
+  color: #0b0e13;
+}
+
+.panel-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+/* ---------- Data table (tick-row headers, mono tabular cells) ---------- */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.data-table th {
+  text-align: left;
+  color: var(--ink-muted);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 6px var(--space-2);
+  border-bottom: 1px solid var(--hairline);
+  white-space: nowrap;
+}
+
+.data-table th.tick::before {
+  content: '\2500\2500 ';
+  color: var(--accent-active);
+  letter-spacing: 0;
+}
+
+.data-table td {
+  padding: 9px var(--space-2);
+  border-bottom: 1px solid var(--hairline);
+  white-space: nowrap;
+}
+
+.data-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+}
+
+.data-table td.ok { color: var(--ok); }
+.data-table td.bad { color: var(--bad); }
+
+.rank-badge {
+  display: inline-block;
+  min-width: 22px;
+  text-align: center;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-micro);
+  background: var(--panel-raised);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  padding: 1px 4px;
+  color: var(--ink);
+}
+
+.res-name { color: var(--ink); }
+.res-prov { color: var(--ink-muted); font-size: 11px; }
+
+/* ---------- Instrument empty state ---------- */
+.empty-state {
+  text-align: center;
+  padding: var(--space-7) var(--space-4);
+  border: 1px dashed var(--hairline);
+  border-radius: var(--radius-default);
+  background: var(--panel);
+}
+
+.empty-mark {
+  display: inline-block;
+  width: 26px;
+  height: 26px;
+  border: 1.5px solid var(--hairline);
+  border-radius: 50%;
+  position: relative;
+  margin-bottom: var(--space-3);
+}
+.empty-mark::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  background: var(--hairline);
+}
+
+.empty-title {
+  margin: 0 0 var(--space-1);
+  color: var(--ink);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.empty-body {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+
+/* ---------- Footer ---------- */
+.footer {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-6);
+  color: var(--ink-muted);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* ---------- Reduced motion: instant, static ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .status-strip[data-state='running'] .status-dot,
+  .measuring-dot { animation: none; }
+
+  .verdict .rv {
+    opacity: 1;
+    transform: none;
+  }
+
+  .verdict.run-complete .rv { animation: none; }
+  .verdict.run-complete .pulse-key { animation: none; }
+}

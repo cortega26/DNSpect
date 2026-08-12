@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DNSpect — The Instrument (design spike)</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="chassis">
+      <header class="header hairline-b">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-name">DNSpect</span>
+        </div>
+
+        <div class="modeswitcher" role="tablist" aria-label="Mode">
+          <button role="tab" aria-selected="true" data-mode="quick" class="mode-tab is-active">Quick check</button>
+          <button role="tab" aria-selected="false" data-mode="lab" class="mode-tab">Lab</button>
+        </div>
+
+        <div class="header-actions">
+          <button class="ghost-icon" aria-label="Toggle theme" id="theme-toggle">&#9681;</button>
+          <button class="ghost-icon" aria-label="Locale">ES</button>
+        </div>
+      </header>
+
+      <div class="status-strip hairline-b" id="status-strip" data-state="idle">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span class="status-label" id="status-label">Idle</span>
+        <span class="status-progress" aria-hidden="true"><span id="status-progress-bar"></span></span>
+        <span class="status-meta" id="status-eta"></span>
+      </div>
+
+      <main class="main">
+        <!-- ============ QUICK CHECK ============ -->
+        <section id="quick" class="view" aria-label="Quick check">
+          <p class="quick-intro">One check. Verdict in seconds.</p>
+          <button class="btn-primary" id="check-dns">Check my DNS</button>
+          <p class="measuring" id="measuring" hidden>
+            <span class="measuring-dot" aria-hidden="true"></span>
+            Measuring 12 resolvers against 5 domains&#8230;
+          </p>
+
+          <article class="verdict" id="verdict" aria-live="polite">
+            <div class="rv rv-0"><span class="verdict-eyebrow">Verdict &#8212; <span class="mono-num">8.1.0</span></span></div>
+            <h2 class="rv rv-1 verdict-line">Your DNS is good &#8212; keep it</h2>
+            <ul class="verdict-reasons rv rv-2">
+              <li><span class="mono-num">12.4</span>&nbsp;ms median &#8212; faster than 9 of 12 resolvers</li>
+              <li><span class="mono-num">0</span> failures in 60 queries</li>
+              <li><span class="mono-num">99.2%</span> stability across 3 runs</li>
+            </ul>
+            <div class="numbers-row rv rv-3">
+              <div class="num-cell"><span class="num-label">median</span><span class="num-value pulse-key">12.4 ms</span></div>
+              <div class="num-cell"><span class="num-label">p95</span><span class="num-value">28.1 ms</span></div>
+              <div class="num-cell"><span class="num-label">failure rate</span><span class="num-value">0.0%</span></div>
+              <div class="num-cell"><span class="num-label">score</span><span class="num-value">94 / 100</span></div>
+            </div>
+            <div class="verdict-actions rv rv-4">
+              <button class="btn-primary btn-chamfer">Apply</button>
+              <button class="btn-lab" data-goto="lab">Open in Lab</button>
+            </div>
+          </article>
+        </section>
+
+        <!-- ============ LAB ============ -->
+        <section id="lab" class="view" aria-label="Lab" hidden>
+          <nav class="subnav hairline-b" role="tablist" aria-label="Lab sections">
+            <button role="tab" aria-selected="true" class="subnav-tab is-active">Benchmark</button>
+            <button role="tab" aria-selected="false" class="subnav-tab">Results</button>
+            <button role="tab" aria-selected="false" class="subnav-tab">History</button>
+            <button role="tab" aria-selected="false" class="subnav-tab">Watch</button>
+            <button role="tab" aria-selected="false" class="subnav-tab">Protocol Lab</button>
+          </nav>
+
+          <div class="lab-grid">
+            <section class="panel">
+              <h3 class="panel-title">Benchmark</h3>
+              <div class="chip-row">
+                <button class="chip is-active">All resolvers</button>
+                <button class="chip">Cloudflare</button>
+                <button class="chip">Quad9</button>
+                <button class="chip">Custom</button>
+              </div>
+              <div class="chip-row">
+                <button class="chip is-active">15 queries</button>
+                <button class="chip">30</button>
+                <button class="chip">60</button>
+              </div>
+              <div class="panel-actions">
+                <button class="btn-lab">Run benchmark</button>
+                <button class="btn-primary btn-chamfer">Run + Quick verdict</button>
+              </div>
+            </section>
+
+            <section class="panel">
+              <h3 class="panel-title">Ranking</h3>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th class="tick" scope="col">Rank</th>
+                    <th scope="col">Resolver</th>
+                    <th class="num" scope="col">Median</th>
+                    <th class="num" scope="col">p95</th>
+                    <th class="num" scope="col">Failures</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="tick"><span class="rank-badge">1</span></td>
+                    <td><span class="res-name">Cloudflare</span> <span class="res-prov">1.1.1.1</span></td>
+                    <td class="num">12.4 ms</td>
+                    <td class="num">28.1 ms</td>
+                    <td class="num ok">0</td>
+                  </tr>
+                  <tr>
+                    <td class="tick"><span class="rank-badge">2</span></td>
+                    <td><span class="res-name">Quad9</span> <span class="res-prov">9.9.9.9</span></td>
+                    <td class="num">14.8 ms</td>
+                    <td class="num">31.9 ms</td>
+                    <td class="num ok">0</td>
+                  </tr>
+                  <tr>
+                    <td class="tick"><span class="rank-badge">3</span></td>
+                    <td><span class="res-name">Google</span> <span class="res-prov">8.8.8.8</span></td>
+                    <td class="num">16.2 ms</td>
+                    <td class="num">35.4 ms</td>
+                    <td class="num bad">2</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+
+            <section class="panel">
+              <h3 class="panel-title">History</h3>
+              <div class="empty-state">
+                <span class="empty-mark" aria-hidden="true"></span>
+                <p class="empty-title">No runs yet</p>
+                <p class="empty-body">Start one in the Lab and your measurements will appear here.</p>
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer hairline-t">
+        <span class="footer-readout">LAB &#8226; DNS SPECTROGRAPH v0.0.1</span>
+        <span class="footer-readout right">UTC <span class="mono-num">2026-08-12T14:20:31Z</span></span>
+      </footer>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>
