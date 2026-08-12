@@ -42,7 +42,7 @@ import {
 } from '@/lib/runtime'
 import { useTheme } from '@/lib/useTheme'
 import type { BenchmarkMode, BenchmarkProtocol, Provider, ResolverResult, ScoringProfile, SystemDnsPayload } from '@/lib/types'
-import { API_BASE, fmtMs, providersByGoal, regionLabelKey, resolverReliabilityScore } from '@/lib/utils'
+import { API_BASE, fmtMs, isWatchRun, latestUserRun, providersByGoal, regionLabelKey, resolverReliabilityScore } from '@/lib/utils'
 import {
   buildTargetSnapshot,
   deriveTargetResolvers,
@@ -498,6 +498,11 @@ function App() {
   const decisiveRanking = useMemo(() => status?.results ?? [], [status?.results])
   const sortedResults = decisiveRanking
   const primaryResult = useMemo(() => resolveRecommendedResult(status), [status])
+  const recommendationRun = useMemo(() => {
+    if (status?.status === 'done' && !isWatchRun(status)) return status
+    return latestUserRun(history)
+  }, [history, status])
+  const viewingWatchRun = useMemo(() => isWatchRun(status), [status])
   const picks = useMemo(() => {
     const primary = primaryResult?.resolver ?? decisiveRanking[0]?.resolver
     const secondary = decisiveRanking.find((item) => item.resolver !== primary)?.resolver
@@ -1379,7 +1384,7 @@ function App() {
         />
       )}
 
-      {isCompleted && recommendationAvailable && primaryResult && (
+      {isCompleted && recommendationAvailable && primaryResult && recommendationRun !== null && !viewingWatchRun && (
         <RecommendedResolverPanel
           result={primaryResult}
           rank={primaryRank ?? 1}
@@ -1387,6 +1392,7 @@ function App() {
           improvementVsCurrentMs={improvementVsCurrentMs}
           recommendationWarning={status?.recommendation_warning ?? null}
           isSmallImprovement={isSmallImprovementLabel}
+          runOrigin={status?.origin ?? null}
           copyStatus={copyStatus}
           summaryCopyStatus={summaryCopyStatus}
           onApplyRecommended={applyRecommendation}

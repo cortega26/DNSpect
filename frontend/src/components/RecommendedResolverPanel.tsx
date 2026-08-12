@@ -1,6 +1,6 @@
 import { useI18n } from '@/lib/useI18n'
 import type { ResolverResult } from '@/lib/types'
-import { fmtMs, resolverBlockingScore } from '@/lib/utils'
+import { fmtMs, isWatchRun, resolverBlockingScore } from '@/lib/utils'
 
 interface Props {
   result: ResolverResult
@@ -9,6 +9,7 @@ interface Props {
   improvementVsCurrentMs: number | null
   recommendationWarning?: string | null
   isSmallImprovement?: boolean
+  runOrigin?: string | null
   copyStatus: 'idle' | 'success' | 'error'
   summaryCopyStatus: 'idle' | 'success' | 'error'
   onApplyRecommended: () => void
@@ -26,6 +27,7 @@ export function RecommendedResolverPanel({
   improvementVsCurrentMs,
   recommendationWarning,
   isSmallImprovement,
+  runOrigin,
   copyStatus,
   summaryCopyStatus,
   onApplyRecommended,
@@ -36,6 +38,8 @@ export function RecommendedResolverPanel({
   onViewFullRanking,
 }: Props) {
   const { t } = useI18n()
+
+  if (isWatchRun({ origin: runOrigin })) return null
   const improvementLabel =
     improvementVsCurrentMs === null
       ? t('recommendation.improvementUnavailable')

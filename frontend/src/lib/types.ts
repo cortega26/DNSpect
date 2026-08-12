@@ -134,6 +134,7 @@ export interface BenchmarkStatus {
   recommended_resolver?: string | null
   recommendation_warning?: string | null
   target_snapshot?: TargetSnapshot | null
+  origin?: 'watch' | null
 }
 
 export interface ProbeResult {
