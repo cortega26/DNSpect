@@ -58,7 +58,8 @@ def _resolve_frontend_dist() -> Path | None:
     return candidate if candidate.exists() else None
 
 
-FRONTEND_DIST = _resolve_frontend_dist()
+_resolved_frontend_dist = _resolve_frontend_dist()
+FRONTEND_DIST = _resolved_frontend_dist.resolve() if _resolved_frontend_dist else None
 if FRONTEND_DIST and (FRONTEND_DIST / "assets").exists():
     app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST / "assets")), name="assets")
 
@@ -249,7 +250,7 @@ def spa_fallback(full_path: str) -> Response:
         raise HTTPException(status_code=404, detail="UI estática no disponible")
 
     requested = (FRONTEND_DIST / full_path).resolve()
-    if requested.is_file() and str(requested).startswith(str(FRONTEND_DIST)):
+    if requested.is_file() and requested.is_relative_to(FRONTEND_DIST):
         return FileResponse(requested)
 
     index_file = FRONTEND_DIST / "index.html"
