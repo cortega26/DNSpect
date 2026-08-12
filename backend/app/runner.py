@@ -752,9 +752,20 @@ class BenchmarkManager:
             raise ValueError("No hay resolvers disponibles para el protocolo seleccionado")
 
         scoring_profile = req.effective_scoring_profile()
-        target_snapshot_dict: dict[str, object] | None = None
         if req.target_snapshot is not None:
             target_snapshot_dict = req.target_snapshot.model_dump()
+        else:
+            # "catalog" approximates the implicit default set (catalog defaults + detected system DNS).
+            target_snapshot_dict = {
+                "resolver_ips": list(resolvers),
+                "selection_source": "manual" if req.resolvers else "catalog",
+                "provider_ids": {
+                    ip: provider.get("id", "")
+                    for ip in resolvers
+                    for provider in [self.provider_index.get(ip) or {}]
+                    if provider.get("id")
+                },
+            }
 
         return BenchmarkConfig(
             resolvers=resolvers,

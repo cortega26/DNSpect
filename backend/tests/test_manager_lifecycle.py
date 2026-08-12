@@ -152,7 +152,11 @@ def test_scoring_profile_and_target_snapshot_in_live_response(monkeypatch, tmp_p
     state = _wait_terminal(manager, benchmark_id)
     assert state["scoring_profile"] == "security"
     assert state["goal"] == "security"
-    assert state["target_snapshot"] is None
+    assert state["target_snapshot"] == {
+        "resolver_ips": ["1.1.1.1"],
+        "selection_source": "manual",
+        "provider_ids": {"1.1.1.1": "cloudflare"},
+    }
 
     queued_state = manager.get(benchmark_id)
     if queued_state:
