@@ -1,16 +1,13 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useFocusTrap } from '@/lib/useFocusTrap'
-import { DashboardControls, type TimeoutPreset } from '@/components/DashboardControls'
-import { DashboardPanel } from '@/components/DashboardPanel'
+import type { TimeoutPreset } from '@/components/DashboardControls'
 import { GuidedApplyModal } from '@/components/GuidedApplyModal'
-import { LiveRankingPanel } from '@/components/LiveRankingPanel'
+import { LabWorkspace } from '@/components/LabWorkspace'
 import { LocaleMenu } from '@/components/LocaleMenu'
-import { RecommendedResolverPanel } from '@/components/RecommendedResolverPanel'
-import { ResolverRankingPanel } from '@/components/ResolverRankingPanel'
-import { RunComparisonPanel } from '@/components/RunComparisonPanel'
-import { RunHistoryPanel } from '@/components/RunHistoryPanel'
-import { WatchPanel, type WatchSessionConfig } from '@/components/WatchPanel'
+import { ModeSwitcher } from '@/components/ModeSwitcher'
+import { QuickCheckPanel } from '@/components/QuickCheckPanel'
+import type { WatchSessionConfig } from '@/components/WatchPanel'
 import { useBenchmarkSession } from '@/hooks/useBenchmarkSession'
 import { useGuidedVerification } from '@/hooks/useGuidedVerification'
 import { useProtocolComparison } from '@/hooks/useProtocolComparison'
@@ -18,8 +15,6 @@ import { useRunComparison } from '@/hooks/useRunComparison'
 import { useRunHistory } from '@/hooks/useRunHistory'
 import { useTargetSnapshot, type ResolverCatalogItem } from '@/hooks/useTargetSnapshot'
 
-const ChartsPanel = lazy(() => import('@/components/ChartsPanel').then((m) => ({ default: m.ChartsPanel })))
-const ProtocolComparisonPanel = lazy(() => import('@/components/ProtocolComparisonPanel').then((m) => ({ default: m.ProtocolComparisonPanel })))
 const ResolverDetailModal = lazy(() => import('@/components/ResolverDetailModal').then((m) => ({ default: m.ResolverDetailModal })))
 import { buildDnsClipboardText, buildGuidedDnsSet, detectPlatformGroup } from '@/lib/applyGuide'
 import { useI18n } from '@/lib/useI18n'
@@ -42,11 +37,13 @@ import {
   terminalRefreshKey,
 } from '@/lib/runtime'
 import { useTheme } from '@/lib/useTheme'
-import type { BenchmarkMode, BenchmarkProtocol, Provider, ResolverResult, ScoringProfile, SystemDnsPayload } from '@/lib/types'
+import type { AppMode, BenchmarkMode, BenchmarkProtocol, Provider, ResolverResult, ScoringProfile, SystemDnsPayload } from '@/lib/types'
 import { API_BASE, fmtMs, isWatchRun, latestUserRun, providersByGoal, regionLabelKey, resolverReliabilityScore } from '@/lib/utils'
 import {
+  buildTargetSnapshot,
   deriveTargetResolvers,
   scopeEligibleProviders,
+  selectionSourceFor,
   type TargetScope,
 } from '@/lib/targetScope'
 
@@ -55,6 +52,8 @@ const MODE_RUNS: Record<BenchmarkMode, number> = {
   standard: 30,
   exhaustive: 80,
 }
+
+const APP_MODE_STORAGE_KEY = 'dnspect-mode'
 
 const BASIC_TIMEOUT_PRESET: Record<TimeoutPreset, number> = {
   low: 1.5,
@@ -196,6 +195,20 @@ function App() {
   const scopeSourceRef = useRef<'auto' | 'manual'>('auto')
   const selectionVersionRef = useRef(0)
   const [advancedOpen, setAdvancedOpen] = useState<boolean>(false)
+  const [appMode, setAppMode] = useState<AppMode>(() => {
+    try {
+      return window.sessionStorage.getItem(APP_MODE_STORAGE_KEY) === 'lab' ? 'lab' : 'quick'
+    } catch {
+      return 'quick'
+    }
+  })
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(APP_MODE_STORAGE_KEY, appMode)
+    } catch {
+      // Best-effort persistence; a blocked sessionStorage must not break the UI.
+    }
+  }, [appMode])
 
   const session = useBenchmarkSession()
   const { benchmarkId, status, error, selectedResult, loadingSamples, viewingSavedRun, reportError } = session
@@ -628,6 +641,38 @@ function App() {
     void session.start(payload)
   }
 
+  const quickResolvers = useMemo(() => deriveTargetResolvers(providers, 'unknown', systemDns), [providers, systemDns])
+  const quickTargetSnapshot = useMemo(
+    () =>
+      buildTargetSnapshot(
+        quickResolvers,
+        { get: (ip) => resolverCatalog.get(ip)?.providerId ?? null },
+        selectionSourceFor(quickResolvers, quickResolvers),
+      ),
+    [quickResolvers, resolverCatalog],
+  )
+
+  function handleQuickStart() {
+    guidedVerification.cancel()
+
+    setCopyStatus('idle')
+    setSummaryCopyStatus('idle')
+    setGuidedApplyOpen(false)
+    setGuidedCopyStatus('idle')
+    setSavedRunNotice(null)
+
+    void session.start({
+      mode: 'quick',
+      goal: 'speed',
+      scoring_profile: 'speed',
+      protocol,
+      runs: MODE_RUNS.quick,
+      timeout_sec: timeoutSec,
+      resolvers: quickResolvers,
+      target_snapshot: quickTargetSnapshot,
+    })
+  }
+
   function toggleResolver(ip: string) {
     selectionVersionRef.current += 1
     setSelectedResolvers((prev) => {
@@ -768,8 +813,6 @@ function App() {
   }
 
   const isCompleted = status?.status === 'done'
-  const hasResults = isCompleted
-  const recommendationAvailable = Boolean(primaryResult)
   const reliabilityPct = primaryResult ? resolverReliabilityScore(primaryResult) * 100 : null
   const runningEtaText = useMemo(() => {
     return computeRunningEtaText(status, timeoutSec, (key) => t(key))
@@ -855,6 +898,7 @@ function App() {
             </svg>
             DNSPect
           </div>
+          <ModeSwitcher mode={appMode} onChange={setAppMode} />
           <div className="header-actions">
             <button
               className="btn-ghost icon-btn theme-toggle"
@@ -888,6 +932,42 @@ function App() {
             <LocaleMenu language={language} onLanguageChange={setLanguage} />
           </div>
         </div>
+
+        {(() => {
+          const stripState =
+            status === null ? 'idle' : isRunning ? 'running' : status.status === 'done' ? 'complete' : status.status === 'failed' || status.status === 'cancelled' ? 'failed' : 'idle'
+          const stripLabel =
+            stripState === 'idle'
+              ? t('status.idle')
+              : stripState === 'running'
+                ? t('status.measuring')
+                : stripState === 'complete'
+                  ? t('status.complete')
+                  : t('status.failed')
+          const stripPct = stripState === 'complete' ? 100 : progressPct
+          const stripEta =
+            stripState === 'running'
+              ? runningTimeRemaining !== null
+                ? formatRemainingTime(runningTimeRemaining)
+                : runningEtaText ?? t('status.etaUnavailable')
+              : null
+          return (
+            <div className="status-strip" data-state={stripState} role="status" aria-live="polite">
+              <span className="status-dot" aria-hidden="true" />
+              <span className="status-label">{stripLabel}</span>
+              <span className="status-progress" aria-hidden="true">
+                <span style={{ width: `${stripPct}%` }} />
+              </span>
+              <span className="status-meta">
+                {stripState === 'running' && stripEta
+                  ? `${stripPct}% · ${t('status.etaValue', { eta: stripEta })}`
+                  : stripState === 'complete'
+                    ? '100%'
+                    : ''}
+              </span>
+            </div>
+          )
+        })()}
 
         {isInitializing ? (
           <div className="hero" style={{ display: 'grid', gap: 'var(--space-3)' }} aria-busy="true" aria-label={t('accessibility.loading')}>
@@ -965,273 +1045,158 @@ function App() {
           <span className="skeleton skeleton-btn" />
           <span className="skeleton skeleton-text" style={{ width: '40%' }} />
         </section>
-      ) : (
-        <DashboardControls
-          providers={regionFilteredProviders}
-          selected={selectedResolvers}
-          mode={mode}
-          protocol={protocol}
-          scoringProfile={scoringProfile}
-          runs={runs}
-          timeoutSec={timeoutSec}
-          timeoutPreset={timeoutPreset}
-          queriesText={queriesText}
-          systemResolvers={systemDns?.resolvers ?? []}
-          isRunning={isRunning}
-          advancedOpen={advancedOpen}
-          workloadSummary={workloadMetrics.summary}
-          startHelperText={startCtaHelpText}
-          scope={targetScope}
-          scopeSource={scopeSource}
-          onScopeSelect={handleScopeSelect}
-          onScopeReset={handleScopeReset}
-          onToggleResolver={toggleResolver}
-          onModeChange={onModeChange}
-          onProtocolChange={setProtocol}
-          onScoringProfileChange={onScoringProfileChange}
-          onRunsChange={(v) => setRuns(Math.max(1, Math.min(300, Number.isFinite(v) ? v : runs)))}
-          onTimeoutChange={(v) => setTimeoutSec(Math.max(0.2, Math.min(10, Number.isFinite(v) ? v : timeoutSec)))}
-          onTimeoutPresetChange={(preset) => {
-            setTimeoutPreset(preset)
-            setTimeoutSec(BASIC_TIMEOUT_PRESET[preset])
-          }}
-          onQueriesTextChange={setQueriesText}
-          onToggleAdvanced={() => setAdvancedOpen((prev) => !prev)}
-          onShowResolverList={() => setResolverListOpen(true)}
-          onStart={() => {
-            void handleStart()
-          }}
-          comparisonOpen={comparisonOpen}
-          comparisonProtocols={comparisonProtocols}
-          comparisonPreflight={comparisonPreflight}
-          comparisonPreflightLoading={comparisonPreflightLoading}
-          comparisonPreflightError={comparisonPreflightError}
-          comparisonActive={protocolComparisonActive}
-          onToggleComparison={handleToggleComparison}
-          onToggleComparisonProtocol={handleToggleComparisonProtocol}
-          onStartComparison={handleStartComparison}
-          doqAvailable={doqAvailable}
+      ) : appMode === 'quick' ? (
+        <QuickCheckPanel
+          status={status}
+          error={error}
+          systemDns={systemDns}
+          resolverCount={quickResolvers.length}
+          onStart={handleQuickStart}
+          onApply={applyRecommendation}
+          onOpenLab={() => setAppMode('lab')}
         />
-      )}
-
-      <WatchPanel
-        doqAvailable={doqAvailable}
-        running={isRunning}
-        currentSession={watchSessionConfig}
-        onCompare={(baselineId, candidateId) => selectComparisonPair(baselineId, candidateId)}
-      />
-
-      {savedLastRunSummary && (
-        <section className="card compact last-run-card fade-in-section">
-          <h3 className="section-heading-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="20" height="20" aria-hidden="true">
-              <circle cx="12" cy="12" r="9" />
-              <path d="M12 7v5l3 3" />
-            </svg>
-            {t('lastRun.title')}
-          </h3>
-          {savedRunNotice && (
-            <p className="section-heading-icon" style={{ color: 'var(--warning)', fontSize: '0.85rem', marginBottom: 'var(--space-2)' }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="16" height="16" aria-hidden="true">
-                <path d="M12 9v4M12 17h.01" />
-                <path d="M10.29 3.86l-8.1 14c-.6 1.04.15 2.14 1.21 2.14h16.2c1.06 0 1.71-1.1 1.21-2.14l-8.1-14c-.6-1.04-1.82-1.04-2.42 0z" />
-              </svg>
-              {savedRunNotice}
-            </p>
-          )}
-          <p className="muted">{t('lastRun.savedAt', { timestamp: savedLastRunSummary.timestampLabel })}</p>
-          <p>{t('lastRun.recommended', { resolver: savedLastRunSummary.recommendedLabel })}</p>
-          <p>{t('lastRun.topLatency', { latency: savedLastRunSummary.topLatency })}</p>
-          <p>{t('lastRun.topReliability', { reliability: savedLastRunSummary.topReliability })}</p>
-          <div className="actions-row">
-            <button type="button" className="btn-secondary" onClick={handleViewSavedRun}>
-              {t('lastRun.view')}
-            </button>
-            <button type="button" className="btn-ghost" onClick={handleClearSavedRun}>
-              {t('lastRun.clear')}
-            </button>
-          </div>
-        </section>
-      )}
-
-      {savedRunNotice && !savedLastRunSummary && (
-        <section className="card compact saved-run-notice fade-in-section" role="status">
-          <p className="section-heading-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="18" height="18" aria-hidden="true">
-              <path d="M12 9v4M12 17h.01" />
-              <path d="M10.29 3.86l-8.1 14c-.6 1.04.15 2.14 1.21 2.14h16.2c1.06 0 1.71-1.1 1.21-2.14l-8.1-14c-.6-1.04-1.82-1.04-2.42 0z" />
-            </svg>
-            {savedRunNotice}
-          </p>
-        </section>
-      )}
-
-      {viewingSavedRun && (
-        <section className="card compact saved-run-viewing-badge fade-in-section" role="status">
-          <h3 className="section-heading-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="20" height="20" aria-hidden="true">
-              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-            {t('lastRun.viewingSavedTitle')}
-          </h3>
-          <p>{t('lastRun.viewingSavedBody')}</p>
-        </section>
-      )}
-
-      {(status?.status === 'running' || status?.status === 'queued') && (
-        <section className="card compact status-running fade-in-section">
-          <h3 className="section-heading-icon">
-            <svg className="icon-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="20" height="20" aria-hidden="true">
-              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-            </svg>
-            {t('status.progressPanelTitle')}
-          </h3>
-          <p className="muted">{runningHealthMessage}</p>
-          <div className="progress-panel progress-panel--live">
-            <div className="progress-wrap">
-              <div className="progress-bar" style={{ width: `${progressPct}%` }} />
-            </div>
-            <p className="progress-percent">{progressPct}%</p>
-            <div className="progress-metrics">
-              <p className="metric-row">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" aria-hidden="true">
-                  <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
-                  <path d="M22 4L12 14.01l-3-3" />
-                </svg>
-                {t('status.resolversTested', { tested: progressCompletedResolvers, total: progressTotalResolvers })}
-              </p>
-              <p className="progress-current-resolver">
-                <span className="progress-current-dot" aria-hidden="true" />
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14" aria-hidden="true">
-                  <rect x="2" y="2" width="20" height="8" rx="2" />
-                  <rect x="2" y="14" width="20" height="8" rx="2" />
-                  <path d="M6 6h.01M6 18h.01" />
-                </svg>
-                {currentResolverLabel}
-              </p>
-              <p className="metric-row">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" aria-hidden="true">
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M12 7v5l3 3" />
-                </svg>
-                {lastProgressLabel}
-              </p>
-              <p className="metric-row">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" aria-hidden="true">
-                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-                </svg>
-                {t('status.avgLatencyContext', { latency: fmtMs(measuredAvgLatencyMs) })}
-              </p>
-              <p className="metric-row">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" aria-hidden="true">
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M12 6v6l4 2" />
-                </svg>
-                {t('status.etaRemaining', {
-                  eta:
+      ) : (
+        <LabWorkspace
+          initialSection={status?.status === 'done' ? 'results' : 'benchmark'}
+          controls={{
+            providers: regionFilteredProviders,
+            selected: selectedResolvers,
+            mode,
+            protocol,
+            scoringProfile,
+            runs,
+            timeoutSec,
+            timeoutPreset,
+            queriesText,
+            systemResolvers: systemDns?.resolvers ?? [],
+            isRunning,
+            advancedOpen,
+            workloadSummary: workloadMetrics.summary,
+            startHelperText: startCtaHelpText,
+            scope: targetScope,
+            scopeSource,
+            onScopeSelect: handleScopeSelect,
+            onScopeReset: handleScopeReset,
+            onToggleResolver: toggleResolver,
+            onModeChange,
+            onProtocolChange: setProtocol,
+            onScoringProfileChange,
+            onRunsChange: (v) => setRuns(Math.max(1, Math.min(300, Number.isFinite(v) ? v : runs))),
+            onTimeoutChange: (v) => setTimeoutSec(Math.max(0.2, Math.min(10, Number.isFinite(v) ? v : timeoutSec))),
+            onTimeoutPresetChange: (preset) => {
+              setTimeoutPreset(preset)
+              setTimeoutSec(BASIC_TIMEOUT_PRESET[preset])
+            },
+            onQueriesTextChange: setQueriesText,
+            onToggleAdvanced: () => setAdvancedOpen((prev) => !prev),
+            onShowResolverList: () => setResolverListOpen(true),
+            onStart: () => {
+              void handleStart()
+            },
+            comparisonOpen,
+            comparisonProtocols,
+            comparisonPreflight,
+            comparisonPreflightLoading,
+            comparisonPreflightError,
+            comparisonActive: protocolComparisonActive,
+            onToggleComparison: handleToggleComparison,
+            onToggleComparisonProtocol: handleToggleComparisonProtocol,
+            onStartComparison: handleStartComparison,
+            doqAvailable,
+          }}
+          doqAvailable={doqAvailable}
+          runningCard={
+            isRunning
+              ? {
+                  healthMessage: runningHealthMessage,
+                  progressPct,
+                  completedResolvers: progressCompletedResolvers,
+                  totalResolvers: progressTotalResolvers,
+                  currentResolverLabel,
+                  lastProgressLabel,
+                  avgLatencyMs: measuredAvgLatencyMs,
+                  etaLabel:
                     runningTimeRemaining !== null
                       ? formatRemainingTime(runningTimeRemaining)
                       : runningEtaText ?? t('status.etaUnavailable'),
-                })}
-              </p>
-            </div>
-          </div>
-          <LiveRankingPanel
-            results={status.results ?? []}
-            expectedSamples={status.runs}
-            isRunning={status.status === 'running'}
-            currentResolver={status.progress.current_resolver}
-          />
-        </section>
-      )}
-
-      {(status?.status === 'failed' || status?.status === 'cancelled') && (
-        <section className="card compact status-error fade-in-section">
-          <h3 className="section-heading-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="20" height="20" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M15 9l-6 6M9 9l6 6" />
-            </svg>
-            {t('status.errorTitle')}
-          </h3>
-          <p>{t('status.errorHint', { error: status.error ?? t('status.pending') })}</p>
-        </section>
-      )}
-
-      {isCompleted && recommendationAvailable && primaryResult && (
-        <DashboardPanel
-          primaryResult={primaryResult}
-          results={decisiveRanking}
-          reliabilityPct={reliabilityPct}
-          improvementVsCurrentMs={improvementVsCurrentMs}
-          currentResolverLabel={currentResolverForSummary}
-          currentResolverRank={currentDnsEvaluation?.rank ?? null}
-          recommendationWarning={status?.recommendation_warning ?? null}
-          isSmallImprovement={isSmallImprovementLabel}
-          copyStatus={copyStatus}
-          summaryCopyStatus={summaryCopyStatus}
-          onApplyRecommended={applyRecommendation}
-          onCopyAddress={() => void handleCopyRecommendedDns()}
-          onCopySummary={() => void handleCopySummary()}
-          onExportJson={exportJsonReport}
-          onExportCsv={() => void exportCsvReport()}
-          onViewFullRanking={handleViewFullRanking}
-        />
-      )}
-
-      {isCompleted && recommendationAvailable && primaryResult && recommendationRun !== null && !viewingWatchRun && (
-        <RecommendedResolverPanel
-          result={primaryResult}
-          rank={primaryRank ?? 1}
-          reliabilityPct={reliabilityPct}
-          improvementVsCurrentMs={improvementVsCurrentMs}
-          recommendationWarning={status?.recommendation_warning ?? null}
-          isSmallImprovement={isSmallImprovementLabel}
-          runOrigin={status?.origin ?? null}
-          copyStatus={copyStatus}
-          summaryCopyStatus={summaryCopyStatus}
-          onApplyRecommended={applyRecommendation}
-          onCopyAddress={() => void handleCopyRecommendedDns()}
-          onCopySummary={() => void handleCopySummary()}
-          onExportJson={exportJsonReport}
-          onExportCsv={() => void exportCsvReport()}
-          onViewFullRanking={handleViewFullRanking}
-        />
-      )}
-
-      {isCompleted && (
-        <div
-          ref={(element) => {
-            rankingPanelRef.current = element
+                  results: status?.results ?? [],
+                  runs: status?.runs ?? 0,
+                  currentResolver: status?.progress.current_resolver ?? null,
+                  isRunning: status?.status === 'running',
+                }
+              : null
+          }
+          failedError={
+            status?.status === 'failed' || status?.status === 'cancelled'
+              ? (status?.error ?? t('status.pending'))
+              : null
+          }
+          systemDns={systemDns}
+          saved={{
+            lastRunSummary: savedLastRunSummary,
+            notice: savedRunNotice,
+            viewingSavedRun,
+            onViewSavedRun: handleViewSavedRun,
+            onClearSavedRun: handleClearSavedRun,
           }}
-        >
-          <ResolverRankingPanel
-            id="resolver-ranking-panel"
-            results={decisiveRanking}
-            emptyMessage={t('noRanking.text')}
-            onSelect={handleSelectResult}
-          />
-        </div>
-      )}
-
-      {systemDns && (
-        <section className="card compact fade-in-section">
-          <h3 className="section-heading-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="20" height="20" aria-hidden="true">
-              <rect x="2" y="2" width="20" height="8" rx="2" />
-              <rect x="2" y="14" width="20" height="8" rx="2" />
-              <path d="M6 6h.01M6 18h.01" />
-            </svg>
-            {t('systemDns.title')}
-          </h3>
-          <p>
-            {t('systemDns.method')}: <strong>{systemDns.method}</strong> | {t('systemDns.platform')}:{' '}
-            <strong>{systemDns.platform}</strong>
-          </p>
-          <p>{systemDns.resolvers.length ? systemDns.resolvers.join(', ') : t('systemDns.none')}</p>
-          {systemDns.error_detail ? <p className="muted">{t('systemDns.errorDetail', { error: systemDns.error_detail })}</p> : null}
-        </section>
+          results={{
+            isCompleted,
+            primaryResult,
+            decisiveRanking,
+            reliabilityPct,
+            improvementVsCurrentMs,
+            currentResolverLabel: currentResolverForSummary,
+            currentResolverRank: currentDnsEvaluation?.rank ?? null,
+            recommendationWarning: status?.recommendation_warning ?? null,
+            isSmallImprovement: isSmallImprovementLabel,
+            showRecommendedPanel: recommendationRun !== null,
+            viewingWatchRun,
+            runOrigin: status?.origin ?? null,
+            primaryRank,
+            copyStatus,
+            summaryCopyStatus,
+            rankingPanelRef,
+            emptyMessage: t('noRanking.text'),
+            onSelectResult: handleSelectResult,
+            onApplyRecommended: applyRecommendation,
+            onCopyAddress: () => void handleCopyRecommendedDns(),
+            onCopySummary: () => void handleCopySummary(),
+            onExportJson: exportJsonReport,
+            onExportCsv: () => void exportCsvReport(),
+            onViewFullRanking: handleViewFullRanking,
+            searchTerm,
+            onlyReliable,
+            isRunning,
+            onSearchChange: setSearchTerm,
+            onOnlyReliableChange: setOnlyReliable,
+            filteredResults,
+            currentDnsEvaluation,
+            recommendedProviderName: primaryResult?.provider_name ?? t('summary.na'),
+          }}
+          history={{
+            runs: history,
+            loading: historyLoading,
+            baselineId: comparisonBaselineId,
+            candidateId: comparisonCandidateId,
+            comparison: comparisonData,
+            comparisonLoading,
+            comparisonError,
+            onSelectRun: (runId) => void handleSelectRun(runId),
+            onSetBaseline: (runId) => selectComparisonPair(runId, comparisonCandidateId),
+            onSetCandidate: (runId) => selectComparisonPair(comparisonBaselineId, runId),
+            onClearComparison: clearComparison,
+          }}
+          watch={{
+            currentSession: watchSessionConfig,
+            onCompare: (baselineId, candidateId) => selectComparisonPair(baselineId, candidateId),
+          }}
+          protocol={{
+            comparisonId: protocolComparisonId,
+            comparison: protocolComparisonData,
+            loading: protocolComparisonLoading,
+            error: protocolComparisonError,
+          }}
+        />
       )}
 
       {error && (
@@ -1245,104 +1210,6 @@ function App() {
             <li>{t('error.hint3')}</li>
           </ul>
         </section>
-      )}
-
-      {hasResults && decisiveRanking.length > 0 && (
-        <>
-          <section className="card compact card-subtle fade-in-section">
-            <h3 className="section-heading-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="20" height="20" aria-hidden="true">
-                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-              </svg>
-              {t('systemDns.evaluationTitle')}
-            </h3>
-            {currentDnsEvaluation ? (
-                <>
-                <p className="recommendation-ip">{currentDnsEvaluation.row.resolver}</p>
-                <p>{t('systemDns.evaluationLatency', { latency: fmtMs(currentDnsEvaluation.row.stats.score_latency) })}</p>
-                <p>{t('systemDns.evaluationRank', { rank: currentDnsEvaluation.rank })}</p>
-                <p>
-                  {t('systemDns.evaluationRecommendation', {
-                    provider: primaryResult?.provider_name ?? t('summary.na'),
-                    resolver: primaryResult?.resolver ?? t('summary.na'),
-                  })}
-                </p>
-              </>
-            ) : (
-              <p>{t('systemDns.evaluationUnavailable')}</p>
-            )}
-          </section>
-
-          <section className="card compact card-subtle fade-in-section">
-            <h3 className="section-heading-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="20" height="20" aria-hidden="true">
-                <path d="M3 3v18h18" />
-                <path d="M7 16l4-8 4 4 4-6" />
-              </svg>
-              {t('summary.title')}
-            </h3>
-            <div className="summary-grid">
-              <article className="metric-card" title={t('summary.medianTitle')}>
-                <h4>{t('summary.fast')}</h4>
-                <p>{fmtMs(primaryResult?.stats.median_ms ?? null)}</p>
-              </article>
-              <article className="metric-card" title={t('summary.p95Title')}>
-                <h4>{t('summary.stable')}</h4>
-                <p>{fmtMs(primaryResult?.stats.p95_ms ?? null)}</p>
-              </article>
-              <article className="metric-card" title={t('summary.reliabilityTitle')}>
-                <h4>{t('summary.reliable')}</h4>
-                <p>{reliabilityPct === null ? t('summary.na') : `${reliabilityPct.toFixed(0)}%`}</p>
-              </article>
-            </div>
-          </section>
-
-          <details className="card compact guide-collapse fade-in-section">
-            <summary className="section-heading-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="18" height="18" aria-hidden="true">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 16v-4M12 8h.01" />
-              </svg>
-              {t('guide.title')}
-            </summary>
-            <p className="helper-text" style={{ marginTop: 'var(--space-2)' }}>{t('guide.line1')}</p>
-            <p className="helper-text">{t('guide.line2')}</p>
-          </details>
-
-          <section className="card compact fade-in-section">
-            <h3 className="section-heading-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="18" height="18" aria-hidden="true">
-                <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
-              </svg>
-              {t('filters.title')}
-            </h3>
-            <div className="filters-grid">
-              <label>
-                {t('filters.searchLabel')}
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder={t('filters.searchPlaceholder')}
-                  disabled={isRunning}
-                />
-              </label>
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={onlyReliable}
-                  disabled={isRunning}
-                  onChange={(e) => setOnlyReliable(e.target.checked)}
-                />
-                {t('filters.onlyReliable')}
-              </label>
-            </div>
-          </section>
-
-          <Suspense fallback={<section className="card"><p>{t('charts.loading')}</p></section>}>
-            <ChartsPanel results={filteredResults} />
-          </Suspense>
-        </>
       )}
 
       <GuidedApplyModal
@@ -1391,37 +1258,6 @@ function App() {
             </ul>
           </div>
         </div>
-      )}
-
-      <RunHistoryPanel
-        runs={history}
-        loading={historyLoading}
-        onSelectRun={(runId) => void handleSelectRun(runId)}
-        baselineId={comparisonBaselineId}
-        candidateId={comparisonCandidateId}
-        onSetBaseline={(runId) => selectComparisonPair(runId, comparisonCandidateId)}
-        onSetCandidate={(runId) => selectComparisonPair(comparisonBaselineId, runId)}
-      />
-
-      {comparisonBaselineId && comparisonCandidateId && (
-        <RunComparisonPanel
-          baselineId={comparisonBaselineId}
-          candidateId={comparisonCandidateId}
-          comparison={comparisonData}
-          loading={comparisonLoading}
-          error={comparisonError}
-          onClear={clearComparison}
-        />
-      )}
-
-      {protocolComparisonId && (
-        <Suspense fallback={null}>
-          <ProtocolComparisonPanel
-            comparison={protocolComparisonData}
-            loading={protocolComparisonLoading}
-            error={protocolComparisonError}
-          />
-        </Suspense>
       )}
 
       {selectedResult && (
