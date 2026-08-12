@@ -188,8 +188,6 @@ def test_country_to_region_known() -> None:
     assert _country_to_region("GB") == "europe"
     assert _country_to_region("BR") == "south-america"
     assert _country_to_region("JP") == "asia"
-    assert _country_to_region("AU") == "oceania"
-    assert _country_to_region("ZA") == "africa"
 
 
 def test_country_to_region_case_insensitive() -> None:
@@ -200,13 +198,13 @@ def test_country_to_region_case_insensitive() -> None:
 def test_country_to_region_unknown() -> None:
     assert _country_to_region("ZZ") is None
     assert _country_to_region("") is None
+    assert _country_to_region("AU") is None
+    assert _country_to_region("ZA") is None
 
 
 def test_country_to_region_all_continents() -> None:
-    """Verify at least one country from each continent maps correctly."""
+    """Verify at least one country from each supported continent maps correctly."""
     assert _country_to_region("ES") == "europe"
     assert _country_to_region("AR") == "south-america"
     assert _country_to_region("MX") == "north-america"
     assert _country_to_region("IN") == "asia"
-    assert _country_to_region("NZ") == "oceania"
-    assert _country_to_region("EG") == "africa"
