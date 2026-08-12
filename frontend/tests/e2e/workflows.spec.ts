@@ -4,6 +4,7 @@ import {
   MockApi,
   QUAD9_RESULT,
   doneBenchmark,
+  makeResult,
   makeWatchEntry,
   probeFixture,
   runningBenchmark,
@@ -19,11 +20,26 @@ async function waitForRouteDeferred(api: MockApi, routeKey: string, count: numbe
     .toBeGreaterThanOrEqual(count)
 }
 
+async function switchToMode(page: import('@playwright/test').Page, name: 'Quick check' | 'Lab') {
+  await page.getByRole('tab', { name, exact: true }).click()
+}
+
+async function switchToSection(page: import('@playwright/test').Page, name: string) {
+  await page.getByRole('tab', { name, exact: true }).click()
+}
+
 test.describe('workflow regression floor (Chromium, mocked network)', () => {
   test('cold initialization renders providers and a usable start control', async ({ page }) => {
     const api = new MockApi(page)
     await api.install()
     await page.goto('/')
+
+    const checkButton = page.getByRole('button', { name: 'Check my DNS' })
+    await expect(checkButton).toBeVisible()
+    await expect(checkButton).toBeEnabled()
+    await expect(page.locator('.btn-start')).toHaveCount(0)
+
+    await switchToMode(page, 'Lab')
 
     const startButton = page.locator('.btn-start')
     await expect(startButton).toBeVisible()
@@ -42,6 +58,8 @@ test.describe('workflow regression floor (Chromium, mocked network)', () => {
     api.on(POST_BENCHMARKS, () => api.deferredFor(POST_BENCHMARKS))
     await api.install()
     await page.goto('/')
+
+    await switchToMode(page, 'Lab')
 
     const startButton = page.locator('.btn-start')
     await expect(startButton).toBeEnabled()
@@ -65,6 +83,7 @@ test.describe('workflow regression floor (Chromium, mocked network)', () => {
     await api.install()
     await page.goto('/')
 
+    await switchToMode(page, 'Lab')
     await page.locator('.btn-start').click()
 
     await waitForRouteDeferred(api, GET_BENCHMARK, 1)
@@ -78,6 +97,7 @@ test.describe('workflow regression floor (Chromium, mocked network)', () => {
     const [, secondPoll] = api.deferredsFor(GET_BENCHMARK)
     secondPoll.resolve({ body: doneBenchmark(benchmarkId, CLOUDFLARE_RESULT) })
 
+    await switchToSection(page, 'Results')
     await expect(page.locator('.dashboard-hero-ip')).toHaveText('1.1.1.1')
     await expect(page.locator('#resolver-ranking-panel .ranking-row-rank-1 .ranking-line')).toContainText(
       'Cloudflare - 1.1.1.1',
@@ -91,6 +111,7 @@ test.describe('workflow regression floor (Chromium, mocked network)', () => {
     await api.install()
     await page.goto('/')
 
+    await switchToMode(page, 'Lab')
     await page.locator('.btn-start').click()
 
     await waitForRouteDeferred(api, GET_BENCHMARK, 1)
@@ -101,6 +122,7 @@ test.describe('workflow regression floor (Chromium, mocked network)', () => {
     await waitForRouteDeferred(api, GET_BENCHMARK, 2)
     const [, secondPoll] = api.deferredsFor(GET_BENCHMARK)
     secondPoll.resolve({ body: doneBenchmark(secondPoll.meta.id, CLOUDFLARE_RESULT) })
+    await switchToSection(page, 'Results')
     await expect(page.locator('#resolver-ranking-panel')).toBeVisible()
 
     await page.waitForTimeout(2_500)
@@ -114,6 +136,8 @@ test.describe('workflow regression floor (Chromium, mocked network)', () => {
     await api.install()
     await page.goto('/')
 
+    await switchToMode(page, 'Lab')
+    await switchToSection(page, 'History')
     await expect(page.locator('.history-btn')).toHaveCount(2)
     await page.locator('.history-btn', { hasText: 'Quad9' }).click()
 
@@ -136,6 +160,7 @@ test.describe('workflow regression floor (Chromium, mocked network)', () => {
     await api.install()
     await page.goto('/')
 
+    await switchToMode(page, 'Lab')
     await page.locator('.btn-start').click()
     await waitForRouteDeferred(api, GET_BENCHMARK, 1)
 
@@ -155,6 +180,8 @@ test.describe('workflow regression floor (Chromium, mocked network)', () => {
     await api.install()
     await page.goto('/')
 
+    await switchToMode(page, 'Lab')
+    await switchToSection(page, 'History')
     await expect(page.locator('.history-btn')).toHaveCount(2)
 
     await page.locator('.history-btn', { hasText: 'Cloudflare' }).click()
@@ -170,6 +197,7 @@ test.describe('workflow regression floor (Chromium, mocked network)', () => {
     quad9Deferred!.resolve({ body: doneBenchmark(quad9Deferred!.meta.id, QUAD9_RESULT) })
 
     await expect(page.locator('.saved-run-viewing-badge')).toBeVisible()
+    await switchToSection(page, 'Results')
     await expect(page.locator('#resolver-ranking-panel .ranking-row-rank-1 .ranking-line')).toContainText(
       'Quad9 - 9.9.9.9',
     )
@@ -191,6 +219,8 @@ test.describe('workflow regression floor (Chromium, mocked network)', () => {
     await api.install()
     await page.goto('/')
 
+    await switchToMode(page, 'Lab')
+    await switchToSection(page, 'History')
     await expect(page.locator('.history-btn')).toHaveCount(2)
     await page.locator('.history-btn', { hasText: 'Quad9' }).click()
 
@@ -199,6 +229,7 @@ test.describe('workflow regression floor (Chromium, mocked network)', () => {
     const runId = selection.meta.id
     selection.resolve({ body: doneBenchmark(runId, QUAD9_RESULT) })
 
+    await switchToSection(page, 'Results')
     await expect(page.locator('#resolver-ranking-panel .ranking-row')).toHaveCount(2)
 
     await page.locator('#resolver-ranking-panel .ranking-row-rank-1 .table-link-btn').click()
@@ -231,6 +262,8 @@ test.describe('workflow regression floor (Chromium, mocked network)', () => {
     await api.install()
     await page.goto('/')
 
+    await switchToMode(page, 'Lab')
+    await switchToSection(page, 'History')
     await expect(page.locator('.history-btn')).toHaveCount(2)
     await page.locator('.history-btn', { hasText: 'Quad9' }).click()
 
@@ -238,6 +271,7 @@ test.describe('workflow regression floor (Chromium, mocked network)', () => {
     const [selection] = api.deferredsFor(GET_BENCHMARK)
     selection.resolve({ body: doneBenchmark(selection.meta.id, QUAD9_RESULT) })
 
+    await switchToSection(page, 'Results')
     await expect(page.locator('.dashboard-panel')).toBeVisible()
 
     await page.locator('.dashboard-panel .btn-primary').click()
@@ -274,6 +308,9 @@ test.describe('workflow regression floor (Chromium, mocked network)', () => {
     await api.install()
     await page.goto('/')
 
+    await switchToMode(page, 'Lab')
+    await switchToSection(page, 'Watch')
+
     const alertBanner = page.locator('.watch-alert-banner')
     await expect(alertBanner).toBeVisible()
     await expect(alertBanner).toContainText('success_rate')
@@ -281,11 +318,67 @@ test.describe('workflow regression floor (Chromium, mocked network)', () => {
 
     await alertBanner.getByRole('button', { name: 'Run comparison' }).click()
 
+    await switchToSection(page, 'History')
     const comparisonPanel = page.locator('.comparison-panel')
     await expect(comparisonPanel).toBeVisible()
     await expect(comparisonPanel).toContainText('Comparable')
     await expect(comparisonPanel).toContainText('Baseline: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa · Candidate: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb')
     await expect(comparisonPanel).toContainText('12.30 ms')
+    expect(api.unhandledRequests).toEqual([])
+  })
+
+  test('quick check end-to-end: verdict, apply modal, and open in lab', async ({ page }) => {
+    const api = new MockApi(page)
+    api.on(POST_BENCHMARKS, () => api.deferredFor(POST_BENCHMARKS))
+    api.on(GET_BENCHMARK, (params) => api.deferredFor(GET_BENCHMARK, { id: params.id }))
+    await api.install()
+    await page.goto('/')
+
+    const quickPayload: { body: Record<string, unknown> | null } = { body: null }
+    page.on('request', (request) => {
+      if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/benchmarks') {
+        quickPayload.body = request.postDataJSON() as Record<string, unknown>
+      }
+    })
+
+    const checkButton = page.getByRole('button', { name: 'Check my DNS' })
+    await expect(checkButton).toBeVisible()
+    await checkButton.click()
+
+    const [startPost] = api.deferredsFor(POST_BENCHMARKS)
+    expect(startPost).toBeDefined()
+    expect(quickPayload.body).not.toBeNull()
+    expect(quickPayload.body?.mode).toBe('quick')
+    expect(quickPayload.body?.scoring_profile).toBe('speed')
+    expect(quickPayload.body?.resolvers).toContain('192.168.1.1')
+    startPost.resolve({ body: { benchmark_id: 'cafebabe00000000000000000000000001' } })
+
+    await waitForRouteDeferred(api, GET_BENCHMARK, 1)
+    const [firstPoll] = api.deferredsFor(GET_BENCHMARK)
+    const benchmarkId = firstPoll.meta.id
+    firstPoll.resolve({ body: runningBenchmark(benchmarkId) })
+    await expect(page.locator('.measuring')).toBeVisible()
+
+    await waitForRouteDeferred(api, GET_BENCHMARK, 2)
+    const [, secondPoll] = api.deferredsFor(GET_BENCHMARK)
+    const done = doneBenchmark(secondPoll.meta.id, CLOUDFLARE_RESULT)
+    done.results = [...(done.results ?? []), makeResult('192.168.1.1', 'isp-detectado', 'ISP (Detectado)', 42.0)]
+    secondPoll.resolve({ body: done })
+
+    const verdict = page.locator('.verdict-card')
+    await expect(verdict).toBeVisible()
+    await expect(verdict).toContainText('Switch to Cloudflare')
+    await expect(verdict).toContainText('29.70 ms')
+    await expect(verdict.locator('.numbers-row')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Apply' }).click()
+    const guidedModal = page.locator('[role="dialog"][aria-label*="Apply DNS"]')
+    await expect(guidedModal).toBeVisible()
+    await guidedModal.locator('.modal-head button').click()
+    await expect(guidedModal).toBeHidden()
+
+    await page.getByRole('button', { name: 'Open in Lab' }).click()
+    await expect(page.locator('.subnav')).toBeVisible()
     expect(api.unhandledRequests).toEqual([])
   })
 })

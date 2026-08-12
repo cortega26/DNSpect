@@ -1,5 +1,8 @@
 export type BenchmarkMode = 'quick' | 'standard' | 'exhaustive'
 
+/** Top-level app IA mode (plan 041): the one-action Quick check vs the full Lab. */
+export type AppMode = 'quick' | 'lab'
+
 export type Goal = 'speed' | 'security' | 'privacy' | 'ad-blocking' | 'family'
 
 export type ScoringProfile = Goal
