@@ -61,18 +61,18 @@ priority describes expected impact, effort is an implementation estimate.
 | [016 — documentation contract](archive/016-documentation-contract.md) | P2 / M | 001, 003, 004, 006, 011, 013 | **Complete** — `8a54401` |
 | [017 — profile-aware history comparison](archive/017-profile-aware-history-comparison.md) | P3 / L | 009, 010, 014, 015, 016 | **Complete** — `80248ce` |
 | [018 — controlled protocol comparison](archive/018-controlled-protocol-comparison.md) | P3 / L | 009, 010, 012, 014, 015, 016, 017 | **Complete** — `ba24025` |
-| [019 — backend CSV diagnostics parity](archive/019-backend-csv-diagnostics-parity.md) | P2 / S | — | **DONE** — **Complete** — `6a71835` |
-| [020 — headless CLI benchmark](archive/020-headless-cli-benchmark.md) | P2 / M | 019 | **DONE** — **Complete** — `44c9eae` |
-| [021 — monitoring mode design spike](archive/021-monitoring-mode-design-spike.md) | P1 / L | — | **DONE** — **Complete** — `7a4cad9` |
-| [022 — DNS-over-QUIC design spike](archive/022-dns-over-quic-design-spike.md) | P2 / L | — | **DONE** — **Complete** — `d5002d0` |
-| [023 — DNS-over-QUIC standalone benchmark](archive/023-dns-over-quic-standalone.md) | P1 / L | — | **DONE** — **Complete** — `cdf4e30` |
-| [024 — persistence write-path robustness](archive/024-persistence-write-path-robustness.md) | P1 / M | — | **DONE** — **Complete** — `82a9d0a` |
-| [025 — manifest target-snapshot synthesis](archive/025-manifest-target-snapshot-synthesis.md) | P1 / M | — | **DONE** — **Complete** — `4be0274` |
-| [026 — frontend session fixes](archive/026-frontend-session-fixes.md) | P2 / S-M | — | **DONE** — **Complete** — `d6c1c8f` |
-| [027 — orchestration hook unit tests](archive/027-hook-unit-tests.md) | P2 / M | 026 (recommended) | **DONE** — **Complete** — `d775029` |
+| [019 — backend CSV diagnostics parity](archive/019-backend-csv-diagnostics-parity.md) | P2 / S | — | **Complete** — `6a71835` |
+| [020 — headless CLI benchmark](archive/020-headless-cli-benchmark.md) | P2 / M | 019 | **Complete** — `44c9eae` |
+| [021 — monitoring mode design spike](archive/021-monitoring-mode-design-spike.md) | P1 / L | — | **Complete** — `7a4cad9` |
+| [022 — DNS-over-QUIC design spike](archive/022-dns-over-quic-design-spike.md) | P2 / L | — | **Complete** — `d5002d0` |
+| [023 — DNS-over-QUIC standalone benchmark](archive/023-dns-over-quic-standalone.md) | P1 / L | — | **Complete** — `cdf4e30` |
+| [024 — persistence write-path robustness](archive/024-persistence-write-path-robustness.md) | P1 / M | — | **Complete** — `82a9d0a` |
+| [025 — manifest target-snapshot synthesis](archive/025-manifest-target-snapshot-synthesis.md) | P1 / M | — | **Complete** — `4be0274` |
+| [026 — frontend session fixes](archive/026-frontend-session-fixes.md) | P2 / S-M | — | **Complete** — `d6c1c8f` |
+| [027 — orchestration hook unit tests](archive/027-hook-unit-tests.md) | P2 / M | 026 (recommended) | **Complete** — `d775029` |
 | [028 — monitoring mode implementation](archive/028-monitoring-mode-implementation.md) | P1 / L | — | **Complete** — merged `29cfaa9` + `abca400` (2 revision rounds: e2e fixtures repaired a pre-existing plan-023 regression; precise heading-role locators fixed a strict-mode collision the WatchPanel copy introduced in `accessibility-i18n.spec.ts`); e2e 25/25 verified on merged main; pushed to `abca400` |
-| [029 — DoQ comparison extension](archive/029-doq-comparison-extension.md) | P2 / M | — | **DONE** — **Complete** — `54ce261` |
-| [030 — history summary sidecars](030-history-summary-sidecar.md) | P2 / M | — | **DONE** — **Complete** — `96ccaed` |
+| [029 — DoQ comparison extension](archive/029-doq-comparison-extension.md) | P2 / M | — | **Complete** — `54ce261` |
+| [030 — history summary sidecars](archive/030-history-summary-sidecar.md) | P2 / M | — | **Complete** — `96ccaed` |
 
 ## Roadmap wave dependency notes (019-022)
 
