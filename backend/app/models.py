@@ -439,6 +439,21 @@ class WatchConfigRequest(BaseModel):
     thresholds: dict[str, float] = Field(default_factory=dict, validate_default=True)
     queries: list[str] | None = None
 
+    @field_validator("target_snapshot")
+    @classmethod
+    def validate_target_snapshot(cls, value: TargetSnapshot) -> TargetSnapshot:
+        normalized = _normalize_resolvers(value.resolver_ips, max_items=256)
+        if not normalized:
+            raise ValueError("Sin resolvers en el snapshot de destino")
+        provider_ids: dict[str, str] | None = None
+        if value.provider_ids is not None:
+            provider_ids = {ip: pid for ip, pid in value.provider_ids.items() if ip in normalized}
+        return TargetSnapshot(
+            resolver_ips=normalized,
+            selection_source=value.selection_source,
+            provider_ids=provider_ids,
+        )
+
     @field_validator("thresholds")
     @classmethod
     def validate_thresholds(cls, value: dict[str, float]) -> dict[str, float]:

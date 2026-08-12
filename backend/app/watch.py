@@ -417,6 +417,7 @@ class WatchScheduler:
             self._store.save(watch_id, data)
 
     def _build_request(self, config: dict[str, Any]) -> BenchmarkRequest:
+        snapshot = TargetSnapshot.model_validate(config["target_snapshot"])
         return BenchmarkRequest(
             mode=BenchmarkMode(config.get("mode") or "quick"),
             scoring_profile=BenchmarkGoal(config.get("scoring_profile") or "speed"),
@@ -424,7 +425,8 @@ class WatchScheduler:
             runs=config.get("runs"),
             timeout_sec=float(config.get("timeout_sec") or 2.0),
             queries=config.get("queries"),
-            target_snapshot=TargetSnapshot.model_validate(config["target_snapshot"]),
+            target_snapshot=snapshot,
+            resolvers=list(snapshot.resolver_ips),
             origin=WatchOrigin.watch,
         )
 
