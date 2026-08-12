@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from time import perf_counter
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import dns.exception
 import dns.message
@@ -321,7 +321,9 @@ def _protocol_diagnostic_domain(parent_id: str) -> str:
 
 
 def _resolver_protocol_endpoint(
-    resolver_ip: str, protocol: BenchmarkProtocol, provider_index: dict[str, dict[str, Any]],
+    resolver_ip: str,
+    protocol: BenchmarkProtocol,
+    provider_index: dict[str, dict[str, Any]],
 ) -> tuple[str | None, str | None]:
     """(endpoint, exclusion_code) — the single source of per-protocol eligibility."""
     if protocol == BenchmarkProtocol.udp:
@@ -1862,7 +1864,9 @@ class BenchmarkManager:
         self._clear_storage_warning(benchmark_id)
 
     def _resolver_supports_protocol(self, resolver_ip: str, protocol: str) -> bool:
-        endpoint, _ = _resolver_protocol_endpoint(resolver_ip, protocol, self.provider_index)
+        endpoint, _ = _resolver_protocol_endpoint(
+            resolver_ip, cast(BenchmarkProtocol, protocol), self.provider_index
+        )
         return endpoint is not None
 
     def _measure_with_protocol(
