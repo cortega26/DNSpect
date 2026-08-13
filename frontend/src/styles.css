@@ -168,6 +168,7 @@ body,
 body {
   margin: 0;
   font-family: var(--font-ui);
+  font-size: 0.95rem;
   color: var(--text);
   background: var(--bg);
   line-height: 1.45;
@@ -180,11 +181,26 @@ h3,
 h4 {
   margin: 0;
   font-family: var(--font-heading);
+  font-weight: 600;
   letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+}
+
+h2 {
+  font-size: 1.25rem;
 }
 
 h3 {
   font-size: 1rem;
+  letter-spacing: 0.01em;
+}
+
+h4 {
+  font-size: 1rem;
+  letter-spacing: 0.01em;
 }
 
 p {
@@ -282,15 +298,15 @@ a:focus-visible {
 }
 
 .hero h1 {
-  font-size: clamp(1.2rem, 1.8vw, 1.45rem);
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
 .hero p {
   max-width: 640px;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   line-height: 1.4;
 }
 
@@ -310,9 +326,11 @@ a:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   color: var(--muted);
-  font-weight: 600;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .hero-meta-item svg {
@@ -329,13 +347,14 @@ a:focus-visible {
 
 .preview-collapse summary {
   cursor: pointer;
-  font-weight: 700;
-  font-size: 0.88rem;
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: 0.01em;
 }
 
 .preview-collapse p {
   margin-top: 6px;
-  font-size: 0.88rem;
+  font-size: 0.95rem;
 }
 
 .header-actions {
@@ -371,6 +390,7 @@ a:focus-visible {
   width: 100%;
   padding-right: calc(var(--space-4) + 12px);
   cursor: pointer;
+  font-size: 0.85rem;
   font-weight: 700;
 }
 
@@ -415,6 +435,7 @@ a:focus-visible {
   gap: var(--space-3);
   text-align: left;
   color: var(--text);
+  font-size: 0.85rem;
   background: color-mix(in srgb, var(--surface) 96%, var(--surface-2));
   cursor: pointer;
 }
@@ -445,9 +466,9 @@ a:focus-visible {
   border-radius: var(--radius-micro);
   background: color-mix(in srgb, var(--accent) 18%, var(--surface-2));
   color: color-mix(in srgb, var(--accent) 88%, var(--text));
-  font-weight: 700;
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
 }
 
 .locale-item.is-active:focus-visible {
@@ -541,11 +562,13 @@ a:focus-visible {
 }
 
 .card.card-compact-controls .card-header h2 {
-  font-size: 0.95rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .card.card-compact-controls .card-header p {
-  font-size: 0.82rem;
+  font-size: 0.95rem;
 }
 
 .section-heading-icon {
@@ -605,8 +628,9 @@ a:focus-visible {
 }
 
 .card-header h2 {
-  font-size: 1.08rem;
-  letter-spacing: -0.01em;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .card-header p,
@@ -664,12 +688,12 @@ a:focus-visible {
 
 .start-subtext {
   margin-top: 0;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
 }
 
 .resolver-count-link {
   align-self: center;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
 }
 
 .inline-link,
@@ -699,8 +723,8 @@ a:focus-visible {
 .label-caption {
   margin-bottom: var(--space-1);
   font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
   overflow-wrap: anywhere;
@@ -715,7 +739,7 @@ a:focus-visible {
 .helper-text {
   margin-top: var(--space-2);
   color: var(--muted);
-  font-size: 0.84rem;
+  font-size: 0.95rem;
   line-height: 1.35;
   overflow-wrap: anywhere;
   text-wrap: pretty;
@@ -729,8 +753,9 @@ a:focus-visible {
   background: var(--panel);
   color: var(--text);
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.85rem;
+  letter-spacing: 0.04em;
   line-height: 1.2;
   white-space: normal;
   text-align: center;
@@ -754,8 +779,9 @@ a:focus-visible {
   border: 0;
   background: transparent;
   color: var(--muted);
-  font-weight: 600;
-  font-size: 0.8rem;
+  font-weight: 500;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
   padding: 5px 14px;
   min-height: 32px;
   cursor: pointer;
@@ -787,8 +813,9 @@ a:focus-visible {
 .chip-compact {
   min-height: 30px;
   padding: 4px 10px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   border-radius: var(--radius-micro);
   border: 1px solid var(--hairline);
   background: var(--panel);
@@ -826,8 +853,8 @@ a:focus-visible {
 .chip-xs {
   min-height: 28px;
   padding: 3px 10px;
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .advanced-timeout-chips {
@@ -912,7 +939,7 @@ label {
   display: grid;
   gap: 6px;
   color: var(--text);
-  font-size: 0.94rem;
+  font-size: 0.85rem;
 }
 
 input[type='number'],
@@ -924,6 +951,7 @@ textarea {
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--surface) 90%, var(--surface-2));
   color: var(--text);
+  font-size: 0.85rem;
   padding: 10px 12px;
   min-height: 42px;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -982,14 +1010,14 @@ textarea {
 .resolver-provider {
   grid-column: 2;
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.7rem;
 }
 
 .btn-primary,
 .btn-start {
   background: var(--accent-live);
   color: var(--chassis);
-  font-size: 1.05rem;
+  font-size: 0.85rem;
   padding: 12px 22px;
   min-height: 48px;
   border-radius: var(--radius-default);
@@ -998,7 +1026,7 @@ textarea {
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.04em;
   text-decoration: none;
   transition:
@@ -1039,7 +1067,8 @@ textarea {
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  font-weight: 600;
+  font-weight: 500;
+  font-size: 0.85rem;
   letter-spacing: 0.04em;
   min-height: 42px;
   transition:
@@ -1140,7 +1169,6 @@ textarea {
 }
 
 .actions-row .btn-start {
-  font-size: 1.1rem;
   padding: 14px 32px;
   min-height: 52px;
   min-width: 200px;
@@ -1203,24 +1231,26 @@ textarea {
 }
 
 .recommendation-provider {
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: var(--muted);
 }
 
 .recommendation-provider-strong {
-  font-size: 1.15rem;
-  font-weight: 800;
+  font-size: 1.25rem;
+  font-weight: 600;
   color: var(--text);
 }
 
 .recommendation-ip {
   font-family: var(--font-mono);
-  font-size: 1.1rem;
-  font-weight: 800;
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .recommendation-ip-strong {
   font-size: 1.25rem;
+  font-weight: 800;
 }
 
 .recommendation-improvement {
@@ -1282,8 +1312,9 @@ textarea {
 }
 
 .progress-percent {
-  font-size: 1.1rem;
-  font-weight: 800;
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .progress-metrics {
@@ -1386,7 +1417,7 @@ textarea {
 }
 
 .ranking-meta {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
 }
 
 .live-ranking-panel {
@@ -1454,9 +1485,10 @@ textarea {
   border: 1px solid color-mix(in srgb, var(--accent-live) 35%, var(--border));
   background: color-mix(in srgb, var(--accent-live) 12%, var(--surface-2));
   color: var(--accent-live);
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   padding: 2px 8px;
 }
 
@@ -1477,7 +1509,10 @@ textarea {
   text-overflow: ellipsis;
   text-align: right;
   display: inline-block;
-  font-size: 0.78rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
@@ -1543,7 +1578,9 @@ textarea {
   border: 1px solid color-mix(in srgb, var(--primary) 46%, var(--border));
   background: color-mix(in srgb, var(--primary) 16%, var(--surface-2));
   color: color-mix(in srgb, var(--primary) 88%, var(--text));
-  font-weight: 800;
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
   text-align: center;
   padding: 2px 8px;
 }
@@ -1586,8 +1623,8 @@ textarea {
   max-width: 4ch;
   justify-self: end;
   text-align: right;
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   opacity: 0;
 }
@@ -1838,14 +1875,15 @@ textarea {
 
 .metric-card h4 {
   color: var(--muted);
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .metric-card p {
   font-size: 1.25rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
@@ -1888,9 +1926,9 @@ td {
 
 thead th {
   color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   background: var(--panel);
   padding: 10px 14px;
@@ -1911,6 +1949,11 @@ th.num,
 td.num {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+td.num {
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
 tbody tr {
@@ -1941,7 +1984,10 @@ tbody tr:last-child td {
   width: fit-content;
   border-radius: var(--radius-micro);
   padding: 2px 9px;
-  font-size: 0.74rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   background: color-mix(in srgb, var(--primary) 18%, var(--surface-2));
   color: var(--primary);
 }
@@ -1986,7 +2032,7 @@ tbody tr:last-child td {
 .badge-protocol {
   background: color-mix(in srgb, var(--accent) 14%, var(--surface-2));
   color: var(--accent);
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   padding: 1px 6px;
   margin-left: 4px;
 }
@@ -2003,7 +2049,7 @@ tbody tr:last-child td {
 }
 
 .protocol-badges .badge {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   padding: 1px 7px;
 }
 
@@ -2025,9 +2071,9 @@ tbody tr:last-child td {
 .dashboard-hero-badge {
   display: inline-block;
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   background: var(--accent-active);
   color: var(--chassis);
   padding: 2px 10px;
@@ -2037,7 +2083,9 @@ tbody tr:last-child td {
 
 .dashboard-hero-title {
   margin: 0 0 var(--space-1);
-  font-size: 1.4rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0;
   line-height: 1.3;
 }
 
@@ -2058,7 +2106,7 @@ tbody tr:last-child td {
 }
 
 .dashboard-hero-stat {
-  font-size: 0.82rem;
+  font-size: 0.7rem;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -2072,8 +2120,9 @@ tbody tr:last-child td {
 }
 
 .dashboard-improvement {
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 600;
+  letter-spacing: 0.01em;
   margin: 0 0 var(--space-1);
 }
 
@@ -2081,7 +2130,7 @@ tbody tr:last-child td {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  font-size: 0.82rem;
+  font-size: 0.7rem;
   color: var(--muted);
   margin: 0;
 }
@@ -2095,9 +2144,9 @@ tbody tr:last-child td {
 
 .dashboard-top5 > h3 {
   margin: 0 0 var(--space-2);
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   color: var(--muted);
 }
 
@@ -2135,7 +2184,7 @@ tbody tr:last-child td {
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-micro);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
   background: var(--panel-raised);
   color: var(--muted);
@@ -2153,7 +2202,7 @@ tbody tr:last-child td {
 }
 
 .dashboard-top5-ip {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2162,6 +2211,8 @@ tbody tr:last-child td {
 
 .dashboard-top5-score {
   margin-left: auto;
+  font-size: 1.25rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
   flex-shrink: 0;
@@ -2214,7 +2265,7 @@ tbody tr:last-child td {
 }
 
 .history-mode {
-  font-size: 0.74rem;
+  font-size: 0.7rem;
   color: var(--muted);
   text-transform: capitalize;
 }
@@ -2227,12 +2278,15 @@ tbody tr:last-child td {
 }
 
 .history-date {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--muted);
 }
 
 .history-top {
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2251,6 +2305,7 @@ tbody tr:last-child td {
   min-height: 34px;
   padding: 6px 10px;
   cursor: pointer;
+  font-size: 0.85rem;
 }
 
 .chart-controls {
@@ -2277,8 +2332,9 @@ tbody tr:last-child td {
   background: var(--panel);
   color: var(--text);
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.85rem;
+  letter-spacing: 0.04em;
   transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
 
@@ -2328,13 +2384,14 @@ tbody tr:last-child td {
 }
 
 .empty-state-title {
-  font-weight: 700;
-  font-size: 1.05rem;
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: 0.01em;
 }
 
 .empty-state-body {
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   max-width: 400px;
   line-height: 1.5;
 }
@@ -2408,7 +2465,7 @@ tbody tr:last-child td {
   display: block;
   overflow-wrap: anywhere;
   font-family: var(--font-mono);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
 }
 
 .guided-verification {
@@ -2477,6 +2534,7 @@ tbody tr:last-child td {
   background: var(--panel-raised);
   padding: 6px 12px;
   cursor: pointer;
+  font-size: 0.85rem;
 }
 
 .stats-grid {
@@ -2595,7 +2653,7 @@ tbody tr:last-child td {
   align-items: center;
   padding: 0 10px;
   font-weight: 700;
-  font-size: 0.84rem;
+  font-size: 0.95rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
@@ -2604,8 +2662,8 @@ tbody tr:last-child td {
 }
 
 .race-bar-pct {
-  font-weight: 800;
-  font-size: 0.82rem;
+  font-weight: 600;
+  font-size: 1.25rem;
   font-variant-numeric: tabular-nums;
   min-width: 4ch;
   text-align: right;
@@ -2614,7 +2672,7 @@ tbody tr:last-child td {
 
 .race-row .live-ranking-rank {
   min-width: 34px;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   padding: 2px 6px;
 }
 
@@ -2719,7 +2777,8 @@ tbody tr:last-child td {
   background: var(--panel);
   color: var(--ink-muted);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   padding: 6px var(--space-4);
@@ -2753,8 +2812,9 @@ tbody tr:last-child td {
   background: var(--panel);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-default);
-  font-size: 11px;
-  letter-spacing: 0.06em;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ink-muted);
 }
@@ -2808,7 +2868,7 @@ tbody tr:last-child td {
 
 .quick-intro {
   color: var(--ink-muted);
-  font-size: 13px;
+  font-size: 0.95rem;
 }
 
 .quick-check-btn {
@@ -2820,7 +2880,7 @@ tbody tr:last-child td {
   align-items: center;
   gap: var(--space-2);
   color: var(--accent-live);
-  font-size: 13px;
+  font-size: 0.95rem;
   margin: 0;
 }
 
@@ -2842,15 +2902,16 @@ tbody tr:last-child td {
 
 .verdict-eyebrow {
   color: var(--ink-muted);
-  font-size: 11px;
-  letter-spacing: 0.14em;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .verdict-line {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: clamp(1.45rem, 4vw, 2.05rem);
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
   line-height: 1.12;
   letter-spacing: -0.01em;
   margin: var(--space-3) 0 var(--space-4);
@@ -2866,7 +2927,7 @@ tbody tr:last-child td {
 
 .verdict-reasons li {
   color: var(--ink-muted);
-  font-size: 13px;
+  font-size: 0.95rem;
   padding-left: var(--space-4);
   position: relative;
 }
@@ -2901,13 +2962,14 @@ tbody tr:last-child td {
 
 .num-label {
   color: var(--ink-muted);
-  font-size: 10px;
+  font-size: 0.7rem;
+  font-weight: 500;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .num-value {
-  font-size: 19px;
+  font-size: 1.25rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
@@ -2926,7 +2988,8 @@ tbody tr:last-child td {
   border-radius: var(--radius-default);
   color: var(--ink-muted);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   padding: 10px 20px;
@@ -3023,7 +3086,8 @@ tbody tr:last-child td {
   border-bottom: 2px solid transparent;
   color: var(--ink-muted);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   padding: 8px var(--space-2);
