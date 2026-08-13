@@ -95,6 +95,7 @@ execution order: 031 → 033 → 032 → 034 → 035 → 036 → 037, with 038 l
 | [041 — two-mode IA](041-two-mode-ia.md) | P1 / L | 040 | **DONE** — worktree `/tmp/opencode/dnspect-041` (branch `plan/041-two-mode-ia`, commits `f4091ce`, `d231edf`, `78c5bd0`); gates re-verified by reviewer (177 vitest incl. 11 new component tests, e2e 27/27 with the Quick-check scenario); **merge pending user decision** |
 | [042 — typographic hierarchy](042-typographic-hierarchy.md) | P1 / S | 040, 041 | **DONE** — worktree `/tmp/opencode/dnspect-042` (branch `plan/042-typographic-hierarchy`, commits `83c6680`, `d66fff3`); gates re-verified by reviewer (177 vitest, e2e 27/27, computed-style probe: hero/verdict 36px, h2 20px, buttons 13.6px, data 20px, captions 11.2px); **merge pending user decision** |
 | [043 — revamp polish](043-revamp-polish.md) | P2 / S-M | 040, 041, 042 | **DONE** — worktree `/tmp/opencode/dnspect-043` (branch `plan/043-revamp-polish`, commits `56c8b4b` merge incl. `sta34a8`-class feature commits); gates re-verified by reviewer (183 vitest, e2e 27/27, one-shot-timer staleness design, token-styled charts probe-verified); one documented scope flag (`LabWorkspace.tsx` prop — minimal, necessary); **merge pending user decision** |
+| [044 — light theme repair](044-light-theme-repair.md) | P1 / S | 040-043 | TODO |
 
 ## Frontend revamp wave (039+, 2026-08-12)
 
