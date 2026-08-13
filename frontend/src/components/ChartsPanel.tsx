@@ -44,24 +44,25 @@ function CustomTooltip({ active, payload, label }: TooltipProps<number, string>)
   return (
     <div
       style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 'var(--radius-sm)',
+        background: 'var(--panel-raised)',
+        border: '1px solid var(--hairline)',
+        borderRadius: 4,
+        fontFamily: 'var(--font-mono)',
+        fontSize: 12,
+        color: 'var(--ink)',
         padding: '8px 12px',
-        boxShadow: 'var(--shadow)',
-        fontSize: '0.88rem',
         display: 'grid',
-        gap: '4px',
+        gap: 4,
       }}
     >
-      <strong style={{ fontSize: '0.94rem' }}>{entry.provider}</strong>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', color: 'var(--muted)' }}>{label}</span>
+      <strong>{entry.provider}</strong>
+      <span style={{ fontSize: 11, color: 'var(--ink-muted)' }}>{label}</span>
       <span>
         <strong>{payload[0]?.value?.toFixed(1) ?? 'N/A'}</strong>
         {entry.unit}
       </span>
       {entry.failureRate > 0 && (
-        <span style={{ color: 'var(--danger)', fontSize: '0.82rem' }}>
+        <span style={{ color: 'var(--bad)', fontSize: 11 }}>
           {t('charts.failureRate', { value: (entry.failureRate * 100).toFixed(1) })}
         </span>
       )}
@@ -159,12 +160,21 @@ export function ChartsPanel({ results }: Props) {
             <h3>{chartLabel}</h3>
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={bars} margin={{ top: 8, right: 16, left: 8, bottom: 48 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="dns" angle={-35} textAnchor="end" height={70} interval={0} stroke="var(--muted)" />
+                <CartesianGrid stroke="var(--hairline)" />
+                <XAxis
+                  dataKey="dns"
+                  angle={-35}
+                  textAnchor="end"
+                  height={70}
+                  interval={0}
+                  stroke="var(--hairline)"
+                  tick={{ fontFamily: 'var(--font-mono)', fontSize: 11, fill: 'var(--ink-muted)' }}
+                />
                 <YAxis
                   unit={metricSpec.yAxisUnit}
-                  stroke="var(--muted)"
+                  stroke="var(--hairline)"
                   domain={metricSpec.yAxisDomain as [number | 'auto', number | 'auto']}
+                  tick={{ fontFamily: 'var(--font-mono)', fontSize: 11, fill: 'var(--ink-muted)' }}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={48}>

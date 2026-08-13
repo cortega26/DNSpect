@@ -34,6 +34,7 @@ import {
 import {
   computeStallThresholds,
   isSmallImprovement,
+  stalenessState,
   terminalRefreshKey,
 } from '@/lib/runtime'
 import { useTheme } from '@/lib/useTheme'
@@ -556,9 +557,13 @@ function App() {
     return t('status.runningHealthStalled')
   }, [isRunning, lastProgressAgeMs, stallThresholds.slowMs, stallThresholds.stalledMs, t])
   const lastProgressLabel = useMemo(() => {
-    if (lastProgressAgeMs === null) return t('status.lastProgressUnknown')
-    return t('status.lastProgressAgo', { seconds: Math.floor(lastProgressAgeMs / 1000) })
-  }, [lastProgressAgeMs, t])
+    const state = stalenessState(lastProgressAgeMs, stallThresholds)
+    if (state === 'fresh') return null
+    const seconds = Math.max(0, Math.floor((lastProgressAgeMs ?? 0) / 1000))
+    return state === 'slow'
+      ? t('status.lastProgressSlow', { seconds })
+      : t('status.lastProgressStalled', { seconds })
+  }, [lastProgressAgeMs, stallThresholds, t])
   const progressTotalResolvers = useMemo(() => {
     if (!status || !status.runs || status.runs <= 0 || !status.progress.total) return selectedResolvers.size
     return Math.max(1, Math.ceil(status.progress.total / status.runs))

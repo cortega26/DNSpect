@@ -1,10 +1,25 @@
-import { useRef } from 'react'
+import { useRef, type CSSProperties, type SVGProps } from 'react'
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { useFocusTrap } from '@/lib/useFocusTrap'
 import { useI18n } from '@/lib/useI18n'
 import type { Provider, ResolverResult } from '@/lib/types'
 import { fmtMs } from '@/lib/utils'
+
+const TOOLTIP_CONTENT_STYLE: CSSProperties = {
+  background: 'var(--panel-raised)',
+  border: '1px solid var(--hairline)',
+  borderRadius: 4,
+  fontFamily: 'var(--font-mono)',
+  fontSize: 12,
+  color: 'var(--ink)',
+}
+
+const AXIS_TICK_STYLE: SVGProps<SVGTextElement> = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: 11,
+  fill: 'var(--ink-muted)',
+}
 
 interface Props {
   result: ResolverResult
@@ -137,14 +152,14 @@ export function ResolverDetailModal({ result, provider, canLoadSamples, isLoadin
                 <h4>{t('modal.timeSeries')}</h4>
                 <ResponsiveContainer width="100%" height={220}>
                   <LineChart data={lineData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis dataKey="run" stroke="var(--muted)" />
-                    <YAxis unit=" ms" stroke="var(--muted)" />
-                    <Tooltip />
+                    <CartesianGrid stroke="var(--hairline)" />
+                    <XAxis dataKey="run" stroke="var(--hairline)" tick={AXIS_TICK_STYLE} />
+                    <YAxis unit=" ms" stroke="var(--hairline)" tick={AXIS_TICK_STYLE} />
+                    <Tooltip contentStyle={TOOLTIP_CONTENT_STYLE} />
                     <Line
                       type="monotone"
                       dataKey="ms"
-                      stroke="var(--primary)"
+                      stroke="var(--accent-active)"
                       strokeWidth={2}
                       dot={false}
                       connectNulls={false}
@@ -157,11 +172,11 @@ export function ResolverDetailModal({ result, provider, canLoadSamples, isLoadin
                 <h4>{t('modal.histogram')}</h4>
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={histogram}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis dataKey="bucket" stroke="var(--muted)" />
-                    <YAxis allowDecimals={false} stroke="var(--muted)" />
-                    <Tooltip />
-                    <Bar dataKey="count" fill="var(--primary)" />
+                    <CartesianGrid stroke="var(--hairline)" />
+                    <XAxis dataKey="bucket" stroke="var(--hairline)" tick={AXIS_TICK_STYLE} />
+                    <YAxis allowDecimals={false} stroke="var(--hairline)" tick={AXIS_TICK_STYLE} />
+                    <Tooltip contentStyle={TOOLTIP_CONTENT_STYLE} />
+                    <Bar dataKey="count" fill="var(--accent-active)" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

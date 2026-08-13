@@ -29,7 +29,7 @@ export interface RunningCardProps {
   completedResolvers: number
   totalResolvers: number
   currentResolverLabel: string
-  lastProgressLabel: string
+  lastProgressLabel: string | null
   avgLatencyMs: number | null
   etaLabel: string
   results: ResolverResult[]
@@ -220,13 +220,15 @@ export function LabWorkspace(props: LabWorkspaceProps) {
                 </svg>
                 {props.runningCard.currentResolverLabel}
               </p>
-              <p className="metric-row">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" aria-hidden="true">
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M12 7v5l3 3" />
-                </svg>
-                {props.runningCard.lastProgressLabel}
-              </p>
+              {props.runningCard.lastProgressLabel !== null ? (
+                <p className="metric-row">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7v5l3 3" />
+                  </svg>
+                  {props.runningCard.lastProgressLabel}
+                </p>
+              ) : null}
               <p className="metric-row">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" aria-hidden="true">
                   <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
