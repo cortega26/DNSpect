@@ -22,6 +22,15 @@ export function computeStallThresholds(timeoutSec: number | null | undefined): S
   }
 }
 
+export type StalenessState = 'fresh' | 'slow' | 'stalled'
+
+export function stalenessState(ageMs: number | null, thresholds: StallThresholds): StalenessState {
+  if (ageMs === null) return 'fresh'
+  if (ageMs > thresholds.stalledMs) return 'stalled'
+  if (ageMs > thresholds.slowMs) return 'slow'
+  return 'fresh'
+}
+
 export function isSmallImprovement(improvementMs: number | null, currentAverageMs: number | null): boolean {
   if (improvementMs === null || !Number.isFinite(improvementMs) || improvementMs <= 0) return false
   const currentBase = Number.isFinite(currentAverageMs) && currentAverageMs !== null && currentAverageMs > 0 ? currentAverageMs : 0

@@ -1470,16 +1470,24 @@ textarea {
 
 .live-ranking-updated {
   margin-left: auto;
-  width: 21ch;
-  max-width: 21ch;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: right;
   display: inline-block;
   font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
-  color: var(--muted);
+}
+
+/* Staleness readout: hidden while fresh, amber when updates lag, red when stalled. */
+.live-ranking-updated[data-state='fresh'] {
+  display: none;
+}
+
+.live-ranking-updated[data-state='slow'] {
+  color: var(--accent-live);
+}
+
+.live-ranking-updated[data-state='stalled'] {
+  color: var(--bad);
+  font-weight: 700;
 }
 
 .live-ranking-list {

@@ -2,6 +2,7 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'rea
 
 import { useI18n } from '@/lib/useI18n'
 import { resolveLiveMotionPolicy } from '@/lib/motion'
+import { stalenessState, type StallThresholds, type StalenessState } from '@/lib/runtime'
 import type { ResolverResult } from '@/lib/types'
 import { resolverReliabilityScore } from '@/lib/utils'
 
@@ -26,33 +27,74 @@ interface Props {
 const REORDER_DURATION_MS = 280
 const DEFAULT_MOTION_ROW_BUDGET = 30
 
+// Staleness tuning knobs for the live-ranking readout (relative to the
+// update-label interval): the label stays hidden while updates arrive
+// regularly, turns amber after UPDATED_SLOW_MULTIPLIER × interval without
+// an update, and red after UPDATED_STALLED_MULTIPLIER × interval.
+const UPDATED_SLOW_MULTIPLIER = 3
+const UPDATED_STALLED_MULTIPLIER = 10
+
 interface UpdatedAgoLabelProps {
   updatedAtMs: number
   isRunning: boolean
   intervalMs: number
 }
 
+interface StaleReadout {
+  state: StalenessState
+  seconds: number
+}
+
 const UpdatedAgoLabel = memo(function UpdatedAgoLabel({ updatedAtMs, isRunning, intervalMs }: UpdatedAgoLabelProps) {
   const { t } = useI18n()
-  const labelRef = useRef<HTMLSpanElement>(null)
+  const [readout, setReadout] = useState<StaleReadout | null>(null)
 
   useEffect(() => {
-    const label = labelRef.current
-    if (!label) return
-
-    const renderElapsed = () => {
-      const elapsedSeconds = Math.max(0, (Date.now() - updatedAtMs) / 1000)
-      label.textContent = t('liveRanking.updatedAgo', { seconds: Math.floor(elapsedSeconds) })
+    if (!isRunning) {
+      setReadout(null)
+      return
     }
 
-    renderElapsed()
-    if (!isRunning) return
+    const thresholds: StallThresholds = {
+      slowMs: UPDATED_SLOW_MULTIPLIER * intervalMs,
+      stalledMs: UPDATED_STALLED_MULTIPLIER * intervalMs,
+    }
 
-    const timer = window.setInterval(renderElapsed, intervalMs)
-    return () => window.clearInterval(timer)
-  }, [intervalMs, isRunning, t, updatedAtMs])
+    let tickTimer: number | undefined
+    let freshCheckTimer: number | undefined
 
-  return <span ref={labelRef} className="live-ranking-updated" aria-live="off" />
+    const recheck = () => {
+      const ageMs = Date.now() - updatedAtMs
+      const state = stalenessState(ageMs, thresholds)
+      if (state === 'fresh') {
+        setReadout(null)
+        const untilSlowMs = Math.max(1, thresholds.slowMs - ageMs)
+        freshCheckTimer = window.setTimeout(recheck, untilSlowMs)
+        return
+      }
+      setReadout({ state, seconds: Math.max(0, Math.floor(ageMs / 1000)) })
+      tickTimer = window.setInterval(recheck, intervalMs)
+    }
+
+    recheck()
+
+    return () => {
+      if (tickTimer !== undefined) window.clearInterval(tickTimer)
+      if (freshCheckTimer !== undefined) window.clearTimeout(freshCheckTimer)
+    }
+  }, [intervalMs, isRunning, updatedAtMs])
+
+  const state = readout?.state ?? 'fresh'
+
+  return (
+    <span className="live-ranking-updated" data-state={state} aria-live="off">
+      {readout === null
+        ? ''
+        : state === 'slow'
+          ? t('liveRanking.updatedSlow', { seconds: readout.seconds })
+          : t('liveRanking.updatedStalled', { seconds: readout.seconds })}
+    </span>
+  )
 })
 
 interface DecoratedRankRow extends CanonicalLiveRow {

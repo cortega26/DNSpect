@@ -6,6 +6,7 @@ import {
   isSmallImprovement,
   shouldAcceptAsyncResult,
   shouldPollBenchmark,
+  stalenessState,
   terminalRefreshKey,
 } from './runtime'
 
@@ -26,6 +27,31 @@ describe('stall threshold computation', () => {
   it('scales thresholds from configured timeout', () => {
     expect(computeStallThresholds(2)).toEqual({ slowMs: 3000, stalledMs: 5000 })
     expect(computeStallThresholds(4)).toEqual({ slowMs: 6000, stalledMs: 10000 })
+  })
+})
+
+describe('staleness state', () => {
+  const thresholds = { slowMs: 3000, stalledMs: 5000 }
+
+  it('treats unknown age as fresh', () => {
+    expect(stalenessState(null, thresholds)).toBe('fresh')
+  })
+
+  it('is fresh below and at the slow boundary', () => {
+    expect(stalenessState(0, thresholds)).toBe('fresh')
+    expect(stalenessState(2999, thresholds)).toBe('fresh')
+    expect(stalenessState(3000, thresholds)).toBe('fresh')
+  })
+
+  it('is slow between the slow and stalled boundaries', () => {
+    expect(stalenessState(3001, thresholds)).toBe('slow')
+    expect(stalenessState(4999, thresholds)).toBe('slow')
+    expect(stalenessState(5000, thresholds)).toBe('slow')
+  })
+
+  it('is stalled past the stalled boundary', () => {
+    expect(stalenessState(5001, thresholds)).toBe('stalled')
+    expect(stalenessState(10_000, thresholds)).toBe('stalled')
   })
 })
 
