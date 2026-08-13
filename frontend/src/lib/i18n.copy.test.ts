@@ -43,7 +43,43 @@ function assertCopyContract(locale: Locale, entries: ContractEntry[]) {
   })
 }
 
+// The Quick-mode verdict/reason templates are a placeholder contract: the
+// ES source pins the exact set each key may use, and EN/PT must preserve it.
+const VERDICT_REASON_PLACEHOLDERS: Array<[key: string, placeholders: string[]]> = [
+  ['quick.verdict.eyebrow', ['id']],
+  ['quick.verdict.good', []],
+  ['quick.verdict.switch', ['pct', 'provider']],
+  ['quick.verdict.switchFallback', ['provider']],
+  ['quick.reason.medianGood', ['count', 'ms', 'total']],
+  ['quick.reason.medianSwitch', ['delta', 'ms']],
+  ['quick.reason.failures', ['count', 'queries']],
+  ['quick.reason.stability', ['pct', 'runs']],
+]
+
+function extractPlaceholders(template: string): string[] {
+  return [...template.matchAll(/\{\{(\w+)\}\}/g)].map((match) => match[1]).sort()
+}
+
 describe('i18n copy contract gate', () => {
+  it('pins the exact placeholder set of every verdict/reason template', () => {
+    const es = translations.es as Record<string, string>
+    for (const [key, expected] of VERDICT_REASON_PLACEHOLDERS) {
+      expect(es[key], `Missing translation key in placeholder pin`).toBeDefined()
+      expect(extractPlaceholders(es[key]), `${key} placeholder drift in ES`).toEqual(expected)
+    }
+  })
+
+  it('preserves verdict/reason placeholders across EN and PT', () => {
+    const es = translations.es as Record<string, string>
+    const en = translations.en as Record<string, string>
+    const pt = translations.pt as Record<string, string>
+    for (const [key] of VERDICT_REASON_PLACEHOLDERS) {
+      const esSet = extractPlaceholders(es[key])
+      expect(extractPlaceholders(en[key]), `${key} placeholder drift in EN`).toEqual(esSet)
+      expect(extractPlaceholders(pt[key]), `${key} placeholder drift in PT`).toEqual(esSet)
+    }
+  })
+
   it('protects apply-in-system guide copy (ES/PT)', () => {
     assertCopyContract('es', [
       ['applyGuide.title', 'Aplicar en el sistema'],
