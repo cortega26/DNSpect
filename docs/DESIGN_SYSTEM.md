@@ -91,6 +91,22 @@ chamfered CTA's clipped corner (see Component skins).
   default; enforce `font-variant-numeric: tabular-nums` at the readout
   level as defense-in-depth).
 
+### The instrument type scale (binding)
+
+Hierarchy comes from size **plus** weight/tracking/case — captions are tiny
+uppercase, data is large tabular, display carries the character font.
+Components must pick sizes from this table, never invent new ones.
+
+| Role | Size | Font | Weight/tracking | Used for |
+|---|---|---|---|---|
+| Display-1 | `clamp(1.75rem, 3vw, 2.25rem)` | Bricolage | 700, -0.01em | hero `h1`, verdict line |
+| Display-2 | `1.25rem` | Bricolage | 600, 0 | section/card titles (`h2`), dashboard-hero-title |
+| Display-3 | `1rem` | Bricolage | 600, 0.01em | `h3`, panel titles |
+| Body | `0.95rem` | Martian Mono | 400, 0 | default text, descriptions |
+| UI | `0.85rem` | Martian Mono | 500, 0.04em | buttons, chips, inputs, mode/sub-nav tabs |
+| Data | `1.25rem` | Martian Mono | 600, tabular | metric values, numbers rows, score readouts |
+| Caption | `0.7rem` | Martian Mono | 500, 0.12em uppercase | labels, table headers, eyebrows, timestamps, brand tagline |
+
 ### Self-hosting plan (build phase)
 
 - Files live under `frontend/public/fonts/` as **variable woff2** +
