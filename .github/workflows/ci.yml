@@ -171,10 +171,13 @@ jobs:
       - name: Install backend packaging deps
         run: |
           python -m pip install --upgrade pip
-          pip install -c backend/constraints.txt -e "./backend[pack]"
+          pip install -c backend/constraints.txt -e "./backend[pack,doq]"
 
       - name: Verify backports packaging dependency
         run: python -c "import backports, backports.tarfile"
+
+      - name: Verify aioquic packaging dependency
+        run: python -c "import aioquic, aioquic.quic"
 
       - name: Build packaged binary
         run: python scripts/package_backend.py
@@ -220,10 +223,13 @@ jobs:
       - name: Install backend packaging deps
         run: |
           python -m pip install --upgrade pip
-          pip install -c backend/constraints.txt -e ".\backend[pack]"
+          pip install -c backend/constraints.txt -e ".\backend[pack,doq]"
 
       - name: Verify backports packaging dependency
         run: python -c "import backports, backports.tarfile"
+
+      - name: Verify aioquic packaging dependency
+        run: python -c "import aioquic, aioquic.quic"
 
       - name: Build packaged binary
         run: python scripts/package_backend.py
