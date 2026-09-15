@@ -105,6 +105,26 @@ execution order: 031 → 033 → 032 → 034 → 035 → 036 → 037, with 038 l
 - Untracked work on the tree (uncommitted, not from any plan): `backend/app/runner.py` naive-`started_at`-as-UTC sort fix + `backend/tests/test_history_summary.py` mixed naive/aware test + `Makefile` `verify` target. Recommend a commit or a small plan on the next planning run; flagging here so it isn't lost.
 - Executable right now: 042 (merge; conflict-free) → then 044.
 
+## Post-revamp wave (045-050, 2026-09-15)
+
+Written against `57a8e34`. The revamp (039-044) is closed; these are the
+vetted next-wave items: dependency hygiene (045), release unblock (046),
+the post-v1.4.0 migration (047), revamp hardening (048), the deferred
+god-module split (049), and the notifications decision spike (050).
+Recommended execution order: 045 + 046 first (cheap, release-relevant;
+046 must run against the final lockfile, so sequence it after 045 if both
+are in flight), then 047, 048, 050 in any order, with 049 last
+(long-lived branch — rebase discipline in the plan).
+
+| Plan | Priority / effort | Depends on | Status |
+|---|---|---|---|
+| [045 — dependabot remediation](045-dependabot-remediation.md) | P2 / S | — | TODO |
+| [046 — Flatpak sources regen](046-flatpak-sources-regen.md) | P1 / S | — (sequence after 045 if in flight) | TODO |
+| [047 — React 19 migration](047-react-19-migration.md) | P2 / M | — | TODO |
+| [048 — frontend hardening](048-frontend-hardening.md) | P2 / M | 044 (merged) | TODO |
+| [049 — runner split](049-runner-split.md) | P2 / L | — | TODO |
+| [050 — OS notifications spike](050-os-notifications-spike.md) | P2 / S | — | TODO (decision-gated build follows) |
+
 ## Frontend revamp wave (039+, 2026-08-12)
 
 The user-requested frontend revamp ("The Instrument" direction + Quick/Lab
