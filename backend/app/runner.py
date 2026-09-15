@@ -1034,6 +1034,10 @@ class BenchmarkManager:
             started_raw = entry.get("started_at")
             try:
                 parsed = datetime.fromisoformat(str(started_raw))
+                if parsed.tzinfo is None:
+                    # Legacy runs persisted naive wall-clock in UTC; interpret them as UTC
+                    # so mixed naive/aware histories sort stably regardless of host timezone.
+                    parsed = parsed.replace(tzinfo=UTC)
                 return (parsed.timestamp(), 0, str(entry.get("id", "")))
             except (ValueError, TypeError):
                 return (0, 1, str(entry.get("id", "")))
