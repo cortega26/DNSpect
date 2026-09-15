@@ -1,4 +1,4 @@
-.PHONY: backend-install backend-dev backend-check backend-semgrep frontend-install frontend-dev frontend-check frontend-check-e2e dev smoke dependency-audit release-check
+.PHONY: backend-install backend-dev backend-check backend-semgrep frontend-install frontend-dev frontend-check frontend-check-e2e verify dev smoke dependency-audit release-check
 
 backend-install:
 	cd backend && python3 -m venv .venv && . .venv/bin/activate && pip install -r constraints.txt -e .[dev]
@@ -30,6 +30,11 @@ frontend-check:
 # Prerequisite: npx playwright install chromium (once, in frontend/)
 frontend-check-e2e:
 	cd frontend && npx playwright test --reporter=line
+
+# Minimal root dispatch: backend pytest + existing frontend vitest suite.
+verify:
+	cd backend && . .venv/bin/activate && pytest -q
+	cd frontend && npm test
 
 dev:
 	bash scripts/dev.sh
