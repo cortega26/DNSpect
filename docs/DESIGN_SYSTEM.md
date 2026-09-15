@@ -52,6 +52,34 @@ hairline `#D9DEE6`, same accent semantics) — implemented in the build
 phase as a `[data-theme='light']` block; dark remains the default. All
 token pairs contrast-checked (WCAG AA; the a11y contract gates).
 
+### Light theme token set (plan 044)
+
+The `[data-theme='light']` block overrides the FULL instrument token
+set (legacy aliases kept as-is for the older components):
+
+| Token | Light value | Dark value | Use / contrast note |
+|---|---|---|---|
+| `--chassis` | `#F4F5F7` | `#0B0E13` | page paper (slight cool cast) |
+| `--panel` | `#FFFFFF` | `#12161D` | cards, panels |
+| `--panel-raised` | `#F8F9FB` | `#171C25` | hover/active surfaces, modals |
+| `--hairline` | `#D8DDE5` | `#232A36` | 1px borders, dividers |
+| `--ink` | `#1A212B` | `#E6EAF1` | primary text (16.2:1 on panel) |
+| `--ink-muted` | `#5B6675` | `#98A2B3` | secondary text (5.8:1 on panel) |
+| `--accent-live` | `#E8A33D` | `#E8A33D` | amber FILL (unchanged per theme) |
+| `--accent-live-ink` | `#A16207` | `#E8A33D` | amber as TEXT (4.5:1 on paper / 9.0:1 on chassis) |
+| `--accent-live-contrast` | `#0B0E13` | `#0B0E13` | text ON the amber fill (9.0:1) |
+| `--accent-active` | `#0F7C8C` | `#5FC9D6` | cyan FILL |
+| `--accent-active-ink` | `#0F7C8C` | `#5FC9D6` | cyan as TEXT (4.5:1 on paper / 10.0:1 on chassis) |
+| `--accent-active-contrast` | `#FFFFFF` | `#0B0E13` | text ON the cyan fill (4.9:1 / 10.0:1) |
+| `--ok` | `#2E7D5B` | `#5BB98C` | success (5.0:1 on panel) |
+| `--bad` | `#B84A3E` | `#E06C5F` | failure (5.1:1 on panel) |
+| `--focus` | `#0F7C8C` | `#5FC9D6` | keyboard focus rings |
+| `--accent-contrast` | `#FFFFFF` | chassis | text on the `--accent` fill (segmented/chips) |
+
+Pattern for future fill+text pairs: one fill value per theme plus one
+text-on-fill value per theme (`-contrast` for text on fills, `-ink`
+for the accent used as body text).
+
 ### Spacing scale
 
 `--space-1: 4px` … `--space-8: 40px` (existing scale kept: 4, 8, 12, 16,
