@@ -118,7 +118,7 @@ are in flight), then 047, 048, 050 in any order, with 049 last
 
 | Plan | Priority / effort | Depends on | Status |
 |---|---|---|---|
-| [045 — dependabot remediation](045-dependabot-remediation.md) | P2 / S | — | **DONE** — branch `plan/045-dependabot-remediation` (commit `e8d3d03`, lockfile-only: vitest 4.1.10→4.1.11, humanfs/core 0.19.1→0.19.2); reviewer re-verified (audit 0 vulns, lint/typecheck/build exit 0, vitest 183/183, e2e 27/27; diff is version/sha lines + upstream `@humanfs/types` entry only); **merge pending user decision** |
+| [045 — dependabot remediation](045-dependabot-remediation.md) | P2 / S | — | **Complete** — merged `81956b7` (lockfile-only: vitest 4.1.10→4.1.11; audit 0 vulns, gates + e2e 27/27 re-verified by reviewer) |
 | [046 — Flatpak sources regen](046-flatpak-sources-regen.md) | P1 / S | — (sequence after 045 if in flight) | TODO |
 | [047 — React 19 migration](047-react-19-migration.md) | P2 / M | — | TODO |
 | [048 — frontend hardening](048-frontend-hardening.md) | P2 / M | 044 (merged) | TODO |
