@@ -120,7 +120,7 @@ are in flight), then 047, 048, 050 in any order, with 049 last
 |---|---|---|---|
 | [045 — dependabot remediation](045-dependabot-remediation.md) | P2 / S | — | **Complete** — merged `81956b7` (lockfile-only: vitest 4.1.10→4.1.11; audit 0 vulns, gates + e2e 27/27 re-verified by reviewer) |
 | [046 — Flatpak sources regen](046-flatpak-sources-regen.md) | P1 / S | — (sequence after 045 if in flight) | **BLOCKED (regen merged)** — regen merged `47264ea` (`f5bf8cd`: 582-entry valid JSON, vitest 4.1.11, scope-clean, reviewer-verified). `make flatpak-validate` stays red until the release-tag manifest `commit:` bump moves off `9e8d552` (vitest-4.1.10 tree) — RELEASE_CHECKLIST §6 at tag time. Re-run validate then; if green, flip this row to Complete. Plan nit recorded: Step 2's shape-grep doesn't match the generator's real schema (`sha512`/`contents`/`type`/`dest-filename`). |
-| [047 — React 19 migration](047-react-19-migration.md) | P2 / M | — | **DONE** — branch `plan/047-react-19` (commit `1724dcb`: package.json + lockfile only, react 19.3.0, zero codemods); reviewer re-verified (lockfile resolves 19.3.0, lint/typecheck/build exit 0, vitest 183/183, e2e 27/27); **merge pending user decision** |
+| [047 — React 19 migration](047-react-19-migration.md) | P2 / M | — | **Complete** — merged `f6dced9` (package.json + lockfile, react 19.3.0, zero codemods; gates + e2e 27/27 re-verified by reviewer) |
 | [048 — frontend hardening](048-frontend-hardening.md) | P2 / M | 044 (merged) | TODO |
 | [049 — runner split](049-runner-split.md) | P2 / L | — | TODO |
 | [050 — OS notifications spike](050-os-notifications-spike.md) | P2 / S | — | TODO (decision-gated build follows) |
