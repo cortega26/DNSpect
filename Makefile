@@ -91,10 +91,11 @@ flatpak-build:
 
 flatpak-validate: flatpak-consistency flatpak-build
 	$(FLATPAK_BUILDER_LINT) manifest $(FLATPAK_MANIFEST)
-	# --exceptions: pre-submission builds hit the registered
-	# appstream-external-screenshot-url exception (screenshots are mirrored
-	# by Flathub after submission); real errors are not suppressed.
-	$(FLATPAK_BUILDER_LINT) --exceptions builddir $(FLATPAK_BUILDDIR)/build
+	# `--exceptions` only skips errors Flathub has registered for this app-id,
+	# which are granted on submission, so it cannot suppress the pre-submission
+	# screenshot-mirroring error. The wrapper tolerates exactly that one code and
+	# still fails on every other error.
+	FLATPAK_BUILDER_LINT=$(FLATPAK_BUILDER_LINT) python3 scripts/flatpak_builddir_lint.py $(FLATPAK_BUILDDIR)/build
 
 flatpak-install:
 	flatpak-builder --user --install --force-clean $(FLATPAK_BUILDDIR)/build $(FLATPAK_MANIFEST)
