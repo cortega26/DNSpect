@@ -228,7 +228,10 @@ def main() -> int:
     else:
         tag = f"v{version}"
         try:
-            tag_commit = git("rev-parse", tag)
+            # `rev-parse v<tag>` returns the *tag object* hash for annotated tags,
+            # which never equals the commit the manifest pins. `^{commit}` peels
+            # it to the commit the tag points at.
+            tag_commit = git("rev-parse", f"{tag}^{{commit}}")
         except subprocess.CalledProcessError:
             report.fail("manifest-pin", f"tag {tag} does not exist yet")
         else:
