@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [1.5.3] - 2026-10-01
+
+### Fixed
+
+- **Metainfo claimed a capability the sandboxed app does not have.** The description advertised "platform-aware DNS detection", but the freedesktop runtime ships no `resolvectl` or `nmcli`, so inside Flatpak the detection falls back to `resolv.conf` and reports `method: resolv.conf`. The wording now describes what a Flathub user actually gets: it detects the system resolver configuration. Flathub reviewers check that an app "does/act what submitter claims", so an overstated description is a review liability, not just a wording nit.
+
+### Changed
+
+- `make flatpak-validate` now also runs the `repo` artifact check, alongside `manifest` and `builddir`. The two screenshot-mirroring codes are tolerated by name because they are never granted as exceptions and need none: Flathub mirrors media itself by passing `--compose-url-policy=full --mirror-screenshots-url=...` and committing the `screenshots/<arch>` ref. Verified in both directions: the real builddir and repo pass, a builddir with the desktop file removed fails with exit 1, and an invalid invocation exits 2.
+
 ## [1.5.2] - 2026-10-01
 
 ### Fixed

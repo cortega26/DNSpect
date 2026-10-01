@@ -93,9 +93,11 @@ flatpak-validate: flatpak-consistency flatpak-build
 	$(FLATPAK_BUILDER_LINT) manifest $(FLATPAK_MANIFEST)
 	# `--exceptions` only skips errors Flathub has registered for this app-id,
 	# which are granted on submission, so it cannot suppress the pre-submission
-	# screenshot-mirroring error. The wrapper tolerates exactly that one code and
-	# still fails on every other error.
-	FLATPAK_BUILDER_LINT=$(FLATPAK_BUILDER_LINT) python3 scripts/flatpak_builddir_lint.py $(FLATPAK_BUILDDIR)/build
+	# screenshot-mirroring errors. The wrapper tolerates exactly those codes and
+	# still fails on every other error. Both artifact checks Flathub automates
+	# (builddir and repo) are run, as the submission guide asks.
+	FLATPAK_BUILDER_LINT=$(FLATPAK_BUILDER_LINT) python3 scripts/flatpak_builddir_lint.py builddir $(FLATPAK_BUILDDIR)/build
+	FLATPAK_BUILDER_LINT=$(FLATPAK_BUILDER_LINT) python3 scripts/flatpak_builddir_lint.py repo $(FLATPAK_BUILDDIR)/repo
 
 flatpak-install:
 	flatpak-builder --user --install --force-clean $(FLATPAK_BUILDDIR)/build $(FLATPAK_MANIFEST)

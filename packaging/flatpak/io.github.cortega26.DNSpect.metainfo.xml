@@ -15,7 +15,7 @@
   </branding>
   <description>
     <p>DNSpect is a local-first DNS performance lab. It starts a localhost web UI, sends DNS queries to the resolvers you choose, and ranks the results with deterministic latency, failure-rate, and stability scoring.</p>
-    <p>The app is designed for measurement integrity rather than resolver marketing. It keeps benchmark execution on your machine, exports CSV or JSON reports, and includes platform-aware DNS detection and guided apply instructions.</p>
+    <p>The app is designed for measurement integrity rather than resolver marketing. It keeps benchmark execution on your machine, exports CSV or JSON reports, detects your system resolver configuration, and offers guided instructions for applying the recommended resolver.</p>
   </description>
   <categories>
     <category>Network</category>
@@ -52,6 +52,7 @@
     <binary>dnspect</binary>
   </provides>
   <releases>
+    <release version="1.5.3" date="2026-10-01" />
     <release version="1.5.2" date="2026-10-01" />
     <release version="1.5.1" date="2026-10-01" />
     <release version="1.5.0" date="2026-10-01" />

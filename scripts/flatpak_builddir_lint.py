@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Run flatpak-builder-lint over a build dir, tolerating only pre-submission errors.
+"""Run flatpak-builder-lint over a builddir or an OSTree repo.
+
+Flathub runs both checks on every build (`manifest` and `repo` are automated
+against all builds; `builddir` and `repo` are what the submission guide asks you
+to run locally), so this covers both artifact types. It tolerates only
+pre-submission errors.
 
 `flatpak-builder-lint --exceptions` skips errors that Flathub has registered as
 exceptions *for this app-id*, and those are only granted after the app is
@@ -34,26 +39,32 @@ def linter_command() -> list[str]:
 
 
 ALLOWED_PRE_SUBMISSION = {
-    # Flathub mirrors externally hosted screenshots to dl.flathub.org *after*
-    # submission. The metainfo points at permanent raw.githubusercontent.com URLs
-    # pinned to a commit, which is the recommended source, so the error is an
-    # artefact of validating before the app is submitted.
+    # Both of these are never granted as exceptions, and neither needs one: they
+    # appear only because a local build does not mirror media. Flathub passes
+    # --compose-url-policy=full --mirror-screenshots-url=https://dl.flathub.org/media
+    # itself and commits the screenshots/<arch> ref, after which both clear. The
+    # metainfo points at permanent raw.githubusercontent.com URLs pinned to a
+    # commit, which is the recommended source.
     "appstream-external-screenshot-url",
+    "appstream-screenshots-not-mirrored-in-ostree",
 }
 
 
 def main() -> int:
-    if len(sys.argv) != 2:
-        print(f"usage: {Path(__file__).name} BUILDDIR", file=sys.stderr)
+    args = sys.argv[1:]
+    if not args or args[0] not in {"builddir", "repo"}:
+        print(f"usage: {Path(__file__).name} (builddir|repo) PATH", file=sys.stderr)
         return 2
-
-    builddir = Path(sys.argv[1]).resolve()
-    if not builddir.is_dir():
-        print(f"flatpak builddir lint: {builddir} is not a directory", file=sys.stderr)
+    kind = args[0]
+    paths = [Path(value).resolve() for value in args[1:]]
+    missing = [path for path in paths if not path.is_dir()]
+    if not paths or missing:
+        for path in missing:
+            print(f"flatpak {kind} lint: {path} is not a directory", file=sys.stderr)
         return 2
 
     result = subprocess.run(
-        [*linter_command(), "builddir", str(builddir)],
+        [*linter_command(), kind, *(str(path) for path in paths)],
         capture_output=True,
         text=True,
         check=False,
@@ -84,7 +95,7 @@ def main() -> int:
             print(f"    {line}")
 
     if blocking:
-        print("\nflatpak builddir lint: FAIL", file=sys.stderr)
+        print(f"\nflatpak {kind} lint: FAIL", file=sys.stderr)
         for code in blocking:
             print(f"  FAIL  {code}", file=sys.stderr)
         for line in report.get("info") or []:
@@ -92,7 +103,7 @@ def main() -> int:
                 print(f"    {line}", file=sys.stderr)
         return 1
 
-    print("flatpak builddir lint: PASS")
+    print(f"flatpak {kind} lint: PASS")
     return 0
 
 
