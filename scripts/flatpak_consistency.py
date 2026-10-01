@@ -87,6 +87,27 @@ def version_contract() -> str:
     return versions.pop()
 
 
+def commit_is_reachable(tag_commit: str, pinned_commit: str) -> bool:
+    """True when the manifest pin is the tagged commit or an ancestor of it.
+
+    The release flow is two commits: the tag lands on the release commit, then a
+    follow-up commit re-pins the manifest to that tag and regenerates the node
+    sources. So a correct pin is the tagged commit itself or anything the tag
+    already contains — pinning forward to a commit the tag does not contain
+    would ship sources generated from an untagged tree.
+    """
+    if tag_commit == pinned_commit:
+        return True
+    result = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", pinned_commit, tag_commit],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.returncode == 0
+
+
 def manifest_app_id(text: str) -> str:
     match = re.search(r"^app-id:\s*(\S+)\s*$", text, re.MULTILINE)
     if not match:
@@ -235,13 +256,14 @@ def main() -> int:
         except subprocess.CalledProcessError:
             report.fail("manifest-pin", f"tag {tag} does not exist yet")
         else:
-            if tag_commit != commit:
+            if commit_is_reachable(tag_commit, commit):
+                report.note(f"manifest pin matches {tag} ({commit[:12]})")
+            else:
                 report.fail(
                     "manifest-pin",
-                    f"manifest commit {commit[:12]} != {tag} {tag_commit[:12]}",
+                    f"manifest commit {commit[:12]} is not the commit {tag} "
+                    f"({tag_commit[:12]}) points at; re-pin the manifest",
                 )
-            else:
-                report.note(f"manifest pin matches {tag} ({commit[:12]})")
 
     # 3. app id parity
     tree = ET.parse(METAINFO)
