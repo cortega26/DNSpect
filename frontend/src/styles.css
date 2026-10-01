@@ -47,6 +47,10 @@
   --font-mono: 'Martian Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --font-ui: var(--font-mono);
   --font-heading: var(--font-display);
+  /* Prose is set in the display face; monospace is reserved for labels, data and
+     UI. Running sentences in Martian Mono is what made the interface read as
+     generated rather than designed, and it is measurably slower to scan. */
+  --font-prose: var(--font-display);
 
   --chassis: #0b0e13;
   --panel: #12161d;
@@ -59,6 +63,10 @@
   --ok: #5bb98c;
   --bad: #e06c5f;
   --focus: #5fc9d6;
+  --accent-live-ink: #e8a33d;
+  --accent-active-ink: #5fc9d6;
+  --accent-live-contrast: #0b0e13;
+  --accent-active-contrast: #0b0e13;
 
   --bg: var(--chassis);
   --bg-soft: #0e1219;
@@ -96,6 +104,21 @@
 
 [data-theme='light'] {
   color-scheme: light;
+  --chassis: #f4f5f7;
+  --panel: #ffffff;
+  --panel-raised: #f8f9fb;
+  --hairline: #d8dde5;
+  --ink: #1a212b;
+  --ink-muted: #5b6675;
+  --accent-live: #e8a33d;
+  --accent-live-ink: #a16207;
+  --accent-live-contrast: #0b0e13;
+  --accent-active: #0f7c8c;
+  --accent-active-ink: #0f7c8c;
+  --accent-active-contrast: #ffffff;
+  --ok: #2e7d5b;
+  --bad: #b84a3e;
+  --focus: #0f7c8c;
   --bg: #f5f6f8;
   --bg-soft: #edeff2;
   --surface: #ffffff;
@@ -168,6 +191,7 @@ body,
 body {
   margin: 0;
   font-family: var(--font-ui);
+  font-size: 0.9375rem;
   color: var(--text);
   background: var(--bg);
   line-height: 1.45;
@@ -180,11 +204,26 @@ h3,
 h4 {
   margin: 0;
   font-family: var(--font-heading);
+  font-weight: 600;
   letter-spacing: -0.01em;
 }
 
+h1 {
+  font-size: clamp(2.25rem, 4vw, 3rem);
+}
+
+h2 {
+  font-size: 1.5rem;
+}
+
 h3 {
-  font-size: 1rem;
+  font-size: 1.125rem;
+  letter-spacing: 0.01em;
+}
+
+h4 {
+  font-size: 1.125rem;
+  letter-spacing: 0.01em;
 }
 
 p {
@@ -238,9 +277,10 @@ a:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  margin: 0;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 1.08rem;
+  font-size: 1.5rem;
   letter-spacing: 0.01em;
   color: var(--text);
   user-select: none;
@@ -262,6 +302,15 @@ a:focus-visible {
   gap: var(--space-2);
 }
 
+/* Lab variant: the scope/provider/system-DNS context is real information the
+   working views need, but it must not arrive as a 250px decorative banner. The
+   Lab is an instrument, so it gets the context line only — no wordmark, no
+   tagline, no onboarding disclosure. */
+.hero-compact {
+  padding: var(--space-3) var(--space-5);
+  gap: 0;
+}
+
 .hero-decoration {
   position: absolute;
   inset: 0;
@@ -281,16 +330,17 @@ a:focus-visible {
   gap: var(--space-1);
 }
 
-.hero h1 {
-  font-size: clamp(1.2rem, 1.8vw, 1.45rem);
+.hero .hero-title {
+  font-size: clamp(2.25rem, 4vw, 3rem);
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
+  color: var(--text);
 }
 
 .hero p {
   max-width: 640px;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.9375rem;
   line-height: 1.4;
 }
 
@@ -310,9 +360,11 @@ a:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  font-size: 0.8rem;
+  font-size: 0.6875rem;
   color: var(--muted);
-  font-weight: 600;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .hero-meta-item svg {
@@ -329,13 +381,14 @@ a:focus-visible {
 
 .preview-collapse summary {
   cursor: pointer;
-  font-weight: 700;
-  font-size: 0.88rem;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
 }
 
 .preview-collapse p {
   margin-top: 6px;
-  font-size: 0.88rem;
+  font-size: 0.9375rem;
 }
 
 .header-actions {
@@ -371,6 +424,7 @@ a:focus-visible {
   width: 100%;
   padding-right: calc(var(--space-4) + 12px);
   cursor: pointer;
+  font-size: 0.8125rem;
   font-weight: 700;
 }
 
@@ -415,6 +469,7 @@ a:focus-visible {
   gap: var(--space-3);
   text-align: left;
   color: var(--text);
+  font-size: 0.8125rem;
   background: color-mix(in srgb, var(--surface) 96%, var(--surface-2));
   cursor: pointer;
 }
@@ -445,9 +500,9 @@ a:focus-visible {
   border-radius: var(--radius-micro);
   background: color-mix(in srgb, var(--accent) 18%, var(--surface-2));
   color: color-mix(in srgb, var(--accent) 88%, var(--text));
-  font-weight: 700;
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
 }
 
 .locale-item.is-active:focus-visible {
@@ -461,7 +516,7 @@ a:focus-visible {
   top: 50%;
   transform: translateY(-50%);
   color: color-mix(in srgb, var(--text) 68%, var(--muted));
-  font-size: 0.9rem;
+  font-size: 0.8125rem;
   pointer-events: none;
   transition: transform 0.2s ease;
 }
@@ -540,12 +595,8 @@ a:focus-visible {
   margin-bottom: var(--space-3);
 }
 
-.card.card-compact-controls .card-header h2 {
-  font-size: 0.95rem;
-}
-
 .card.card-compact-controls .card-header p {
-  font-size: 0.82rem;
+  font-size: 0.9375rem;
 }
 
 .section-heading-icon {
@@ -586,7 +637,7 @@ a:focus-visible {
   content: '▾';
   margin-left: auto;
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.6875rem;
   transition: transform 0.2s ease;
 }
 
@@ -602,11 +653,6 @@ a:focus-visible {
 
 .card-header.small {
   margin-bottom: var(--space-2);
-}
-
-.card-header h2 {
-  font-size: 1.08rem;
-  letter-spacing: -0.01em;
 }
 
 .card-header p,
@@ -626,6 +672,25 @@ a:focus-visible {
   display: grid;
   align-content: start;
   min-width: 0;
+}
+
+/* The four option groups (mode, protocol, goal, region) form one 2x2 grid on
+   wide viewports instead of a single 700px column of stacked chips. */
+.controls-groups {
+  display: grid;
+  gap: var(--space-4);
+}
+
+@media (min-width: 900px) {
+  .controls-groups {
+    grid-template-columns: 1fr 1fr;
+    column-gap: var(--space-5);
+  }
+  /* display:contents promotes mode/protocol to direct grid items, so the four
+     groups land as a balanced 2x2 instead of three children leaving a hole. */
+  .controls-groups .controls-grid {
+    display: contents;
+  }
 }
 
 .goal-selector {
@@ -664,12 +729,41 @@ a:focus-visible {
 
 .start-subtext {
   margin-top: 0;
-  font-size: 0.8rem;
+  font-size: 0.9375rem;
 }
 
 .resolver-count-link {
   align-self: center;
-  font-size: 0.88rem;
+}
+
+/* The resolver count is data, not a link: it sits on the UI role with a hairline
+   and a tabular figure so it no longer reads as a third action competing with
+   the primary CTA. */
+.stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px var(--space-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-default);
+  background: transparent;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.stat-chip:hover {
+  border-color: var(--accent-active);
+  color: var(--text);
+}
+
+.controls-actions-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
 }
 
 .inline-link,
@@ -696,14 +790,19 @@ a:focus-visible {
   font-weight: 600;
 }
 
-.label-caption {
-  margin-bottom: var(--space-1);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted);
-  overflow-wrap: anywhere;
+
+/* Prose roles: running sentences use the display face. Labels (.label-caption),
+   chips, buttons, inputs, tabular data and every numeric readout keep
+   Martian Mono, which is where its fixed pitch actually helps.
+   `.card p` outranks `.label-caption` on specificity, so the caption class has
+   to be excluded explicitly or every eyebrow label turns into display type. */
+.card-header p:not(.label-caption),
+.card p:not(.label-caption),
+.helper-text:not(.label-caption),
+.hero p:not(.label-caption),
+.empty-state p:not(.label-caption),
+.hero-meta {
+  font-family: var(--font-prose);
 }
 
 .mode-grid {
@@ -715,10 +814,23 @@ a:focus-visible {
 .helper-text {
   margin-top: var(--space-2);
   color: var(--muted);
-  font-size: 0.84rem;
-  line-height: 1.35;
+  font-family: var(--font-prose);
+  font-size: 0.9375rem;
+  line-height: 1.45;
   overflow-wrap: anywhere;
   text-wrap: pretty;
+}
+
+/* A label that outranks what it labels. At Caption (11px) the label sat below
+   its own 13px chips, which inverted the reading order. */
+.label-caption {
+  margin-bottom: var(--space-1);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .chip {
@@ -729,8 +841,9 @@ a:focus-visible {
   background: var(--panel);
   color: var(--text);
   cursor: pointer;
-  font-weight: 600;
-  font-size: 0.85rem;
+  font-weight: 500;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
   line-height: 1.2;
   white-space: normal;
   text-align: center;
@@ -754,8 +867,9 @@ a:focus-visible {
   border: 0;
   background: transparent;
   color: var(--muted);
-  font-weight: 600;
-  font-size: 0.8rem;
+  font-weight: 500;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
   padding: 5px 14px;
   min-height: 32px;
   cursor: pointer;
@@ -787,8 +901,9 @@ a:focus-visible {
 .chip-compact {
   min-height: 30px;
   padding: 4px 10px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   border-radius: var(--radius-micro);
   border: 1px solid var(--hairline);
   background: var(--panel);
@@ -826,8 +941,8 @@ a:focus-visible {
 .chip-xs {
   min-height: 28px;
   padding: 3px 10px;
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: 0.8125rem;
+  font-weight: 500;
 }
 
 .advanced-timeout-chips {
@@ -912,7 +1027,7 @@ label {
   display: grid;
   gap: 6px;
   color: var(--text);
-  font-size: 0.94rem;
+  font-size: 0.8125rem;
 }
 
 input[type='number'],
@@ -924,6 +1039,7 @@ textarea {
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--surface) 90%, var(--surface-2));
   color: var(--text);
+  font-size: 0.8125rem;
   padding: 10px 12px;
   min-height: 42px;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -982,14 +1098,14 @@ textarea {
 .resolver-provider {
   grid-column: 2;
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.6875rem;
 }
 
 .btn-primary,
 .btn-start {
   background: var(--accent-live);
-  color: var(--chassis);
-  font-size: 1.05rem;
+  color: var(--accent-live-contrast);
+  font-size: 0.8125rem;
   padding: 12px 22px;
   min-height: 48px;
   border-radius: var(--radius-default);
@@ -998,7 +1114,7 @@ textarea {
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.04em;
   text-decoration: none;
   transition:
@@ -1039,7 +1155,8 @@ textarea {
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  font-weight: 600;
+  font-weight: 500;
+  font-size: 0.8125rem;
   letter-spacing: 0.04em;
   min-height: 42px;
   transition:
@@ -1140,7 +1257,6 @@ textarea {
 }
 
 .actions-row .btn-start {
-  font-size: 1.1rem;
   padding: 14px 32px;
   min-height: 52px;
   min-width: 200px;
@@ -1178,7 +1294,7 @@ textarea {
   border: 1px solid color-mix(in srgb, var(--accent-live) 55%, var(--border));
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--accent-live) 14%, var(--surface-2));
-  color: var(--accent-live);
+  color: var(--accent-live-ink);
   padding: 8px 10px;
   font-weight: 700;
 }
@@ -1203,24 +1319,26 @@ textarea {
 }
 
 .recommendation-provider {
-  font-size: 1rem;
+  font-size: 0.9375rem;
   color: var(--muted);
 }
 
 .recommendation-provider-strong {
-  font-size: 1.15rem;
-  font-weight: 800;
+  font-size: 1.25rem;
+  font-weight: 600;
   color: var(--text);
 }
 
 .recommendation-ip {
   font-family: var(--font-mono);
-  font-size: 1.1rem;
-  font-weight: 800;
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .recommendation-ip-strong {
   font-size: 1.25rem;
+  font-weight: 800;
 }
 
 .recommendation-improvement {
@@ -1278,12 +1396,13 @@ textarea {
 }
 
 .progress-panel h4 {
-  font-size: 1rem;
+  font-size: 1.125rem;
 }
 
 .progress-percent {
-  font-size: 1.1rem;
-  font-weight: 800;
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .progress-metrics {
@@ -1386,7 +1505,7 @@ textarea {
 }
 
 .ranking-meta {
-  font-size: 0.9rem;
+  font-size: 0.9375rem;
 }
 
 .live-ranking-panel {
@@ -1443,7 +1562,7 @@ textarea {
 }
 
 .live-ranking-header h4 {
-  font-size: 1rem;
+  font-size: 1.125rem;
 }
 
 .live-ranking-chip {
@@ -1453,10 +1572,11 @@ textarea {
   border-radius: var(--radius-micro);
   border: 1px solid color-mix(in srgb, var(--accent-live) 35%, var(--border));
   background: color-mix(in srgb, var(--accent-live) 12%, var(--surface-2));
-  color: var(--accent-live);
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  color: var(--accent-live-ink);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   padding: 2px 8px;
 }
 
@@ -1472,7 +1592,10 @@ textarea {
   margin-left: auto;
   white-space: nowrap;
   display: inline-block;
-  font-size: 0.78rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1482,7 +1605,7 @@ textarea {
 }
 
 .live-ranking-updated[data-state='slow'] {
-  color: var(--accent-live);
+  color: var(--accent-live-ink);
 }
 
 .live-ranking-updated[data-state='stalled'] {
@@ -1551,7 +1674,9 @@ textarea {
   border: 1px solid color-mix(in srgb, var(--primary) 46%, var(--border));
   background: color-mix(in srgb, var(--primary) 16%, var(--surface-2));
   color: color-mix(in srgb, var(--primary) 88%, var(--text));
-  font-weight: 800;
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
   text-align: center;
   padding: 2px 8px;
 }
@@ -1594,8 +1719,8 @@ textarea {
   max-width: 4ch;
   justify-self: end;
   text-align: right;
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   opacity: 0;
 }
@@ -1846,14 +1971,15 @@ textarea {
 
 .metric-card h4 {
   color: var(--muted);
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .metric-card p {
   font-size: 1.25rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
@@ -1896,9 +2022,9 @@ td {
 
 thead th {
   color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   background: var(--panel);
   padding: 10px 14px;
@@ -1911,7 +2037,7 @@ thead th {
 /* Tick-row headers — the instrument table signature */
 thead th::before {
   content: '\2500\2500 ';
-  color: var(--accent-active);
+  color: var(--accent-active-ink);
   letter-spacing: 0;
 }
 
@@ -1919,6 +2045,11 @@ th.num,
 td.num {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+td.num {
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
 tbody tr {
@@ -1949,14 +2080,17 @@ tbody tr:last-child td {
   width: fit-content;
   border-radius: var(--radius-micro);
   padding: 2px 9px;
-  font-size: 0.74rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   background: color-mix(in srgb, var(--primary) 18%, var(--surface-2));
   color: var(--primary);
 }
 
 .badge-rank-1 {
   background: var(--accent-active);
-  color: var(--chassis);
+  color: var(--accent-active-contrast);
   font-weight: 800;
   border: 1px solid var(--accent-active);
 }
@@ -1994,7 +2128,7 @@ tbody tr:last-child td {
 .badge-protocol {
   background: color-mix(in srgb, var(--accent) 14%, var(--surface-2));
   color: var(--accent);
-  font-size: 0.65rem;
+  font-size: 0.6875rem;
   padding: 1px 6px;
   margin-left: 4px;
 }
@@ -2011,7 +2145,7 @@ tbody tr:last-child td {
 }
 
 .protocol-badges .badge {
-  font-size: 0.72rem;
+  font-size: 0.6875rem;
   padding: 1px 7px;
 }
 
@@ -2032,12 +2166,12 @@ tbody tr:last-child td {
 
 .dashboard-hero-badge {
   display: inline-block;
-  font-size: 0.7rem;
-  font-weight: 600;
+  font-size: 0.6875rem;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   background: var(--accent-active);
-  color: var(--chassis);
+  color: var(--accent-active-contrast);
   padding: 2px 10px;
   border-radius: var(--radius-micro);
   margin-bottom: var(--space-2);
@@ -2045,13 +2179,15 @@ tbody tr:last-child td {
 
 .dashboard-hero-title {
   margin: 0 0 var(--space-1);
-  font-size: 1.4rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0;
   line-height: 1.3;
 }
 
 .dashboard-hero-ip {
   display: inline-block;
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   background: var(--surface);
   padding: 2px 10px;
   border-radius: var(--radius-sm);
@@ -2066,7 +2202,7 @@ tbody tr:last-child td {
 }
 
 .dashboard-hero-stat {
-  font-size: 0.82rem;
+  font-size: 0.6875rem;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -2080,8 +2216,9 @@ tbody tr:last-child td {
 }
 
 .dashboard-improvement {
-  font-size: 1.05rem;
+  font-size: 1.125rem;
   font-weight: 600;
+  letter-spacing: 0.01em;
   margin: 0 0 var(--space-1);
 }
 
@@ -2089,7 +2226,7 @@ tbody tr:last-child td {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  font-size: 0.82rem;
+  font-size: 0.6875rem;
   color: var(--muted);
   margin: 0;
 }
@@ -2103,9 +2240,9 @@ tbody tr:last-child td {
 
 .dashboard-top5 > h3 {
   margin: 0 0 var(--space-2);
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   color: var(--muted);
 }
 
@@ -2123,7 +2260,7 @@ tbody tr:last-child td {
   gap: var(--space-2);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   transition: background 0.15s;
 }
 
@@ -2143,7 +2280,7 @@ tbody tr:last-child td {
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-micro);
-  font-size: 0.72rem;
+  font-size: 0.6875rem;
   font-weight: 700;
   background: var(--panel-raised);
   color: var(--muted);
@@ -2152,7 +2289,7 @@ tbody tr:last-child td {
 
 .dashboard-top5-item.is-primary .dashboard-top5-rank {
   background: var(--accent-active);
-  color: var(--chassis);
+  color: var(--accent-active-contrast);
 }
 
 .dashboard-top5-name {
@@ -2161,7 +2298,7 @@ tbody tr:last-child td {
 }
 
 .dashboard-top5-ip {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2170,6 +2307,8 @@ tbody tr:last-child td {
 
 .dashboard-top5-score {
   margin-left: auto;
+  font-size: 1.25rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
   flex-shrink: 0;
@@ -2222,7 +2361,7 @@ tbody tr:last-child td {
 }
 
 .history-mode {
-  font-size: 0.74rem;
+  font-size: 0.6875rem;
   color: var(--muted);
   text-transform: capitalize;
 }
@@ -2235,12 +2374,15 @@ tbody tr:last-child td {
 }
 
 .history-date {
-  font-size: 0.8rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--muted);
 }
 
 .history-top {
-  font-size: 0.78rem;
+  font-size: 0.6875rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2259,6 +2401,7 @@ tbody tr:last-child td {
   min-height: 34px;
   padding: 6px 10px;
   cursor: pointer;
+  font-size: 0.8125rem;
 }
 
 .chart-controls {
@@ -2285,8 +2428,9 @@ tbody tr:last-child td {
   background: var(--panel);
   color: var(--text);
   cursor: pointer;
-  font-weight: 600;
-  font-size: 0.85rem;
+  font-weight: 500;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
   transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
 
@@ -2297,7 +2441,7 @@ tbody tr:last-child td {
 
 .chart-tab-active {
   background: var(--accent-active);
-  color: var(--chassis);
+  color: var(--accent-active-contrast);
   border-color: var(--accent-active);
 }
 
@@ -2336,13 +2480,14 @@ tbody tr:last-child td {
 }
 
 .empty-state-title {
-  font-weight: 700;
-  font-size: 1.05rem;
+  font-weight: 600;
+  font-size: 1.125rem;
+  letter-spacing: 0.01em;
 }
 
 .empty-state-body {
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.9375rem;
   max-width: 400px;
   line-height: 1.5;
 }
@@ -2416,7 +2561,7 @@ tbody tr:last-child td {
   display: block;
   overflow-wrap: anywhere;
   font-family: var(--font-mono);
-  font-size: 0.9rem;
+  font-size: 0.9375rem;
 }
 
 .guided-verification {
@@ -2485,6 +2630,7 @@ tbody tr:last-child td {
   background: var(--panel-raised);
   padding: 6px 12px;
   cursor: pointer;
+  font-size: 0.8125rem;
 }
 
 .stats-grid {
@@ -2603,7 +2749,7 @@ tbody tr:last-child td {
   align-items: center;
   padding: 0 10px;
   font-weight: 700;
-  font-size: 0.84rem;
+  font-size: 0.9375rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
@@ -2612,8 +2758,8 @@ tbody tr:last-child td {
 }
 
 .race-bar-pct {
-  font-weight: 800;
-  font-size: 0.82rem;
+  font-weight: 600;
+  font-size: 1.25rem;
   font-variant-numeric: tabular-nums;
   min-width: 4ch;
   text-align: right;
@@ -2622,7 +2768,7 @@ tbody tr:last-child td {
 
 .race-row .live-ranking-rank {
   min-width: 34px;
-  font-size: 0.82rem;
+  font-size: 0.8125rem;
   padding: 2px 6px;
 }
 
@@ -2727,7 +2873,8 @@ tbody tr:last-child td {
   background: var(--panel);
   color: var(--ink-muted);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 0.8125rem;
+  font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   padding: 6px var(--space-4);
@@ -2743,7 +2890,7 @@ tbody tr:last-child td {
 
 .mode-tab.is-active {
   background: var(--accent-active);
-  color: var(--chassis);
+  color: var(--accent-active-contrast);
 }
 
 .mode-tab:focus-visible {
@@ -2761,8 +2908,9 @@ tbody tr:last-child td {
   background: var(--panel);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-default);
-  font-size: 11px;
-  letter-spacing: 0.06em;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ink-muted);
 }
@@ -2816,7 +2964,7 @@ tbody tr:last-child td {
 
 .quick-intro {
   color: var(--ink-muted);
-  font-size: 13px;
+  font-size: 0.9375rem;
 }
 
 .quick-check-btn {
@@ -2827,8 +2975,8 @@ tbody tr:last-child td {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--accent-live);
-  font-size: 13px;
+  color: var(--accent-live-ink);
+  font-size: 0.9375rem;
   margin: 0;
 }
 
@@ -2850,15 +2998,16 @@ tbody tr:last-child td {
 
 .verdict-eyebrow {
   color: var(--ink-muted);
-  font-size: 11px;
-  letter-spacing: 0.14em;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .verdict-line {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: clamp(1.45rem, 4vw, 2.05rem);
+  font-size: clamp(2.25rem, 4vw, 3rem);
   line-height: 1.12;
   letter-spacing: -0.01em;
   margin: var(--space-3) 0 var(--space-4);
@@ -2874,7 +3023,7 @@ tbody tr:last-child td {
 
 .verdict-reasons li {
   color: var(--ink-muted);
-  font-size: 13px;
+  font-size: 0.9375rem;
   padding-left: var(--space-4);
   position: relative;
 }
@@ -2909,13 +3058,14 @@ tbody tr:last-child td {
 
 .num-label {
   color: var(--ink-muted);
-  font-size: 10px;
+  font-size: 0.6875rem;
+  font-weight: 500;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .num-value {
-  font-size: 19px;
+  font-size: 1.25rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
@@ -2934,7 +3084,8 @@ tbody tr:last-child td {
   border-radius: var(--radius-default);
   color: var(--ink-muted);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 0.8125rem;
+  font-weight: 500;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   padding: 10px 20px;
@@ -2994,11 +3145,11 @@ tbody tr:last-child td {
 
 @keyframes settle-pulse {
   0% {
-    color: var(--accent-live);
+    color: var(--accent-live-ink);
     transform: scale(1);
   }
   35% {
-    color: var(--accent-live);
+    color: var(--accent-live-ink);
     transform: scale(1.07);
   }
   100% {
@@ -3024,16 +3175,21 @@ tbody tr:last-child td {
   padding-bottom: var(--space-1);
 }
 
+/* The tab row is the Lab's chapter level: it owns each panel's accessible name
+   via aria-labelledby, so it carries the chapter role rather than a second
+   heading node (which would duplicate the accessible name). Every tab is sized
+   at Display-2 so switching tabs changes no widths and the row never reflows;
+   active vs inactive is weight, colour and the accent underline. */
 .subnav-tab {
   appearance: none;
   background: transparent;
   border: 0;
   border-bottom: 2px solid transparent;
   color: var(--ink-muted);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: 0;
   padding: 8px var(--space-2);
   cursor: pointer;
   transition:
@@ -3043,6 +3199,7 @@ tbody tr:last-child td {
 
 .subnav-tab.is-active {
   color: var(--ink);
+  font-weight: 600;
   border-bottom-color: var(--accent-active);
 }
 
@@ -3055,6 +3212,7 @@ tbody tr:last-child td {
   display: grid;
   gap: var(--space-5);
 }
+
 
 @media (prefers-reduced-motion: reduce) {
   .status-strip[data-state='running'] .status-dot,

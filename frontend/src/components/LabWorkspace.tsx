@@ -276,7 +276,7 @@ export function LabWorkspace(props: LabWorkspaceProps) {
             {t('lastRun.title')}
           </h3>
           {saved.notice && (
-            <p className="section-heading-icon" style={{ color: 'var(--warning)', fontSize: '0.85rem', marginBottom: 'var(--space-2)' }}>
+            <p className="section-heading-icon" style={{ color: 'var(--warning)', fontSize: '0.8125rem', marginBottom: 'var(--space-2)' }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="16" height="16" aria-hidden="true">
                 <path d="M12 9v4M12 17h.01" />
                 <path d="M10.29 3.86l-8.1 14c-.6 1.04.15 2.14 1.21 2.14h16.2c1.06 0 1.71-1.1 1.21-2.14l-8.1-14c-.6-1.04-1.82-1.04-2.42 0z" />

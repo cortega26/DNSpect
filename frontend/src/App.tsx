@@ -895,14 +895,14 @@ function App() {
       <div className="app-shell">
       <header className="app-header">
         <div className="app-topbar">
-          <div className="app-brand">
+          <h1 className="app-brand">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="22" height="22" aria-hidden="true">
               <circle cx="12" cy="12" r="9" stroke="var(--accent)" />
               <path d="M12 8v4l3 3" stroke="var(--accent)" />
               <path d="M5 5l2 2M19 5l-2 2M5 19l2-2M19 19l-2-2" stroke="currentColor" strokeOpacity="0.4" />
             </svg>
             DNSPect
-          </div>
+          </h1>
           <ModeSwitcher mode={appMode} onChange={setAppMode} />
           <div className="header-actions">
             <button
@@ -980,7 +980,9 @@ function App() {
             <span className="skeleton skeleton-text" style={{ width: '48%' }} />
           </div>
         ) : (
-          <div className="hero">
+          <div className={`hero${appMode === 'lab' ? ' hero-compact' : ''}`}>
+            {appMode === 'lab' ? null : (
+            <>
             <svg className="hero-decoration" viewBox="0 0 400 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
               <path d="M30 80 L90 30 L170 50 L250 20 L340 55" stroke="var(--accent)" strokeWidth="1" opacity="0.12" fill="none" />
               <path d="M30 80 L60 110 L140 90 L210 115 L340 55" stroke="var(--accent)" strokeWidth="1" opacity="0.08" fill="none" />
@@ -995,9 +997,11 @@ function App() {
               <circle cx="210" cy="115" r="2.5" fill="var(--accent)" opacity="0.2" />
             </svg>
             <div className="hero-content">
-              <h1>{t('app.title')}</h1>
+              <p className="hero-title">{t('app.title')}</p>
               <p>{t('app.subtitle')}</p>
             </div>
+            </>
+            )}
             <div className="hero-meta">
               <span className="hero-meta-item">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14" aria-hidden="true">
@@ -1023,11 +1027,13 @@ function App() {
                 </span>
               ) : null}
             </div>
-            <details className="preview-collapse">
-              <summary>{t('app.previewTitle')}</summary>
-              <p>{t('app.previewLine1')}</p>
-              <p>{t('app.previewLine2')}</p>
-            </details>
+            {appMode === 'lab' ? null : (
+              <details className="preview-collapse">
+                <summary>{t('app.previewTitle')}</summary>
+                <p>{t('app.previewLine1')}</p>
+                <p>{t('app.previewLine2')}</p>
+              </details>
+            )}
           </div>
         )}
       </header>

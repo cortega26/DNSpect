@@ -19,6 +19,9 @@ build-flatpak/
 node_modules/
 frontend/node_modules/
 frontend/dist/
+
+# Flatpak: generated from packaging/flatpak/requirements.txt + backend/constraints.txt
+packaging/flatpak/requirements.closure.txt
 frontend/test-results/
 frontend/playwright-report/
 frontend/.playwright/

@@ -91,11 +91,39 @@ execution order: 031 → 033 → 032 → 034 → 035 → 036 → 037, with 038 l
 | [037 — docs and release readiness](archive/037-docs-release-readiness.md) | P2 / M | — | **Complete** — merged `b392b6d`; flatpak `generated-sources.json` regen deferred (release-checklist item) |
 | [038 — frontend structure](archive/038-frontend-structure.md) | P2 / M | 032, 034 | **DONE** — **Complete** — `bebfd47` |
 | [039 — frontend revamp design spike](archive/039-frontend-revamp-design-spike.md) | P1 / L | — | **Complete** — `1c42b08` (spike prototype kept on main as the build reference) |
-| [040 — design-system rollout](040-design-system-rollout.md) | P1 / L | 039 | **DONE** — worktree `/tmp/opencode/dnspect-040` (branch `plan/040-design-system-rollout`, commits `652d63c`, `2930db2`); gates re-verified by reviewer (166 vitest, e2e 26/26, anti-slop greps clean, dark-default with no light flash); **merge pending user decision** |
-| [041 — two-mode IA](041-two-mode-ia.md) | P1 / L | 040 | **DONE** — worktree `/tmp/opencode/dnspect-041` (branch `plan/041-two-mode-ia`, commits `f4091ce`, `d231edf`, `78c5bd0`); gates re-verified by reviewer (177 vitest incl. 11 new component tests, e2e 27/27 with the Quick-check scenario); **merge pending user decision** |
-| [042 — typographic hierarchy](042-typographic-hierarchy.md) | P1 / S | 040, 041 | **DONE** — worktree `/tmp/opencode/dnspect-042` (branch `plan/042-typographic-hierarchy`, commits `83c6680`, `d66fff3`); gates re-verified by reviewer (177 vitest, e2e 27/27, computed-style probe: hero/verdict 36px, h2 20px, buttons 13.6px, data 20px, captions 11.2px); **merge pending user decision** |
-| [043 — revamp polish](043-revamp-polish.md) | P2 / S-M | 040, 041, 042 | **DONE** — worktree `/tmp/opencode/dnspect-043` (branch `plan/043-revamp-polish`, commits `56c8b4b` merge incl. `sta34a8`-class feature commits); gates re-verified by reviewer (183 vitest, e2e 27/27, one-shot-timer staleness design, token-styled charts probe-verified); one documented scope flag (`LabWorkspace.tsx` prop — minimal, necessary); **merge pending user decision** |
-| [044 — light theme repair](044-light-theme-repair.md) | P1 / S | 040-043 | TODO |
+| [040 — design-system rollout](archive/040-design-system-rollout.md) | P1 / L | 039 | **Complete** — merged `f285323` (verifier: fonts self-hosted ×4 files, font-specific grep clean, dark default; note: the plan's literal `Inter` grep now false-positives on `setInterval` — any re-check must use the font-name grep) |
+| [041 — two-mode IA](archive/041-two-mode-ia.md) | P1 / L | 040 | **Complete** — merged `46ad483` (verifier: ModeSwitcher/QuickCheckPanel/LabWorkspace present, `mode.quick|mode.lab` ×6 i18n hits) |
+| [042 — typographic hierarchy](archive/042-typographic-hierarchy.md) | P1 / S | 040, 041 | **Complete** — merged `2966023` (verifier: scale table in DESIGN_SYSTEM.md:102, explicit size rules for `.verdict-line`/`.mode-tab`/`.status-strip`/`.card-header h2`/`td.num`; conflict-free merge, expected `instrument-lab-benchmark.png` refresh accepted) |
+| [043 — revamp polish](archive/043-revamp-polish.md) | P2 / S-M | 040, 041, 042 | **Complete** — merged `704494a` (verifier: `stalenessState` in runtime.ts + LiveRankingPanel, `updatedSlow|updatedStalled` ×6 i18n hits, token vars in ChartsPanel, placeholder-pinning cases in i18n.copy.test.ts:46-78). Merged ahead of 042 — safe: 043's hunks don't overlap 042's scale hunks (merge-tree conflict-free), but 042's screenshot refresh will overwrite 043's `instrument-lab-benchmark.png`; accept 042's version at merge |
+| [044 — light theme repair](archive/044-light-theme-repair.md) | P1 / S | 040-043 | **Complete** — merged `0a5526f` (reviewer re-verified on branch: lint/typecheck/build exit 0, vitest 183/183, e2e 27/27; conflict-free merge). Revamp wave 040-044 closed. |
+
+## Reconcile note (2026-09-15, at `609475f`)
+
+- Verified DONE still holding on HEAD (cheap checks only — greps, file presence, merge-tree; no test runs): 039 (DESIGN_SYSTEM.md 10 sections, spike dir retained on main as build reference), 040, 041, 043. Full gates were reviewer-verified at merge time per the prior rows.
+- Index staleness fixed: 040/041/043 had merged (`f285323`/`46ad483`/`704494a`) but rows still said "merge pending" — now marked **Complete**.
+- No BLOCKED, no stale IN PROGRESS, no `**Deferred:**` lines in any active or archived plan — nothing to harvest, nothing to retire.
+- Untracked work on the tree (uncommitted, not from any plan): `backend/app/runner.py` naive-`started_at`-as-UTC sort fix + `backend/tests/test_history_summary.py` mixed naive/aware test + `Makefile` `verify` target. Recommend a commit or a small plan on the next planning run; flagging here so it isn't lost.
+- Executable right now: 042 (merge; conflict-free) → then 044.
+
+## Post-revamp wave (045-050, 2026-09-15)
+
+Written against `57a8e34`. The revamp (039-044) is closed; these are the
+vetted next-wave items: dependency hygiene (045), release unblock (046),
+the post-v1.4.0 migration (047), revamp hardening (048), the deferred
+god-module split (049), and the notifications decision spike (050).
+Recommended execution order: 045 + 046 first (cheap, release-relevant;
+046 must run against the final lockfile, so sequence it after 045 if both
+are in flight), then 047, 048, 050 in any order, with 049 last
+(long-lived branch — rebase discipline in the plan).
+
+| Plan | Priority / effort | Depends on | Status |
+|---|---|---|---|
+| [045 — dependabot remediation](045-dependabot-remediation.md) | P2 / S | — | **Complete** — merged `81956b7` (lockfile-only: vitest 4.1.10→4.1.11; audit 0 vulns, gates + e2e 27/27 re-verified by reviewer) |
+| [046 — Flatpak sources regen](046-flatpak-sources-regen.md) | P1 / S | — (sequence after 045 if in flight) | **BLOCKED (regen merged)** — regen merged `47264ea` (`f5bf8cd`: 582-entry valid JSON, vitest 4.1.11, scope-clean, reviewer-verified). `make flatpak-validate` stays red until the release-tag manifest `commit:` bump moves off `9e8d552` (vitest-4.1.10 tree) — RELEASE_CHECKLIST §6 at tag time. Re-run validate then; if green, flip this row to Complete. Plan nit recorded: Step 2's shape-grep doesn't match the generator's real schema (`sha512`/`contents`/`type`/`dest-filename`). |
+| [047 — React 19 migration](047-react-19-migration.md) | P2 / M | — | **Complete** — merged `f6dced9` (package.json + lockfile, react 19.3.0, zero codemods; gates + e2e 27/27 re-verified by reviewer) |
+| [048 — frontend hardening](048-frontend-hardening.md) | P2 / M | 044 (merged) | **BLOCKED (spec done, rename stopped)** — theme spec complete on branch `plan/048-frontend-hardening` (`35cc39e`, reviewer ran it: 1 passed; meaningful exact-value pins both themes). Rename half correctly STOPPED by executor: 3 of 7 map pairs DIVERGE one hex step in light (`--bg` #f5f6f8 vs `--chassis` #f4f5f7; `--muted` #5a6472 vs `--ink-muted` #5b6675; `--border` #d9dee6 vs `--hairline` #d8dde5 — reviewer confirmed by direct read), so mechanical rename would silently recolor 67 rule-sites. 4 pairs verified identical (surface/text/accent/accent-contrast). Needs maintainer recolor decision → plan 051. |
+| [049 — runner split](049-runner-split.md) | P2 / L | — | TODO |
+| [050 — OS notifications spike](050-os-notifications-spike.md) | P2 / S | — | TODO (decision-gated build follows) |
 
 ## Frontend revamp wave (039+, 2026-08-12)
 

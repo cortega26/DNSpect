@@ -48,7 +48,7 @@ function CustomTooltip({ active, payload, label }: TooltipProps<number, string>)
         border: '1px solid var(--hairline)',
         borderRadius: 4,
         fontFamily: 'var(--font-mono)',
-        fontSize: 12,
+        fontSize: 13,
         color: 'var(--ink)',
         padding: '8px 12px',
         display: 'grid',
@@ -118,7 +118,7 @@ export function ChartsPanel({ results }: Props) {
   return (
     <section className="card">
       <div className="card-header">
-        <h2>{t('charts.title')}</h2>
+        <h3>{t('charts.title')}</h3>
         <p>{t('charts.subtitle')}</p>
         <div className="chart-tabs">
           {CHART_VIEWS.map((view) => (

@@ -80,7 +80,7 @@ function DeltaPairTable({ pair }: { pair: ProtocolDeltaPair }) {
         </strong>
       </summary>
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.9rem' }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.9375rem' }}>
           <thead>
             <tr style={{ textAlign: 'left' }}>
               <th scope="col">{t('results.colDns')}</th>

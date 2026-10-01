@@ -52,6 +52,34 @@ hairline `#D9DEE6`, same accent semantics) — implemented in the build
 phase as a `[data-theme='light']` block; dark remains the default. All
 token pairs contrast-checked (WCAG AA; the a11y contract gates).
 
+### Light theme token set (plan 044)
+
+The `[data-theme='light']` block overrides the FULL instrument token
+set (legacy aliases kept as-is for the older components):
+
+| Token | Light value | Dark value | Use / contrast note |
+|---|---|---|---|
+| `--chassis` | `#F4F5F7` | `#0B0E13` | page paper (slight cool cast) |
+| `--panel` | `#FFFFFF` | `#12161D` | cards, panels |
+| `--panel-raised` | `#F8F9FB` | `#171C25` | hover/active surfaces, modals |
+| `--hairline` | `#D8DDE5` | `#232A36` | 1px borders, dividers |
+| `--ink` | `#1A212B` | `#E6EAF1` | primary text (16.2:1 on panel) |
+| `--ink-muted` | `#5B6675` | `#98A2B3` | secondary text (5.8:1 on panel) |
+| `--accent-live` | `#E8A33D` | `#E8A33D` | amber FILL (unchanged per theme) |
+| `--accent-live-ink` | `#A16207` | `#E8A33D` | amber as TEXT (4.5:1 on paper / 9.0:1 on chassis) |
+| `--accent-live-contrast` | `#0B0E13` | `#0B0E13` | text ON the amber fill (9.0:1) |
+| `--accent-active` | `#0F7C8C` | `#5FC9D6` | cyan FILL |
+| `--accent-active-ink` | `#0F7C8C` | `#5FC9D6` | cyan as TEXT (4.5:1 on paper / 10.0:1 on chassis) |
+| `--accent-active-contrast` | `#FFFFFF` | `#0B0E13` | text ON the cyan fill (4.9:1 / 10.0:1) |
+| `--ok` | `#2E7D5B` | `#5BB98C` | success (5.0:1 on panel) |
+| `--bad` | `#B84A3E` | `#E06C5F` | failure (5.1:1 on panel) |
+| `--focus` | `#0F7C8C` | `#5FC9D6` | keyboard focus rings |
+| `--accent-contrast` | `#FFFFFF` | chassis | text on the `--accent` fill (segmented/chips) |
+
+Pattern for future fill+text pairs: one fill value per theme plus one
+text-on-fill value per theme (`-contrast` for text on fills, `-ink`
+for the accent used as body text).
+
 ### Spacing scale
 
 `--space-1: 4px` … `--space-8: 40px` (existing scale kept: 4, 8, 12, 16,
@@ -79,17 +107,45 @@ chamfered CTA's clipped corner (see Component skins).
 
 | Role | Font | Notes |
 |---|---|---|
-| Display/headings | **Bricolage Grotesque** (OFL) | tight tracking — brand, verdict, section titles only |
-| UI/body/data | **Martian Mono** (OFL) | mono-forward instrument voice: labels, buttons, body text, and EVERY numeric value in tabular figures (latency ms, percentages, scores, timestamps) |
+| Display/headings/prose | **Bricolage Grotesque** (OFL) | tight tracking — brand, verdict, section titles, and all running sentences |
+| UI/labels/data | **Martian Mono** (OFL) | mono-forward instrument voice: labels, buttons, chips, inputs, and EVERY numeric value in tabular figures (latency ms, percentages, scores, timestamps) |
 
 ### Usage rules
 
-- Bricolage Grotesque: brand mark, verdict line, section titles. Never
-  body text.
-- Martian Mono: everything else — labels, buttons, body text, all numbers.
+- Bricolage Grotesque (`--font-prose`): brand mark, verdict line, section
+  titles, **and every running sentence** — card subtitles, helper text,
+  descriptions. Running prose in a monospace face is what made the interface
+  read as generated; fixed pitch helps columns of data, not paragraphs.
+- Martian Mono (`--font-mono`): labels and eyebrows, buttons, chips, inputs,
+  and all numbers. This is where the fixed pitch actually pays.
+- `.label-caption` is a `<p>`, so any prose rule must exclude it explicitly:
+  `.card p` outranks it on specificity and would silently convert every eyebrow
+  to display type.
 - Numbers render in tabular figures (Martian Mono has tabular figures by
   default; enforce `font-variant-numeric: tabular-nums` at the readout
   level as defense-in-depth).
+
+### The instrument type scale (binding)
+
+Hierarchy comes from size **plus** weight/tracking/case — captions are tiny
+uppercase, data is large tabular, display carries the character font.
+Components must pick sizes from this table, never invent new ones.
+
+| Role | Size | Font | Weight/tracking | Used for |
+|---|---|---|---|---|
+| Display-1 | `clamp(2.25rem, 4vw, 3rem)` | Bricolage | 700, -0.01em | hero `h1`, verdict line |
+| Display-2 | `1.5rem` | Bricolage | 600, 0 | section/card titles (`h2`), dashboard-hero-title, brand mark |
+| Data | `1.25rem` | Martian Mono | 600, tabular | metric values, numbers rows, score readouts |
+| Display-3 | `1.125rem` | Bricolage | 600, 0.01em | `h3`/`h4`, panel titles |
+| Body | `0.9375rem` | Martian Mono | 400, 0 | default text, descriptions |
+| UI | `0.8125rem` | Martian Mono | 500, 0.04em | buttons, chips, inputs, mode/sub-nav tabs |
+| Caption | `0.6875rem` | Martian Mono | 500, 0.12em uppercase | labels, table headers, eyebrows, timestamps, brand tagline |
+
+Rendered at a 16px root the adjacent steps are 11 / 13 / 15 / 18 / 20 / 24 /
+36–48px, so no two neighbouring roles differ by less than 2px. Data is listed
+between Display-2 and Display-3 by rendered size, not by font, because that
+ordering is what the eye reads: **no two roles may share a size**, since size is
+the first cue a reader uses to scan the page and the font is the second.
 
 ### Self-hosting plan (build phase)
 

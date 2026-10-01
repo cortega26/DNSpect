@@ -50,11 +50,31 @@ Expected release assets (produced by `release.yml` from the tagged commit):
 
 ## 6. Flatpak Manifest Verification
 
-- [ ] The manifest `io.github.cortega26.DNSpect.yaml` `commit:` field matches the release tag hash: `git rev-parse v<version>`.
-- [ ] Regenerate `packaging/flatpak/generated-sources.json` (node deps): `make flatpak-deps`.
-- [ ] Regenerate `packaging/flatpak/python3-requirements.json` (python deps): `make flatpak-python-deps`.
-  - Both targets need the flatpak tooling installed locally (`flatpak-node-generator`, `flatpak-pip-generator`). If it is not available, record the regeneration as a checklist item for the release machine.
-- [ ] When tooling is available, validate the manifest and build: `make flatpak-validate`.
+The order below matters: the tag must exist before the manifest can be pinned to
+it, and the generated dependency sources must be regenerated from the pinned
+tree *before* the consistency gate can pass.
+
+- [ ] Regenerate the pinned runtime closure and the python deps:
+  `make flatpak-python-deps`.
+  - Derives `packaging/flatpak/requirements.closure.txt` from
+    `backend/constraints.txt`, so transitive dependencies cannot float to
+    whatever PyPI currently serves. Both the closure script and the generators
+    need local tooling (`flatpak-pip-generator`); without it, record the
+    regeneration as an item for the release machine.
+- [ ] Regenerate `packaging/flatpak/generated-sources.json` (node deps):
+  `make flatpak-deps`.
+- [ ] Set the manifest `commit:` field to the release tag hash:
+  `git rev-parse v<version>`.
+- [ ] Run the offline consistency gate: `make flatpak-consistency`.
+  - Verifies the version contract, the manifest pin against the tag, app-id
+    parity across manifest/metainfo/desktop/icon, that the metainfo's latest
+    `<release>` matches the version contract, that the generated node sources
+    cover every package in the lockfile *at the pinned commit*, and that the
+    generated python sources pin the whole runtime closure to
+    `backend/constraints.txt`. This is the gate that would have caught the
+    v1.4.0 packaging defects, so do not skip it.
+- [ ] When tooling is available, build and lint the artifacts:
+  `make flatpak-validate`.
 
 ## 7. Pre-Upload Windows Packaged Smoke
 

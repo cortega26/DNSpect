@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import time
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -270,6 +272,45 @@ def test_summary_does_not_affect_get_fallback(manager: BenchmarkManager) -> None
     assert loaded is not None
     assert loaded["status"] == "done"
     assert loaded["results"] == _valid_run_payload(benchmark_id)["results"]
+
+
+def test_history_mixed_naive_aware_timestamps_sort_stably(manager: BenchmarkManager) -> None:
+    """Naive `started_at` values are read as UTC so mixed-format histories stay newest-first."""
+    if not hasattr(time, "tzset"):
+        pytest.skip("requires POSIX tzset to pin the host timezone")
+    previous_tz = os.environ.get("TZ")
+    os.environ["TZ"] = "EST5"  # fixed UTC-5: naive-as-local would shift entries by 5h
+    time.tzset()
+    try:
+        runs_dir = _runs_dir(manager)
+        same_naive_id = uuid.uuid4().hex
+        naive_payload = _valid_run_payload(same_naive_id)
+        naive_payload["started_at"] = "2026-01-01T00:00:00"
+        _write_run(runs_dir, same_naive_id, naive_payload)
+        same_aware_id = uuid.uuid4().hex
+        aware_payload = _valid_run_payload(same_aware_id)
+        aware_payload["started_at"] = "2026-01-01T00:00:00+00:00"
+        _write_run(runs_dir, same_aware_id, aware_payload)
+        # Genuinely newer (02:00 UTC). With the old naive-as-local behavior the naive
+        # 00:00 entry compares as 05:00 UTC and wrongly sorts first.
+        newer_id = uuid.uuid4().hex
+        newer_payload = _valid_run_payload(newer_id)
+        newer_payload["started_at"] = "2026-01-01T02:00:00+00:00"
+        _write_run(runs_dir, newer_id, newer_payload)
+
+        history = manager.list_history()
+        # Same instant in both formats ties, so the id-descending tiebreak applies.
+        assert [entry["id"] for entry in history["runs"]] == [
+            newer_id,
+            max(same_naive_id, same_aware_id),
+            min(same_naive_id, same_aware_id),
+        ]
+    finally:
+        if previous_tz is None:
+            os.environ.pop("TZ", None)
+        else:
+            os.environ["TZ"] = previous_tz
+        time.tzset()
 
 
 def _seed_run(runs_dir, benchmark_id: str, *, origin: str, started_at: datetime) -> None:
