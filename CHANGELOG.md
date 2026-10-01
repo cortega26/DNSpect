@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [1.5.2] - 2026-10-01
+
+### Fixed
+
+- **Four inert Flatpak permissions removed.** The manifest requested `--socket=wayland`, `--socket=fallback-x11`, `--share=ipc` and `--device=dri`, but the freedesktop runtime ships no WebKit2 typelib, so the GTK/WebKit window in `cli.py` can never engage inside the sandbox: the app always falls back to serving localhost and opening the host browser. Verified by serving the full UI with every display socket denied. The manifest now requests `--share=network` alone, which is what `.agents/flathub-compliance.md` has always specified — the manifest had contradicted the project's own packaging rule since it was written.
+
+### Changed
+
+- The Flatpak manifest now states plainly that the app is a localhost server plus a system browser rather than implying a windowed GUI it cannot provide in the sandbox.
+
 ## [1.5.1] - 2026-10-01
 
 ### Fixed

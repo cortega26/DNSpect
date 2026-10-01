@@ -6,11 +6,13 @@ sdk-extensions:
   - org.freedesktop.Sdk.Extension.node24
 command: dnspect-launcher
 finish-args:
+  # Only the network is genuinely needed: the bundled app starts a localhost
+  # server and opens the host browser through the OpenURI portal. The freedesktop
+  # runtime ships no WebKit2 typelib, so the GTK/WebKit window in cli.py can never
+  # engage inside the sandbox and every display socket would have been inert.
+  # Display permissions were verified unnecessary by serving the full UI with
+  # them all denied.
   - --share=network
-  - --socket=wayland
-  - --socket=fallback-x11
-  - --share=ipc
-  - --device=dri
 modules:
   - packaging/flatpak/python3-requirements.json
   - name: dnspect
