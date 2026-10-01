@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [1.5.0] - 2026-10-01
+
+### Added
+
+- **`make flatpak-consistency`**: an offline gate (`scripts/flatpak_consistency.py`) that verifies the version contract, the manifest pin against the release tag, app-id parity across manifest/metainfo/desktop/icon, the metainfo's latest release against the version contract, the generated node sources against the lockfile at the pinned commit, and the generated python sources against the constraints closure. Wired into `make flatpak-validate` and into CI as the `flatpak-consistency` job.
+- **`scripts/flatpak_python_closure.py`**: derives the fully pinned runtime dependency closure from `backend/constraints.txt`, so `flatpak-pip-generator` cannot float transitive dependencies to whatever PyPI currently serves.
+
+### Fixed
+
+- **Flatpak metainfo reported the wrong version**: the `<releases>` list stopped at 1.3.0 while the project was 1.4.0, so the app would have been published to Flathub as 1.3.0. Added the missing 1.1.0, 1.2.0 and 1.4.0 entries with their tag dates.
+- **Flatpak screenshots advertised the pre-revamp UI**: the metainfo pinned February screenshots from `a1a97c3` while the app had since been redesigned. Now references four screenshots of the current UI, pinned to a commit that contains them, with explicit dimensions.
+- **`generated-sources.json` matched neither the pinned commit nor HEAD**: it was a hybrid holding `react@18` from the old tag and `vitest@4.1.11` from HEAD, so the offline `npm install` could not resolve. Regenerated from the lockfile of the pinned commit.
+- **DoQ missing from the Flatpak build**: `aioquic` was pinned in `packaging/flatpak/requirements.txt` but had no module in `python3-requirements.json`, so the packaged app reported `doq: false`. The python sources are now generated from the pinned closure, which includes `aioquic` and its transitive dependencies.
+
 ## [1.4.0] - 2026-08-12
 
 ### Added

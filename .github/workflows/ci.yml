@@ -139,6 +139,35 @@ jobs:
         run: npm audit --package-lock-only
         working-directory: frontend
 
+  flatpak-consistency:
+    name: flatpak-consistency
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          # The gate compares the manifest pin against the release tag, so the
+          # tags must be present in the clone.
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      # Offline gate: version contract, manifest pin, app-id parity, metainfo
+      # releases, node sources vs the pinned lockfile, python sources vs the
+      # constraints closure, manifest asset installs. This is what catches the
+      # packaging drift that the manual checklist used to miss.
+      - name: Flatpak consistency gate
+        run: make flatpak-consistency
+
+      - name: Validate desktop file
+        run: desktop-file-validate packaging/flatpak/io.github.cortega26.DNSpect.desktop
+
+      - name: Validate metainfo
+        run: appstreamcli validate --pedantic packaging/flatpak/io.github.cortega26.DNSpect.metainfo.xml
+
   packaged-linux-smoke:
     name: packaged-linux-smoke
     runs-on: ubuntu-latest
