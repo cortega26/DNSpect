@@ -31,7 +31,7 @@ export function ResultsTable({ results, primary, secondary, emptyMessage, onSele
   return (
     <section className="card">
       <div className="card-header">
-        <h2>{t('results.title')}</h2>
+        <h3>{t('results.title')}</h3>
         <p>{t('results.subtitle')}</p>
       </div>
       {results.length === 0 ? (

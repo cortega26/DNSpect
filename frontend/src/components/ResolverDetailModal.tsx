@@ -11,7 +11,7 @@ const TOOLTIP_CONTENT_STYLE: CSSProperties = {
   border: '1px solid var(--hairline)',
   borderRadius: 4,
   fontFamily: 'var(--font-mono)',
-  fontSize: 12,
+  fontSize: 13,
   color: 'var(--ink)',
 }
 
@@ -84,7 +84,7 @@ export function ResolverDetailModal({ result, provider, canLoadSamples, isLoadin
 
         {provider?.features ? (
           <div className="protocol-badges">
-            <h4 className="muted" style={{ fontSize: '0.8rem', marginBottom: 'var(--space-1)' }}>{t('modal.supportedProtocols')}</h4>
+            <h4 className="muted" style={{ fontSize: '0.6875rem', marginBottom: 'var(--space-1)' }}>{t('modal.supportedProtocols')}</h4>
             <div className="badges-row">
               <span className="badge" title="UDP">UDP</span>
               {provider.features.doh === 'yes' ? <span className="badge badge-success" title={provider.features.doh_url || 'DNS-over-HTTPS'}>{t('protocol.doh')}</span> : null}

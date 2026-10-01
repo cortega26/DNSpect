@@ -130,7 +130,7 @@ export function RunHistoryPanel({ runs, loading, onSelectRun, baselineId, candid
                 <button
                   type="button"
                   className="btn-ghost"
-                  style={{ fontSize: '0.75rem', padding: '2px var(--space-2)', borderColor: isBaseline ? 'var(--success)' : undefined }}
+                  style={{ fontSize: '0.6875rem', padding: '2px var(--space-2)', borderColor: isBaseline ? 'var(--success)' : undefined }}
                   aria-pressed={isBaseline}
                   aria-label={
                     isBaseline
@@ -149,7 +149,7 @@ export function RunHistoryPanel({ runs, loading, onSelectRun, baselineId, candid
                 <button
                   type="button"
                   className="btn-ghost"
-                  style={{ fontSize: '0.75rem', padding: '2px var(--space-2)', borderColor: isCandidate ? 'var(--success)' : undefined }}
+                  style={{ fontSize: '0.6875rem', padding: '2px var(--space-2)', borderColor: isCandidate ? 'var(--success)' : undefined }}
                   aria-pressed={isCandidate}
                   aria-label={
                     isCandidate

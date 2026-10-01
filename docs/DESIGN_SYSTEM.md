@@ -107,14 +107,20 @@ chamfered CTA's clipped corner (see Component skins).
 
 | Role | Font | Notes |
 |---|---|---|
-| Display/headings | **Bricolage Grotesque** (OFL) | tight tracking — brand, verdict, section titles only |
-| UI/body/data | **Martian Mono** (OFL) | mono-forward instrument voice: labels, buttons, body text, and EVERY numeric value in tabular figures (latency ms, percentages, scores, timestamps) |
+| Display/headings/prose | **Bricolage Grotesque** (OFL) | tight tracking — brand, verdict, section titles, and all running sentences |
+| UI/labels/data | **Martian Mono** (OFL) | mono-forward instrument voice: labels, buttons, chips, inputs, and EVERY numeric value in tabular figures (latency ms, percentages, scores, timestamps) |
 
 ### Usage rules
 
-- Bricolage Grotesque: brand mark, verdict line, section titles. Never
-  body text.
-- Martian Mono: everything else — labels, buttons, body text, all numbers.
+- Bricolage Grotesque (`--font-prose`): brand mark, verdict line, section
+  titles, **and every running sentence** — card subtitles, helper text,
+  descriptions. Running prose in a monospace face is what made the interface
+  read as generated; fixed pitch helps columns of data, not paragraphs.
+- Martian Mono (`--font-mono`): labels and eyebrows, buttons, chips, inputs,
+  and all numbers. This is where the fixed pitch actually pays.
+- `.label-caption` is a `<p>`, so any prose rule must exclude it explicitly:
+  `.card p` outranks it on specificity and would silently convert every eyebrow
+  to display type.
 - Numbers render in tabular figures (Martian Mono has tabular figures by
   default; enforce `font-variant-numeric: tabular-nums` at the readout
   level as defense-in-depth).
@@ -127,13 +133,19 @@ Components must pick sizes from this table, never invent new ones.
 
 | Role | Size | Font | Weight/tracking | Used for |
 |---|---|---|---|---|
-| Display-1 | `clamp(1.75rem, 3vw, 2.25rem)` | Bricolage | 700, -0.01em | hero `h1`, verdict line |
-| Display-2 | `1.25rem` | Bricolage | 600, 0 | section/card titles (`h2`), dashboard-hero-title |
-| Display-3 | `1rem` | Bricolage | 600, 0.01em | `h3`, panel titles |
-| Body | `0.95rem` | Martian Mono | 400, 0 | default text, descriptions |
-| UI | `0.85rem` | Martian Mono | 500, 0.04em | buttons, chips, inputs, mode/sub-nav tabs |
+| Display-1 | `clamp(2.25rem, 4vw, 3rem)` | Bricolage | 700, -0.01em | hero `h1`, verdict line |
+| Display-2 | `1.5rem` | Bricolage | 600, 0 | section/card titles (`h2`), dashboard-hero-title, brand mark |
 | Data | `1.25rem` | Martian Mono | 600, tabular | metric values, numbers rows, score readouts |
-| Caption | `0.7rem` | Martian Mono | 500, 0.12em uppercase | labels, table headers, eyebrows, timestamps, brand tagline |
+| Display-3 | `1.125rem` | Bricolage | 600, 0.01em | `h3`/`h4`, panel titles |
+| Body | `0.9375rem` | Martian Mono | 400, 0 | default text, descriptions |
+| UI | `0.8125rem` | Martian Mono | 500, 0.04em | buttons, chips, inputs, mode/sub-nav tabs |
+| Caption | `0.6875rem` | Martian Mono | 500, 0.12em uppercase | labels, table headers, eyebrows, timestamps, brand tagline |
+
+Rendered at a 16px root the adjacent steps are 11 / 13 / 15 / 18 / 20 / 24 /
+36–48px, so no two neighbouring roles differ by less than 2px. Data is listed
+between Display-2 and Display-3 by rendered size, not by font, because that
+ordering is what the eye reads: **no two roles may share a size**, since size is
+the first cue a reader uses to scan the page and the font is the second.
 
 ### Self-hosting plan (build phase)
 

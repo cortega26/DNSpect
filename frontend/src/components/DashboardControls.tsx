@@ -163,14 +163,20 @@ export function DashboardControls({ doqAvailable = true, ...props }: Props) {
   return (
     <section className="card card-compact-controls">
       <div className="card-header">
-        <h2>{t('controls.title')}</h2>
+        <h3>{t('controls.title')}</h3>
         <p>{t('controls.subtitle')}</p>
       </div>
 
+      <div className="controls-groups">
       <div className="controls-grid">
         <div className="controls-mode-col">
           <p className="label-caption">{t('controls.mode')}</p>
-          <div className="segmented-control" role="radiogroup" aria-label={t('controls.mode')}>
+          <div
+            className="segmented-control"
+            role="radiogroup"
+            aria-label={t('controls.mode')}
+            title={t('controls.modeHelp')}
+          >
             {(['quick', 'standard', 'exhaustive'] as BenchmarkMode[]).map((mode) => (
               <button
                 key={mode}
@@ -185,12 +191,16 @@ export function DashboardControls({ doqAvailable = true, ...props }: Props) {
               </button>
             ))}
           </div>
-          <p className="helper-text">{t('controls.modeHelp')}</p>
         </div>
 
         <div className="controls-protocol-col">
           <p className="label-caption">{t('controls.protocol')}</p>
-          <div className="segmented-control" role="radiogroup" aria-label={t('controls.protocol')}>
+          <div
+            className="segmented-control"
+            role="radiogroup"
+            aria-label={t('controls.protocol')}
+            title={t('protocol.help')}
+          >
             {PROTOCOLS.filter((p) => p !== 'doq' || doqAvailable).map((p) => (
               <button
                 key={p}
@@ -205,13 +215,12 @@ export function DashboardControls({ doqAvailable = true, ...props }: Props) {
               </button>
             ))}
           </div>
-          <p className="helper-text">{t('protocol.help')}</p>
         </div>
       </div>
 
       <div className="goal-selector">
         <p className="label-caption">{t('goal.title')}</p>
-          <div className="mode-grid">
+          <div className="mode-grid" title={t(GOAL_HELP_KEY[props.scoringProfile])}>
             {GOALS.map((g) => (
               <button
                 key={g}
@@ -224,12 +233,18 @@ export function DashboardControls({ doqAvailable = true, ...props }: Props) {
               </button>
             ))}
           </div>
-          <p className="helper-text">{t(GOAL_HELP_KEY[props.scoringProfile])}</p>
       </div>
 
       <div className="region-selector">
         <p className="label-caption">{t('region.title')}</p>
-        <div className="mode-grid region-chips">
+        <div
+          className="mode-grid region-chips"
+          title={
+            props.scopeSource === 'manual' && props.scope !== 'unknown' && props.scope !== 'all'
+              ? t('region.help', { region: t(regionLabelKey(props.scope)) })
+              : t('region.helpAll')
+          }
+        >
           <button
             type="button"
             className={`chip-compact${props.scopeSource === 'auto' ? ' chip-active' : ''}`}
@@ -258,11 +273,7 @@ export function DashboardControls({ doqAvailable = true, ...props }: Props) {
             {t('region.all')}
           </button>
         </div>
-        <p className="helper-text">
-          {props.scopeSource === 'manual' && props.scope !== 'unknown' && props.scope !== 'all'
-            ? t('region.help', { region: t(regionLabelKey(props.scope)) })
-            : t('region.helpAll')}
-        </p>
+      </div>
       </div>
 
       <div className="comparison-controls">
@@ -354,18 +365,20 @@ export function DashboardControls({ doqAvailable = true, ...props }: Props) {
           </button>
           <p className="helper-text start-subtext">{props.startHelperText}</p>
         </div>
-        <button type="button" className="inline-link resolver-count-link" onClick={props.onShowResolverList}>
-          {t('controls.selectedResolvers', { count: props.selected.size })}
-        </button>
-        <button
-          type="button"
-          className="text-link advanced-toggle-link"
-          onClick={props.onToggleAdvanced}
-          aria-expanded={props.advancedOpen}
-          aria-controls="advanced-controls"
-        >
-          {props.advancedOpen ? t('controls.closeAdvanced') : t('controls.openAdvanced')}
-        </button>
+        <div className="controls-actions-secondary">
+          <button type="button" className="stat-chip resolver-count-link" onClick={props.onShowResolverList}>
+            {t('controls.selectedResolvers', { count: props.selected.size })}
+          </button>
+          <button
+            type="button"
+            className="text-link advanced-toggle-link"
+            onClick={props.onToggleAdvanced}
+            aria-expanded={props.advancedOpen}
+            aria-controls="advanced-controls"
+          >
+            {props.advancedOpen ? t('controls.closeAdvanced') : t('controls.openAdvanced')}
+          </button>
+        </div>
       </div>
 
       <div id="advanced-controls" className={`advanced-collapse ${props.advancedOpen ? 'is-open' : ''}`}>

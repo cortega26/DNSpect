@@ -54,7 +54,7 @@ export function DashboardPanel({
       {/* Hero Recommendation */}
       <div className="dashboard-hero">
         <div className="dashboard-hero-badge">{t('dashboard.recommended')}</div>
-        <h2 className="dashboard-hero-title">{primaryResult.provider_name}</h2>
+        <h3 className="dashboard-hero-title">{primaryResult.provider_name}</h3>
         <code className="dashboard-hero-ip">{primaryResult.resolver}</code>
         <div className="dashboard-hero-stats">
           <span className="dashboard-hero-stat">

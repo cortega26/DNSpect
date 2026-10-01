@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [1.5.1] - 2026-10-01
+
+### Fixed
+
+- **Type scale had two roles sharing a size**: Display-2 (section titles) and Data (metric values) were both `1.25rem`, so a heading and a number were indistinguishable by size — the only cue left was typeface. Display-3 → `1.125rem` and Body → `0.9375rem` also restore real separation between neighbours, which sat 0.8–1.6px apart at a 16px root.
+- **Twelve invented font sizes**: values outside the binding scale (`0.78`, `0.8`, `0.85`, `0.9`, `0.95`, `1.08rem`, both in CSS and as inline `fontSize` in components) are gone; the app now uses exactly the seven scale roles.
+- **Inverted heading hierarchy**: card titles (`controls`, `charts`, `results`) were `h2` at 24px while the sections containing them were `h3` at 18px. Demoted to `h3`.
+- **The Lab's chapter rendered below its own children**: the tab row that owns each panel's accessible name was set at 13px UI while the cards inside it were 18px. All tabs are now Display-2 (24px); active vs inactive is weight, colour and the accent underline, so switching tabs reflows nothing.
+- **Eyebrow labels ranked below what they label**: `.label-caption` was Caption (11px) above 13px chips. Now 13px/600.
+- **Running prose was set in monospace**, which is the strongest single contributor to the interface reading as generated. Bricolage Grotesque (`--font-prose`) now carries every running sentence; Martian Mono is reserved for labels, chips, inputs and numeric readouts, where fixed pitch helps.
+- **Four redundant label+paragraph pairs** in the guided-flow card competed at the same weight. The explanatory sentences moved to the `title` of each option group, so they stay on hover and in the accessibility tree without occupying the reading order.
+- **The guided-flow card was a single ~700px column** of stacked option groups. Now a balanced 2×2 grid above 900px.
+- **Data and actions shared one visual treatment**: the resolver count rendered as an underlined link beside the primary CTA. It is now a bordered stat chip; the "advanced options" control stays a link because it is an action.
+- **A 250px decorative banner opened every Lab tab**: a 48px duplicate wordmark plus onboarding tagline, identical across all five tabs and carrying no navigational information. The display block and the sample-results disclosure are now Quick-only; the scope/provider/system-DNS context line stays in both modes as a compact strip. The single `h1` moved to the app brand in the header.
+
+### Changed
+
+- `docs/DESIGN_SYSTEM.md`: the font-role table now assigns prose to Bricolage Grotesque, and records that `.card p` outranks `.label-caption` on specificity so prose rules must exclude the caption class explicitly.
+
 ## [1.5.0] - 2026-10-01
 
 ### Added
