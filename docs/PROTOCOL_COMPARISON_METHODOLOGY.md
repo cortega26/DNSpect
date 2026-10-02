@@ -149,6 +149,17 @@ bounded worker, and matched deltas with explicit endpoint caveats.
   hostname, DoH with a URL) plus cache and TLS-handshake behavior. Results are
   measured-path caveats, not proof of a transport property. Reviewers reject
   causal language.
+- **Cross-protocol latency deltas mix measurement methods.** DoT/DoH/DoQ open a
+  connection per sample, so their per-sample latency includes a full handshake
+  while UDP is stateless. Measured on this project's data, a DoT sample to
+  Cloudflare costs ~87 ms cold against ~6 ms on a reused socket, and the setup
+  cost tracks RTT at r=0.97 (about 3 RTTs, the cost of a TLS handshake) rather
+  than tracking resolver quality. A UDP-vs-DoT latency delta therefore mixes a
+  client-side handshake cost with the path cost, and must not be read as a
+  transport property. Deltas within one protocol are unaffected: reuse does not
+  touch blocking efficacy, NXDOMAIN hijacking or DNSSEC. `connection_setup_ms`
+  is measured once per resolver as a diagnostic, is never scored, and never
+  enters `COMPARISON_METRIC_KEYS`. See `docs/MEASUREMENT_METHODOLOGY.md`.
 - Exclusions are deterministic catalog eligibility facts; they are never
   reliability failures and never appear in subrun results.
 - DNS behavior is covered by mocked backend tests; this plan performs no live

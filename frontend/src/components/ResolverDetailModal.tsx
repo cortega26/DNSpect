@@ -107,6 +107,11 @@ export function ResolverDetailModal({ result, provider, canLoadSamples, isLoadin
           <div>
             <strong>{t('modal.stddev')}:</strong> {fmtMs(result.stats.stddev_ms)}
           </div>
+          {result.connection_setup_ms != null ? (
+            <div title={t('modal.setupNote')}>
+              <strong>{t('modal.setup')}:</strong> {fmtMs(result.connection_setup_ms)}
+            </div>
+          ) : null}
           <div>
             <strong>{t('modal.average')}:</strong> {fmtMs(result.stats.avg_ms)}
           </div>

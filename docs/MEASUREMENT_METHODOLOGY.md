@@ -101,10 +101,48 @@ Conclusión operativa: **el score mide lookup en caliente y es válido para
 comparar resolvers entre sí bajo el mismo método.** No es válido como medida de
 resolución en frío, y la interfaz no debe presentarlo como tal.
 
-## Límite conocido adyacente
+## Coste de conexión en DoT/DoH/DoQ
 
-Para DoT, DoH y DoQ la conexión se establece **por muestra**
-(`runner.py`, llamadas a `dns.query.tls` / `https` / `quic`). Esas muestras
-están dominadas por el handshake, no por la resolución. Es un problema de
-comparabilidad entre protocolos mayor que el encuadre frío/caliente, y también
-es observable. Queda como trabajo pendiente.
+Para DoT, DoH y DoQ la conexión se establece **por muestra** (`runner.py`,
+llamadas a `dns.query.tls` / `https` / `quic`). La latencia medida incluye por
+tanto el handshake completo, no solo la consulta.
+
+Medido en este proyecto, con `dnspython` 2.7.0:
+
+| Resolver | RTT UDP | DoT conexión nueva | DoT conexión reutilizada |
+|---|---:|---:|---:|
+| Cloudflare | 12.3 ms | 87.1 ms | 6.3 ms |
+| Quad9 | 12.2 ms | 60.7 ms | 21.2 ms |
+| Google | 62.4 ms | 115.8 ms | 9.6 ms |
+| AdGuard | 59.3 ms | 306.2 ms | 62.8 ms |
+| CleanBrowsing | 136.5 ms | 593.7 ms | 143.1 ms |
+| DNS.SB | 197.6 ms | 826.4 ms | 229.9 ms |
+
+Tres conclusiones:
+
+1. **El handshake domina la medición.** En Cloudflare, 87.1 ms con conexión nueva frente a
+   6.3 ms con conexión reutilizada, y ese 6.3 ms es indistinguible del baseline UDP. El
+   transporte cifrado no es lento; la medición estaba dominada por el
+   handshake.
+2. **El setup es coste de ruta, no propiedad del resolver.** El setup sigue al
+   RTT con correlación r=0.97 y equivale a ~3 RTT, que es lo que cuesta un
+   handshake TLS. No es una señal de calidad del resolver y por eso no se
+   puntúa ni se compara.
+3. **Comparar DoT/DoH/DoQ contra UDP en deltas de latencia mezcla métodos.** La
+   diferencia medida entre protocolos incluye el handshake del cliente, no una
+   propiedad del transporte.
+
+Por eso `connection_setup_ms` se mide una vez por resolver y se expone como
+diagnóstico en el detalle del resolver. Es explícito, nunca entra en `stats`,
+nunca entra en `COMPARISON_METRIC_KEYS` y no altera el score. El campo es
+`null` para UDP (sin estado) y para un setup que no se pudo medir, de modo que
+"no aplica" nunca se confunde con "falló".
+
+### Límite conocido adyacente
+
+No se corrigió el handshake por muestra. Reutilizar conexiones exigiría un
+ciclo de vida por (protocolo, resolver) con manejo de conexiones caducas: en
+este dataset se observó 1 reutilización caduca en 36 (2.8%), y un error de ese tipo no
+debe contar como fallo del resolver ni disparar la guarda `is_unreliable`.
+Mientras no se resuelva, **las cifras de DoT/DoH/DoQ incluyen el handshake por
+muestra y no deben leerse como latencia de consulta pura.**

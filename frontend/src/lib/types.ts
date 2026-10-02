@@ -112,6 +112,10 @@ export interface ResolverResult {
   samples: Sample[]
   sample_count?: number
   is_unreliable?: boolean
+  /** One-time connection setup for encrypted protocols. Diagnostic only: it is
+   *  path cost, never scored and never compared. Null for UDP (stateless) and
+   *  for a setup that could not be measured. */
+  connection_setup_ms?: number | null
 }
 
 export interface BenchmarkStatus {

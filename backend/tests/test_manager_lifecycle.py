@@ -182,7 +182,8 @@ def test_max_query_attempts_rejects_over_budget(monkeypatch, tmp_path) -> None:
 def test_max_query_attempts_accepts_at_limit(monkeypatch, tmp_path) -> None:
     manager = BenchmarkManager(max_concurrent_jobs=1, max_queued_jobs=1, data_runs_dir=tmp_path / "runs")
     manager.blocking_test_queries = ["blocked.test"]
-    manager.max_query_attempts = 13
+    # 10 runs + 1 blocking + 2 diagnostics + 1 connection-setup probe.
+    manager.max_query_attempts = 14
 
     def fake_measure_query(*, resolver, domain, timeout_sec, engine):
         del timeout_sec, engine
@@ -259,4 +260,7 @@ def test_completed_run_progress_includes_diagnostics(monkeypatch, tmp_path) -> N
     state = _wait_terminal(manager, benchmark_id)
     assert state["status"] == "done"
     assert state["progress"]["current"] == state["progress"]["total"]
+    # 2 runs + 2 diagnostics + 1 blocking are domain queries. The
+    # connection-setup probe is budgeted and advances progress, but it runs on
+    # its own socket and is not one of these domain measurements.
     assert len(measurements) == 5
