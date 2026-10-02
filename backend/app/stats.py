@@ -252,6 +252,8 @@ def compute_stats(
             "avg_ms": None,
             "median_ms": None,
             "p95_ms": None,
+            "p99_ms": None,
+            "stddev_ms": None,
             "min_ms": None,
             "max_ms": None,
             "ok_count": success_count,
@@ -284,6 +286,19 @@ def compute_stats(
     avg_ms = round(sum(success_samples_ms) / success_count, 3)
     median_ms = round(float(statistics.median(success_samples_ms)), 3)
     p95_ms = round(float(percentile(success_samples_ms, 95) or 0.0), 3)
+    # p99 and the sample standard deviation complement p95: p95 already reaches
+    # the stability score, and p99/stddev are the spread measures the better
+    # resolvers publish (GRC, VeloDNS, taihen/dns-benchmark). A single outlier
+    # batch moves p99 and sigma while leaving p95 nearly untouched, so reporting
+    # both is what separates a genuinely steady resolver from one that averages
+    # well. Sample stdev (n-1) matches the "standard deviation" readers compare
+    # against; population stdev would understate the spread of a small sample.
+    p99_ms = round(float(percentile(success_samples_ms, 99) or 0.0), 3)
+    # A single sample has no defined sample standard deviation, so the field is
+    # null rather than 0.0: reporting zero spread would claim a steadiness the
+    # run never measured. Null is already the shape of this column when no
+    # sample succeeded.
+    stddev_ms = round(float(statistics.stdev(success_samples_ms)), 3) if success_count > 1 else None
     consistency_ratio = round(p95_ms / median_ms, 4) if median_ms > 0 else None
     jitter_ms = round(p95_ms - median_ms, 3)
     score_latency = avg_ms
@@ -294,6 +309,8 @@ def compute_stats(
         "avg_ms": avg_ms,
         "median_ms": median_ms,
         "p95_ms": p95_ms,
+        "p99_ms": p99_ms,
+        "stddev_ms": stddev_ms,
         "min_ms": round(min(success_samples_ms), 3),
         "max_ms": round(max(success_samples_ms), 3),
         "ok_count": success_count,

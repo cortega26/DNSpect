@@ -205,6 +205,7 @@ class ComparisonReasonCode(str, Enum):
 class RunComparisonMetrics(BaseModel):
     median_ms: float | None
     p95_ms: float | None
+    p99_ms: float | None
     success_rate: float | None
     failure_rate: float | None
     blocking_efficacy: float | None
@@ -214,6 +215,7 @@ class RunComparisonMetrics(BaseModel):
 class RunComparisonDeltas(BaseModel):
     median_ms: float | None
     p95_ms: float | None
+    p99_ms: float | None
     success_rate: float | None
     failure_rate: float | None
     blocking_efficacy: float | None

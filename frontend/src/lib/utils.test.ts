@@ -60,6 +60,8 @@ function result(stats: Partial<ResolverStats> = {}): ResolverResult {
       avg_ms: null,
       median_ms: null,
       p95_ms: null,
+      p99_ms: null,
+      stddev_ms: null,
       min_ms: null,
       max_ms: null,
       ok_count: 0,

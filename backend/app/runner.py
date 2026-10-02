@@ -10,6 +10,7 @@ import shutil
 import string
 import subprocess
 import threading
+import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import suppress
@@ -99,6 +100,7 @@ COMPARISON_REASON_ORDER: tuple[ComparisonReasonCode, ...] = (
 COMPARISON_METRIC_KEYS = (
     "median_ms",
     "p95_ms",
+    "p99_ms",
     "success_rate",
     "failure_rate",
     "blocking_efficacy",
@@ -121,6 +123,32 @@ def _to_positive_int(raw: str | None, default: int) -> int:
     except ValueError:
         return default
     return max(parsed, 1)
+
+
+# Inter-query pacing, in milliseconds.
+#
+# Queries fired back to back measure queueing and load behaviour rather than
+# isolated resolver latency, and a burst is indistinguishable from a slow
+# resolver. GRC's DNS Benchmark spaces its queries ~20ms apart for this reason,
+# and the pacing is configurable because a VPN or a congested uplink wants a
+# slower cadence. 0 disables pacing entirely.
+DEFAULT_QUERY_PACE_MS = 20
+
+
+def _to_non_negative_ms(raw: str | None, default: int) -> int:
+    if raw is None:
+        return default
+    try:
+        parsed = int(raw)
+    except ValueError:
+        return default
+    return max(parsed, 0)
+
+
+def resolve_query_pace_ms(override: int | None = None) -> int:
+    if override is not None:
+        return max(override, 0)
+    return _to_non_negative_ms(os.getenv("DNS_SPEED_LAB_QUERY_PACE_MS"), DEFAULT_QUERY_PACE_MS)
 
 
 DATA_RUNS = _resolve_runs_dir()
@@ -277,6 +305,7 @@ def _comparison_metrics(result: dict[str, Any]) -> RunComparisonMetrics:
     return RunComparisonMetrics(
         median_ms=_opt_float(stats.get("median_ms")),
         p95_ms=_opt_float(stats.get("p95_ms")),
+        p99_ms=_opt_float(stats.get("p99_ms")),
         success_rate=_opt_float(stats.get("success_rate")),
         failure_rate=_opt_float(stats.get("failure_rate")),
         blocking_efficacy=_opt_float(stats.get("blocking_efficacy")),
@@ -302,6 +331,7 @@ def _comparison_deltas(
     return RunComparisonDeltas(
         median_ms=deltas["median_ms"],
         p95_ms=deltas["p95_ms"],
+        p99_ms=deltas["p99_ms"],
         success_rate=deltas["success_rate"],
         failure_rate=deltas["failure_rate"],
         blocking_efficacy=deltas["blocking_efficacy"],
@@ -689,6 +719,7 @@ class BenchmarkManager:
         max_retained_states: int | None = None,
         data_runs_dir: Path | None = None,
         watch_dir: Path | None = None,
+        query_pace_ms: int | None = None,
     ) -> None:
         self._lock = threading.RLock()
         self._states: dict[str, BenchmarkState] = {}
@@ -706,6 +737,7 @@ class BenchmarkManager:
             os.getenv("DNS_SPEED_LAB_MAX_RETAINED_STATES"), 256
         )
         self.max_query_attempts = _to_positive_int(os.getenv("DNS_SPEED_LAB_MAX_QUERY_ATTEMPTS"), 10000)
+        self.query_pace_ms = resolve_query_pace_ms(query_pace_ms)
         self.max_estimated_duration_sec = _to_positive_int(
             os.getenv("DNS_SPEED_LAB_MAX_ESTIMATED_DURATION_SEC"), 14400
         )
@@ -747,7 +779,10 @@ class BenchmarkManager:
         diag_per_resolver = FIXED_DIAGNOSTIC_ATTEMPTS
         total = (normal_per_resolver + blocking + diag_per_resolver) * resolver_count * protocol_count
         drill_allowance = timeout_sec + 0.6
-        est_duration = total * drill_allowance
+        # Pacing adds a known per-query cost to each resolver's series; leaving
+        # it out would understate the estimate and the work budget.
+        per_attempt = drill_allowance + self.query_pace_ms / 1000
+        est_duration = total * per_attempt
         return BenchmarkWorkEstimate(
             normal_attempts_per_resolver=normal_per_resolver,
             blocking_attempts_per_resolver=blocking,
@@ -1874,6 +1909,17 @@ class BenchmarkManager:
         )
         return endpoint is not None
 
+    def _pace(self, index: int) -> None:
+        """Delay before query number ``index`` of the current per-resolver series.
+
+        Every consecutive query to the same resolver is spaced: consecutive
+        queries fired back to back measure queueing and self-inflicted load
+        rather than isolated resolver latency. Index 0 is never delayed, so a
+        resolver's first query is not penalised by a fixed startup cost.
+        """
+        if index > 0 and self.query_pace_ms > 0:
+            time.sleep(self.query_pace_ms / 1000)
+
     def _measure_with_protocol(
         self,
         resolver: str,
@@ -1908,8 +1954,15 @@ class BenchmarkManager:
             for resolver in config.resolvers:
                 successful_ms: list[float] = []
                 samples: list[dict[str, Any]] = []
+                # One pacing counter per resolver, shared by every series it
+                # runs (latency, blocking efficacy, integrity probes), so the
+                # hand-off between series is paced too and only the very first
+                # query of the resolver is not delayed.
+                pace_index = 0
 
                 for run_idx, domain in enumerate(query_schedule):
+                    self._pace(pace_index)
+                    pace_index += 1
                     sample = self._measure_with_protocol(
                         resolver=resolver,
                         domain=domain,
@@ -1963,6 +2016,8 @@ class BenchmarkManager:
                 # Blocking efficacy test
                 blocking_samples: list[dict[str, Any]] = []
                 for domain in self.blocking_test_queries:
+                    self._pace(pace_index)
+                    pace_index += 1
                     b_sample = self._measure_with_protocol(
                         resolver=resolver,
                         domain=domain,
@@ -1986,6 +2041,8 @@ class BenchmarkManager:
                 # NXDOMAIN hijacking detection
                 hijack_suffix = "".join(random.choices(string.ascii_lowercase, k=8))  # nosec B311
                 hijack_domain = f"nxdomain-check-{hijack_suffix}.invalid"
+                self._pace(pace_index)
+                pace_index += 1
                 hijack_sample = self._measure_with_protocol(
                     resolver=resolver,
                     domain=hijack_domain,
@@ -2007,6 +2064,8 @@ class BenchmarkManager:
 
                 # DNSSEC validation check
                 dnssec_domain = "badsig.go.dnscheck.tools"
+                self._pace(pace_index)
+                pace_index += 1
                 dnssec_sample = self._measure_with_protocol(
                     resolver=resolver,
                     domain=dnssec_domain,

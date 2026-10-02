@@ -43,6 +43,8 @@ def _diagnostics_stats() -> dict:
         "avg_ms": 24.5,
         "median_ms": 24.1,
         "p95_ms": 35.125,
+        "p99_ms": 39.4,
+        "stddev_ms": 7.42,
         "min_ms": 20.0,
         "max_ms": 40.0,
         "ok_count": 2,
@@ -98,6 +100,8 @@ def test_export_csv_keeps_stable_order_and_raw_numeric_values() -> None:
             "avg_ms",
             "median_ms",
             "p95_ms",
+            "p99_ms",
+            "stddev_ms",
             "min_ms",
             "max_ms",
             "ok_count",
@@ -127,13 +131,18 @@ def test_export_csv_keeps_stable_order_and_raw_numeric_values() -> None:
             "dnssec_validating",
             "nxdomain_hijack_detected",
         ]
-        assert rows[1][5] == "24.5"
-        assert rows[1][7] == "35.125"
+        # Address cells by column name: positional indices break every time a
+        # metric column is added, which is exactly what p99/stddev did.
+        cells = dict(zip(rows[0], rows[1], strict=True))
+        assert cells["avg_ms"] == "24.5"
+        assert cells["p95_ms"] == "35.125"
+        assert cells["p99_ms"] == "39.4"
+        assert cells["stddev_ms"] == "7.42"
         assert "24,5" not in rows[1]
-        assert rows[1][28] == "87.5"
-        assert rows[1][31] == "12.3"
-        assert rows[1][34] == "True"
-        assert rows[1][35] == "False"
+        assert cells["blocking_efficacy"] == "87.5"
+        assert cells["score_blocking"] == "12.3"
+        assert cells["dnssec_validating"] == "True"
+        assert cells["nxdomain_hijack_detected"] == "False"
     finally:
         with manager._lock:
             manager._states.pop(benchmark_id, None)
@@ -155,9 +164,11 @@ def test_export_csv_diagnostics_none_renders_empty() -> None:
         assert response.status_code == 200
         rows = list(csv.reader(io.StringIO(response.text)))
 
-        assert rows[1][28] == ""
-        assert rows[1][34] == ""
-        assert rows[1][35] == ""
+        # A None diagnostic renders empty, not "0.0" or "None".
+        cells = dict(zip(rows[0], rows[1], strict=True))
+        assert cells["blocking_efficacy"] == ""
+        assert cells["dnssec_validating"] == ""
+        assert cells["nxdomain_hijack_detected"] == ""
     finally:
         with manager._lock:
             manager._states.pop(benchmark_id, None)

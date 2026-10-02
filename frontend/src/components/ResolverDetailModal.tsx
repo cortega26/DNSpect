@@ -102,6 +102,12 @@ export function ResolverDetailModal({ result, provider, canLoadSamples, isLoadin
             <strong>{t('modal.p95')}:</strong> {fmtMs(result.stats.p95_ms)}
           </div>
           <div>
+            <strong>{t('modal.p99')}:</strong> {fmtMs(result.stats.p99_ms)}
+          </div>
+          <div>
+            <strong>{t('modal.stddev')}:</strong> {fmtMs(result.stats.stddev_ms)}
+          </div>
+          <div>
             <strong>{t('modal.average')}:</strong> {fmtMs(result.stats.avg_ms)}
           </div>
           <div>

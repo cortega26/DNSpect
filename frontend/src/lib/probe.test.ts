@@ -8,6 +8,8 @@ function stats(overrides: Partial<ResolverStats> = {}): ResolverStats {
     avg_ms: 22,
     median_ms: 21,
     p95_ms: 30,
+    p99_ms: 33,
+    stddev_ms: 5,
     min_ms: 18,
     max_ms: 31,
     ok_count: 4,

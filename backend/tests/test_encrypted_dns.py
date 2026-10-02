@@ -203,10 +203,15 @@ def test_run_doh_query_failure(monkeypatch) -> None:
 
 def test_benchmark_with_dot_protocol(monkeypatch, tmp_path) -> None:
     """Full benchmark run with DoT protocol succeeds."""
-    manager = BenchmarkManager(max_concurrent_jobs=1, max_queued_jobs=1, data_runs_dir=tmp_path / "runs")
+    manager = BenchmarkManager(
+        max_concurrent_jobs=1,
+        max_queued_jobs=1,
+        data_runs_dir=tmp_path / "runs",
+        query_pace_ms=0,
+    )
 
-    def fake_measure(*, resolver, domain, timeout_sec, engine):
-        del timeout_sec, engine
+    def fake_dot(resolver, domain, timeout_sec, hostname):
+        del timeout_sec, hostname
         return {
             "ok": True,
             "ms": 22.0,
@@ -216,7 +221,7 @@ def test_benchmark_with_dot_protocol(monkeypatch, tmp_path) -> None:
             "resolver": resolver,
         }
 
-    monkeypatch.setattr("app.runner.measure_query", fake_measure)
+    monkeypatch.setattr("app.runner.run_dot_query", fake_dot)
     monkeypatch.setattr("app.runner.select_engine", lambda: "dnspython")
     manager.blocking_test_queries = []
 
@@ -240,10 +245,15 @@ def test_benchmark_with_dot_protocol(monkeypatch, tmp_path) -> None:
 
 def test_benchmark_with_doh_protocol(monkeypatch, tmp_path) -> None:
     """Full benchmark run with DoH protocol succeeds."""
-    manager = BenchmarkManager(max_concurrent_jobs=1, max_queued_jobs=1, data_runs_dir=tmp_path / "runs")
+    manager = BenchmarkManager(
+        max_concurrent_jobs=1,
+        max_queued_jobs=1,
+        data_runs_dir=tmp_path / "runs",
+        query_pace_ms=0,
+    )
 
-    def fake_measure(*, resolver, domain, timeout_sec, engine):
-        del timeout_sec, engine
+    def fake_doh(resolver, domain, timeout_sec, url):
+        del timeout_sec, url
         return {
             "ok": True,
             "ms": 28.0,
@@ -253,7 +263,7 @@ def test_benchmark_with_doh_protocol(monkeypatch, tmp_path) -> None:
             "resolver": resolver,
         }
 
-    monkeypatch.setattr("app.runner.measure_query", fake_measure)
+    monkeypatch.setattr("app.runner.run_doh_query", fake_doh)
     monkeypatch.setattr("app.runner.select_engine", lambda: "dnspython")
     manager.blocking_test_queries = []
 
@@ -275,10 +285,15 @@ def test_benchmark_with_doh_protocol(monkeypatch, tmp_path) -> None:
 
 def test_protocol_filters_unsupported_resolvers(monkeypatch, tmp_path) -> None:
     """Protocol filtering excludes resolvers without the required protocol support."""
-    manager = BenchmarkManager(max_concurrent_jobs=1, max_queued_jobs=1, data_runs_dir=tmp_path / "runs")
+    manager = BenchmarkManager(
+        max_concurrent_jobs=1,
+        max_queued_jobs=1,
+        data_runs_dir=tmp_path / "runs",
+        query_pace_ms=0,
+    )
 
-    def fake_measure(*, resolver, domain, timeout_sec, engine):
-        del timeout_sec, engine
+    def fake_dot(resolver, domain, timeout_sec, hostname):
+        del timeout_sec, hostname
         return {
             "ok": True,
             "ms": 15.0,
@@ -288,7 +303,7 @@ def test_protocol_filters_unsupported_resolvers(monkeypatch, tmp_path) -> None:
             "resolver": resolver,
         }
 
-    monkeypatch.setattr("app.runner.measure_query", fake_measure)
+    monkeypatch.setattr("app.runner.run_dot_query", fake_dot)
     monkeypatch.setattr("app.runner.select_engine", lambda: "dnspython")
     manager.blocking_test_queries = []
 

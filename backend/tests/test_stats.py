@@ -1,3 +1,5 @@
+import pytest
+
 from app.stats import (
     GOAL_WEIGHTS,
     RECOMMENDATION_WARNING_ALL_UNRELIABLE,
@@ -34,6 +36,8 @@ def test_stats_median_and_p95():
 
     assert stats["median_ms"] == 30
     assert stats["p95_ms"] == 48
+    assert stats["p99_ms"] == 49.6
+    assert stats["stddev_ms"] == 15.811
     assert stats["ok_count"] == 5
     assert stats["timeout_count"] == 2
     assert stats["success_count"] == 5
@@ -48,6 +52,58 @@ def test_stats_median_and_p95():
     assert stats["normalized_reliability"] is None
     assert stats["normalized_stability"] is None
     assert stats["reliability_penalty"] is None
+
+
+def test_stats_p99_and_stddev_track_a_single_outlier_batch() -> None:
+    """At a realistic sample size one stalled batch leaves p95 untouched while
+    p99 and the sample stdev absorb it, which is what makes them worth
+    reporting alongside p95."""
+    steady_samples = [10.0] * 20 + [11.0]
+    spiky_samples = [10.0] * 20 + [300.0]
+    steady = compute_stats(steady_samples, total_runs=21, timeout_count=0, failure_count=0)
+    spiky = compute_stats(spiky_samples, total_runs=21, timeout_count=0, failure_count=0)
+
+    assert spiky["p95_ms"] == steady["p95_ms"]
+    assert spiky["p99_ms"] > steady["p99_ms"] * 10
+    assert spiky["stddev_ms"] > steady["stddev_ms"] * 10
+    assert spiky["max_ms"] == 300.0
+
+
+def test_stats_p99_and_stddev_degenerate_inputs() -> None:
+    single = compute_stats([42], total_runs=1, timeout_count=0, failure_count=0)
+    assert single["p99_ms"] == 42
+    # A single sample cannot carry a sample standard deviation, and null is
+    # honest where 0.0 would claim an unmeasured steadiness.
+    assert single["stddev_ms"] is None
+
+    uniform = compute_stats([7, 7, 7], total_runs=3, timeout_count=0, failure_count=0)
+    assert uniform["p99_ms"] == 7
+    assert uniform["stddev_ms"] == 0.0
+
+
+def test_stats_p99_and_stddev_are_none_without_a_successful_sample() -> None:
+    stats = compute_stats([], total_runs=4, timeout_count=2, failure_count=2)
+
+    assert stats["p99_ms"] is None
+    assert stats["stddev_ms"] is None
+
+
+def test_stats_p99_is_never_below_p95() -> None:
+    samples = [5, 9, 12, 15, 15, 18, 22, 26, 31, 90]
+    stats = compute_stats(samples, total_runs=len(samples), timeout_count=0, failure_count=0)
+
+    assert stats["p95_ms"] <= stats["p99_ms"] <= stats["max_ms"]
+
+
+def test_stats_new_spread_metrics_do_not_change_scoring() -> None:
+    """Adding p99/stddev must not perturb ranking: score_stability stays
+    p95 - median, so determinism and backward compatibility hold."""
+    samples = [12, 14, 15, 16, 40]
+    stats = compute_stats(samples, total_runs=5, timeout_count=0, failure_count=0)
+
+    assert stats["score_latency"] == stats["avg_ms"]
+    assert stats["score_stability"] == stats["p95_minus_median_ms"]
+    assert stats["score_stability"] == pytest.approx(stats["p95_ms"] - stats["median_ms"])
 
 
 def test_all_zero_failure_rates_have_zero_normalized_reliability() -> None:

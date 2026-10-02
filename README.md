@@ -257,6 +257,7 @@ All runtime configuration happens through `DNS_SPEED_LAB_*` environment variable
 | `DNS_SPEED_LAB_MAX_QUEUED_JOBS` | `5` | Maximum queued benchmark jobs |
 | `DNS_SPEED_LAB_TERMINAL_TTL_SEC` | `3600` | Terminal benchmark states kept in memory (seconds) |
 | `DNS_SPEED_LAB_MAX_RETAINED_STATES` | `256` | Maximum retained benchmark states |
+| `DNS_SPEED_LAB_QUERY_PACE_MS` | `20` | Delay between consecutive queries to the same resolver, in ms (`0` disables pacing) |
 | `DNS_SPEED_LAB_MAX_QUERY_ATTEMPTS` | `10000` | Aggregate query-attempt budget per benchmark |
 | `DNS_SPEED_LAB_MAX_ESTIMATED_DURATION_SEC` | `14400` | Aggregate estimated-duration budget per benchmark (4 h) |
 

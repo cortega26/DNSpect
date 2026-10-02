@@ -16,7 +16,7 @@ Ruta: `backend/app/`
 - `main.py`: endpoints de API, exportaciones y servido del frontend estático en modo empaquetado.
 - `models.py`: validación estricta de entrada (IP literales, hostnames), modelos `BenchmarkRequest`, `BenchmarkGoal`, `ProbeRequest`, `BenchmarkMode`.
 - `runner.py`: `BenchmarkManager` (thread-safe), ejecución de benchmarks en segundo plano con `ThreadPoolExecutor`, clasificación de fallos, persistencia opcional de runs.
-- `stats.py`: parser de `drill`, cálculo de métricas (`compute_stats`), scoring goal-aware (`apply_normalized_scoring`), selección de resolver recomendado (`select_recommended_resolver`), percentiles.
+- `stats.py`: parser de `drill`, cálculo de métricas (`compute_stats`), scoring goal-aware (`apply_normalized_scoring`), selección de resolver recomendado (`select_recommended_resolver`), percentiles (p50, p95, p99) y dispersión (`stddev_ms`, desviación muestral, `null` con menos de dos muestras porque entonces no está definida).
 - `detect_dns.py`: detección DNS del sistema (resolvectl, scutil, networksetup, ipconfig, netsh).
 - `providers.py`: carga del dataset de proveedores (`dns_providers.es.json`) y consultas por defecto (`queries.txt`).
 - `geoip.py`: lookup opcional de GeoIP (MaxMind GeoLite2), mapeo país → región.
@@ -26,7 +26,30 @@ Ruta: `backend/app/`
 - `cli_run.py`: subcomando `run` headless del CLI (benchmark completo sin UI).
 - `packaged_main.py`: entrypoint del binario empaquetado (bootstrap de data paths y arranque).
 
-### Motores DNS
+### Ritmo de consultas (pacing)
+
+Las consultas consecutivas al mismo resolver se separan **20 ms** por defecto
+(`DEFAULT_QUERY_PACE_MS`, ajustable con `DNS_SPEED_LAB_QUERY_PACE_MS`, `0` lo
+desactiva).
+
+Motivo: dos consultas disparadas back-to-back miden encolado y carga
+auto-infligida, no latencia aislada del resolver; además una ráfaga propia es
+indistinguible de un resolver lento. GRC DNS Benchmark separa sus consultas
+~20 ms por el mismo motivo.
+
+Detalles que importan para la interpretación:
+
+- El primer pacing es **por resolver**, no por serie: el contador se comparte
+  entre la serie de latencia, las sondas de blocking efficacy y las sondas de
+  integridad (NXDOMAIN hijacking y DNSSEC), de modo que el traspaso entre
+  series también va espaciado. Solo la primera consulta de cada resolver no
+  lleva retraso, para no penalizar el arranque de la serie con un coste fijo.
+- El pacing no altera el orden de las consultas ni el plan hasheado del
+  manifest, así que el determinismo del ranking se mantiene.
+- `_estimate_benchmark_work` incluye el coste del pacing en la duración
+  estimada, para que el presupuesto de trabajo siga siendo una cota honesta.
+
+### Motivos DNS
 
 - Linux: `drill` si está disponible.
 - Fallback y Windows: `dnspython`.
@@ -138,9 +161,12 @@ forma explícita para no presentar deltas engañosos entre runs incomparables.
      `candidate: RunComparisonMetrics`, `baseline_rank: int`,
      `candidate_rank: int` y `deltas: RunComparisonDeltas`.
    - Cada objeto de métricas tiene floats nullable `median_ms`, `p95_ms`,
-     `success_rate`, `failure_rate`, `blocking_efficacy` y `score_total`, y no
-     tiene campo de rank; el objeto de deltas correspondiente tiene floats
-     nullable para esas seis métricas y un `rank: int` con signo.
+     `p99_ms`, `success_rate`, `failure_rate`, `blocking_efficacy` y
+     `score_total`, y no tiene campo de rank; el objeto de deltas
+     correspondiente tiene floats nullable para esas siete métricas y un
+     `rank: int` con signo.
+   - `p99_ms` se añadió de forma aditiva: las corridas históricas sin el campo
+     producen `null` en lugar de un valor inventado.
    - Los arrays de resultados faltantes contienen solo IPs de resolver
      canónicas en orden de respuesta (sort lexicográfico).
    - Si un manifest está ausente o es inválido, su campo queda `null`, su

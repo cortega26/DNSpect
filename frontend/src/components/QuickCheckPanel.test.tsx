@@ -31,6 +31,8 @@ function result(resolver: string, providerName: string, medianMs: number, failur
       avg_ms: medianMs,
       median_ms: medianMs,
       p95_ms: medianMs * 1.4,
+      p99_ms: medianMs * 1.7,
+      stddev_ms: medianMs * 0.3,
       min_ms: medianMs * 0.7,
       max_ms: medianMs * 1.8,
       ok_count: 30,

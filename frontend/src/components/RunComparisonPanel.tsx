@@ -47,7 +47,9 @@ function fmtScore(value: number | null): string {
 }
 
 function formatMetric(key: string, value: number | null): string {
-  if (key === 'median_ms' || key === 'p95_ms') return fmtMs(value)
+  if (key === 'median_ms' || key === 'p95_ms' || key === 'p99_ms' || key === 'stddev_ms') {
+    return fmtMs(value)
+  }
   if (key === 'score_total') return fmtScore(value)
   return fmtPct(value)
 }
@@ -58,7 +60,12 @@ interface DeltaTone {
 }
 
 function deltaTone(key: string, value: number | null): DeltaTone {
-  const isLowerBetter = key === 'median_ms' || key === 'p95_ms' || key === 'failure_rate'
+  const isLowerBetter =
+    key === 'median_ms' ||
+    key === 'p95_ms' ||
+    key === 'p99_ms' ||
+    key === 'stddev_ms' ||
+    key === 'failure_rate'
   if (value === null || value === 0) {
     return { label: '', color: 'var(--muted)' }
   }
@@ -71,6 +78,7 @@ function deltaTone(key: string, value: number | null): DeltaTone {
 const METRIC_KEYS: Array<{ key: string; labelKey: TranslationKey }> = [
   { key: 'median_ms', labelKey: 'comparison.metricMedian' },
   { key: 'p95_ms', labelKey: 'comparison.metricP95' },
+  { key: 'p99_ms', labelKey: 'comparison.metricP99' },
   { key: 'success_rate', labelKey: 'comparison.metricSuccessRate' },
   { key: 'failure_rate', labelKey: 'comparison.metricFailureRate' },
   { key: 'blocking_efficacy', labelKey: 'comparison.metricBlocking' },
@@ -173,7 +181,7 @@ function ComparableTable({ comparison }: { comparison: RunComparisonResponse }) 
                     const [baselineText, candidateText] = metricValues[key]
                     const tone = metricTones[key]
                     const deltaValue = row.deltas[key as keyof RunComparisonMetrics] as number | null
-                    const deltaText = deltaValue === null ? 'NA' : key === 'median_ms' || key === 'p95_ms'
+                    const deltaText = deltaValue === null ? 'NA' : key === 'median_ms' || key === 'p95_ms' || key === 'p99_ms'
                       ? `${deltaValue >= 0 ? '+' : ''}${deltaValue.toFixed(2)} ms`
                       : key === 'score_total'
                         ? `${deltaValue >= 0 ? '+' : ''}${deltaValue.toFixed(3)}`

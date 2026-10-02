@@ -48,6 +48,8 @@ const BASE_CSV_COLUMNS = [
   'avg_ms',
   'median_ms',
   'p95_ms',
+  'p99_ms',
+  'stddev_ms',
   'min_ms',
   'max_ms',
   'ok_count',

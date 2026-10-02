@@ -71,6 +71,8 @@ export interface ResolverStats {
   avg_ms: number | null
   median_ms: number | null
   p95_ms: number | null
+  p99_ms: number | null
+  stddev_ms: number | null
   min_ms: number | null
   max_ms: number | null
   ok_count: number
@@ -195,6 +197,7 @@ export interface RunManifest {
 export interface RunComparisonMetrics {
   median_ms: number | null
   p95_ms: number | null
+  p99_ms: number | null
   success_rate: number | null
   failure_rate: number | null
   blocking_efficacy: number | null

@@ -63,6 +63,7 @@ def _stats(median: float, score_total: float, **overrides) -> dict:
         "avg_ms": median,
         "median_ms": median,
         "p95_ms": round(median * 1.4, 3),
+        "p99_ms": round(median * 1.7, 3),
         "min_ms": round(median * 0.7, 3),
         "max_ms": round(median * 1.8, 3),
         "ok_count": 30,
@@ -284,6 +285,7 @@ def test_comparable_pair_returns_fully_typed_200(monkeypatch, tmp_path) -> None:
     assert cloudflare_row["baseline"] == {
         "median_ms": 12.3,
         "p95_ms": 17.22,
+        "p99_ms": round(12.3 * 1.7, 3),
         "success_rate": 1.0,
         "failure_rate": 0.0,
         "blocking_efficacy": None,
@@ -292,6 +294,7 @@ def test_comparable_pair_returns_fully_typed_200(monkeypatch, tmp_path) -> None:
     assert cloudflare_row["deltas"] == {
         "median_ms": 2.9,
         "p95_ms": round(15.2 * 1.4 - 12.3 * 1.4, 4),
+        "p99_ms": round(15.2 * 1.7 - 12.3 * 1.7, 4),
         "success_rate": 0.0,
         "failure_rate": 0.0,
         "blocking_efficacy": None,
