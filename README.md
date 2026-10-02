@@ -153,6 +153,7 @@ flowchart TD
 
 Detailed design notes: `docs/ARCHITECTURE.md`.
 Architecture deep dive: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+What the benchmark measures, and what it does not: [`docs/MEASUREMENT_METHODOLOGY.md`](docs/MEASUREMENT_METHODOLOGY.md).
 
 ## Installation
 ### Option A: Run from source (dev)

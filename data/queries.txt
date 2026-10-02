@@ -1,4 +1,17 @@
-# Lista curada para reducir sesgo de caché y reflejar tráfico común
+# Lista curada de dominios de alto tráfico, representativa del uso habitual.
+#
+# NO reduce el sesgo de caché, y no debe leerse como si lo hiciera. Estos
+# nombres se consultan millones de veces por segundo, así que un recursivo
+# público los sirve desde caché en la immense mayoría de los casos: lo que se
+# mide es latencia de lookup en caliente contra el edge del resolver, no
+# resolución en frío. Para eso sí es válida la separación por protocolo y
+# objetivo, y también sirve para evitar que un mismo nombre sesgue todo el
+# perfil de latencia.
+#
+# El auto-calentamiento (consultar dos veces el mismo nombre en una corrida)
+# sí se controla, y por diseño del schedule: con 54 dominios y los modos
+# quick (12) y standard (30) no se repite ningún nombre. Solo exhaustive
+# (80) repite, y son las últimas 26 consultas del ciclo.
 # Global / CDN-backed
 cloudflare.com
 google.com

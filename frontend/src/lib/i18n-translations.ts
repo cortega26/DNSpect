@@ -391,6 +391,7 @@ const esTranslations = {
   'guide.title': 'Cómo leer los resultados',
   'guide.line1': 'Mediana: latencia típica. p95: estabilidad en escenarios adversos. Timeouts: fallos por demora.',
   'guide.line2': 'Nota: hacer ping al DNS no mide resolución DNS; esta app sí mide el tiempo real de consulta.',
+  'guide.line3': 'Caché: el corpus usa dominios de alto tráfico, así que se mide latencia con la caché del resolver ya caliente, no resolución en frío.',
 
   'filters.title': 'Filtros de ranking',
   'filters.searchLabel': 'Buscar (IP, proveedor, tags)',
@@ -919,6 +920,7 @@ export const translations: { es: Record<TranslationKey, string>; en: Translation
     'guide.title': 'How to read results',
     'guide.line1': 'Median: typical latency. p95: stability in worst-case scenarios. Timeouts: delayed failures.',
     'guide.line2': 'Note: pinging DNS does not measure DNS resolution; this app measures real query time.',
+    'guide.line3': 'Cache: the corpus uses high-traffic domains, so this measures latency against the already-warm resolver cache, not cold resolution.',
     'filters.title': 'Ranking filters',
     'filters.searchLabel': 'Search (IP, provider, tags)',
     'filters.searchPlaceholder': 'e.g.: cloudflare, 1.1.1.1, privacy',
@@ -1412,6 +1414,7 @@ export const translations: { es: Record<TranslationKey, string>; en: Translation
     'guide.title': 'Como ler os resultados',
     'guide.line1': 'Mediana: latência típica. p95: estabilidade em cenários ruins. Timeouts: falhas por atraso.',
     'guide.line2': 'Nota: fazer ping no DNS não mede resolução DNS; este app mede o tempo real de consulta.',
+    'guide.line3': 'Cache: o corpus usa domínios de alto tráfego, então isto mede latência com o cache do resolver já quente, não resolução a frio.',
     'filters.title': 'Filtros de ranking',
     'filters.searchLabel': 'Buscar (IP, provedor, tags)',
     'filters.searchPlaceholder': 'ex.: cloudflare, 1.1.1.1, privacidade',

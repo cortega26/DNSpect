@@ -480,6 +480,7 @@ export function LabWorkspace(props: LabWorkspaceProps) {
                   </summary>
                   <p className="helper-text" style={{ marginTop: 'var(--space-2)' }}>{t('guide.line1')}</p>
                   <p className="helper-text">{t('guide.line2')}</p>
+                  <p className="helper-text">{t('guide.line3')}</p>
                 </details>
 
                 <section className="card compact fade-in-section">
