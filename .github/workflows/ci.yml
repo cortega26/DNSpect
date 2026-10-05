@@ -162,6 +162,9 @@ jobs:
       - name: Flatpak consistency gate
         run: make flatpak-consistency
 
+      - name: Install packaging validators
+        run: sudo apt-get update && sudo apt-get install -y desktop-file-utils appstream
+
       - name: Validate desktop file
         run: desktop-file-validate packaging/flatpak/io.github.cortega26.DNSpect.desktop
 
