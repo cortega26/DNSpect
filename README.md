@@ -1,23 +1,41 @@
+<div align="center">
+
 # DNSpect
-Deterministic, local-first DNS resolver benchmarking with FastAPI + React.
 
-*Part of the [Tooltician ecosystem](https://tooltician.com) — local-first DNS resolver benchmarking.*
+<p><strong>Choose a DNS resolver for <em>your</em> network — not somebody else's benchmark server.</strong></p>
+<p>Local-first, deterministic DNS benchmarking across UDP, DoT, DoH and DoQ with goal-aware scoring for speed, security, privacy, ad blocking and family filtering.</p>
 
-[![Part of Tooltician](https://img.shields.io/badge/Part_of-Tooltician.com-6C47FF?v=2)](https://tooltician.com)
+[![GitHub stars](https://img.shields.io/github/stars/cortega26/DNSpect?style=flat&logo=github)](https://github.com/cortega26/DNSpect/stargazers)
 [![CI](https://github.com/cortega26/DNSpect/actions/workflows/ci.yml/badge.svg)](https://github.com/cortega26/DNSpect/actions/workflows/ci.yml)
-[![Release](https://github.com/cortega26/DNSpect/actions/workflows/release.yml/badge.svg)](https://github.com/cortega26/DNSpect/actions/workflows/release.yml)
 [![Version](https://img.shields.io/github/v/release/cortega26/DNSpect?display_name=tag)](https://github.com/cortega26/DNSpect/releases)
-[![License](https://img.shields.io/github/license/cortega26/DNSpect)](LICENSE)
-[![Python >=3.13](https://img.shields.io/badge/python-%3E%3D3.13-3776AB?logo=python&logoColor=white)](backend/pyproject.toml)
-[![Node 24.x](https://img.shields.io/badge/node-24.x-339933?logo=node.js&logoColor=white)](.github/workflows/ci.yml)
-[![Security: Bandit](https://img.shields.io/badge/security-bandit%20(CI)-f59e0b)](.github/workflows/ci.yml)
-[![Security: Semgrep](https://img.shields.io/badge/security-semgrep%20(CI)-14b8a6)](.github/workflows/ci.yml)
-[![Code Quality: Ruff + mypy + ESLint + tsc](https://img.shields.io/badge/code%20quality-ruff%20%2B%20mypy%20%2B%20eslint%20%2B%20tsc-6366f1)](.github/workflows/ci.yml)
-[![Formatting: Ruff format](https://img.shields.io/badge/formatting-ruff%20format-111827)](.github/workflows/ci.yml)
 [![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20macOS%20%7C%20windows-0ea5e9)](.github/workflows/release.yml)
-[![Last Commit](https://img.shields.io/github/last-commit/cortega26/DNSpect)](https://github.com/cortega26/DNSpect/commits/main/)
+[![License](https://img.shields.io/github/license/cortega26/DNSpect)](LICENSE)
+
+<p>
+  <a href="https://github.com/cortega26/DNSpect/releases"><strong>Download a release</strong></a> ·
+  <a href="#installation">Run from source</a> ·
+  <a href="docs/MEASUREMENT_METHODOLOGY.md">Measurement methodology</a>
+</p>
+
+</div>
 
 ![DNSpect live benchmark demo](docs/screenshots/readme-demo.gif)
+
+## One question, measured locally: which resolver is actually better here?
+
+Remote DNS speed-test sites observe **their** route, **their** geography and often a simplified metric. DNSpect sends real DNS queries from your machine and keeps the benchmark reproducible enough to inspect, compare and rerun.
+
+| DNSpect measures | Why it matters |
+|:---|:---|
+| Latency, median, p95 and failures | Fast averages can hide unstable resolvers |
+| UDP / DoT / DoH / DoQ | Protocol choice changes the path and overhead |
+| DNSSEC readiness | Security capability should be visible |
+| Blocking efficacy | Ad/family/security resolvers need more than latency |
+| NXDOMAIN hijacking | Detects resolvers that rewrite nonexistent domains |
+| Goal-aware scoring | “Best” depends on what you actually optimize for |
+| Immutable run manifests | Prevents invalid apples-to-oranges comparisons |
+
+> **Privacy model:** benchmarks run locally. The repository has no telemetry/analytics pipeline; automatic region detection makes the explicitly documented public-IP lookup described below.
 
 ## Problem Statement
 Most "DNS speed test" pages run from a remote browser context or cloud vantage point, so they measure someone else's network path. DNSpect runs on your machine, sends real DNS queries to candidate resolvers, and ranks outcomes using latency, failure rate, and stability metrics.
